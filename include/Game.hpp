@@ -2,6 +2,7 @@
 #define GAME_HPP
 
 #include "Country.hpp"
+#include "EventManager.hpp"
 
 // The Game class acts as the "Central Brain".
 // It manages the game loop, updates variables, and handles player input.
@@ -17,6 +18,7 @@ private:
 
     bool isRunning;
     Country playerCountry; // The country instance
+    EventManager eventManager; // Handles random events
 };
 
 #endif // GAME_HPP
