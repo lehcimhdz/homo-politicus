@@ -1,37 +1,76 @@
-# Welcome to Homo Politicus!
+# Homo Politicus
 
-In this game I try to develop a game model with artificial intelligence that simulates the political, economic and internacional systems!
+**Homo Politicus** es un simulador político y económico de estrategia por turnos escrito en C++.
+Asumes el papel de Presidente de una nación ficticia. Tu objetivo: mantenerte en el poder ganando elecciones cada 4 años, mientras gestionas la economía, el bienestar social y evitas el caos.
 
-It is ambitious? Yes, but I'm willing to try it while I learn C++!
+## 🚀 Cómo Empezar
 
-Am i new at programming? No, I've been programming in Python for 4 years but now I want a big challenge with C++, the father of modern programming languages!
+### Requisitos
+- Compilador de C++ (clang++ o g++)
+- Make
 
-Do I have a life? No, I'm a programmer! I also studies maths and systems engineering at the same time!
+### Compilación
+Abre tu terminal en la carpeta del proyecto y ejecuta:
+```bash
+make
+```
 
-For what reason I study maths and systems engineering? First, I don't want to go out for four years, my country it's not very safe. Second, I want the both degrees and I'm able to don't sleep don't eat and have a social life. Third, I studied International Relations to insert myself in the world of politics but it disappointed me. Meritocracy don't exist in politics. For that reason I decided to develop this game to simulate the real world. Fourth, I don't waste my knowledge about politics, economics and international relations. I'll try to use reliable books and theories to develop the whole system, obviously inspired by my knok-how and my experience in the dirty world of politics.
+### Ejecución
+```bash
+./HomoPoliticus
+```
 
-Do I have a girlfriend? Yes, she is the best and she supports me in everything I do! I want to build a big career and make a lot of money to buy her a house and a car, i love you babe!
+---
 
-Will I use AI to develop this game? No, I'm old school, I'll use C++ and I'll try to develop the whole system by myself. Hahahah, it's a joke, everything uses AI nowadays, maybe AI'll help me with the code, but coding isn't everything. I'll plane, design and and test the whole system by myself.
+## 🎮 Cómo Jugar
 
-Don't hate vibe coding, bro, even Linus Torvalds used it to develop new things! I think it's the future of development!
+El juego es **por turnos**. En cada año, puedes tomar decisiones antes de avanzar.
 
-"But, you're not Linus Torvalds and you said you try to learn C++!"
+### Comandos Principales
+| Comando | Acción | Efecto |
+| :--- | :--- | :--- |
+| **`next`** | Avanzar Año | Pasa el tiempo. La población crece, el PIB cambia, ocurren eventos. |
+| **`exit`** | Salir | Cierra el juego. |
 
-Yes, I said it! But I don't want to learn C++ like I learned Python a R in 2022 (before AI era). I'll combine some books, courses, documentation and AI to learn while I develop the game. "Hey Gemini/Claude/Copilot, design me an entire system for a political simulation game with actor, elections, economy, international relations, etc! Everything must be work" No, AI can't do everything in a single prompt.
+### 💰 Gestión Fiscal
+| Comando | Acción | Efecto |
+| :--- | :--- | :--- |
+| **`tax+`** | Subir Impuestos | 📈 +10% Recaudación, 📉 -5% Popularidad, 📈 +1% Inflación. |
+| **`tax-`** | Bajar Impuestos | 📉 -10% Recaudación, 📈 +3% Popularidad. |
 
-I'm currently reading "C++ for engineers and scientists" by Gary J. Bronson, but I'm not a man of theory, when I'm reading I'm thinking about how to apply it.
+### 🏗️ Presupuesto e Inversión
+Gasta tu PIB para mejorar el país permanentemente.
 
-What was my inspiration to develop this game? Well, I was a big fan of Sim City, even my bachelor's degree included it in a class called "Theory of International Decisions" when we learned about game theory and linear programming. I love that game. Now I'll try to develop a political simulation game with the same mechanics but with a more realistic approach when I'm learning C++. Isn't it cool?
+| Comando | Coste | Efecto |
+| :--- | :--- | :--- |
+| **`invest_health`** | $10M | Mejora la Cobertura de Salud (+5%) y Popularidad (+2%). |
+| **`invest_security`**| $10M | Reduce la Tasa de Homicidios (-1.0) y mejora Popularidad (+1%). |
+| **`invest_infra`** | $50M | **Aumenta la Tasa de Crecimiento (+0.1%)**. La mejor inversión a largo plazo. |
 
-I'm also inspired in RollerCoaster Tycoon, I love that game too! Recently, I read that the creator of the game, Chris Sawyer, developed the game by himself using assembly language. That gave a big motivation to develop a game by myself.
+---
 
-Why you don't use assembly language? Come on, I'm not a masochist, I want to develop a game, not to suffer! Hahahah, it's a joke, maximum respect for Chris Sawyer and all the old school developers. Maybe in the future I'll try to learn the direct communication with the hardware and machine language, but for now I'll use C++.
+## ⚙️ Mecánicas del Juego
 
-## Clone the repository
-git clone git@github.com:lehcimhdz/homo-politicus.git
-cd homo-politicus
+### 🗳️ Elecciones
+Cada **4 años** se celebran elecciones democráticas.
+- Si tu **Popularidad > 50%**: Ganas la reelección.
+- Si tu **Popularidad <= 50%**: Pierdes y el juego termina (**GAME OVER**).
 
-## License
+### 🎲 Eventos Aleatorios
+Cada año hay un 30% de probabilidad de que ocurra un evento:
+- **Pandemia**: La población muere y la economía se contrae.
+- **Escándalo de Corrupción**: Tu popularidad cae drásticamente.
+- **Avance Tecnológico**: El PIB crece rápidamente.
 
-[MIT](https://choosealicense.com/licenses/mit/)
+### 📊 Economía
+- **PIB (GDP)**: Crece anualmente basado en la `growth_rate`.
+- **Población**: Crece basado en nacimientos vs muertes.
+
+---
+
+## 📂 Estructura del Código
+- `src/main.cpp`: Punto de entrada.
+- `src/Game.cpp`: Bucle principal y lógica de comandos.
+- `src/Country.cpp`: Datos del país.
+- `src/EventManager.cpp`: Lógica de eventos aleatorios.
+- `include/`: Archivos de cabecera (.hpp).

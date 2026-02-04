@@ -5,7 +5,7 @@
 #include <cstdlib> // For rand
 #include <ctime>   // For time
 
-Game::Game() : isRunning(true) {
+Game::Game() : isRunning(true), turnCount(0) {
     std::cout << "Initializing Game..." << std::endl;
     std::srand(std::time(nullptr)); // Seed the random number generator
 }
@@ -26,7 +26,7 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_...): ";
     std::string command;
     std::cin >> command;
 
@@ -46,6 +46,31 @@ void Game::processEvents() {
         playerCountry.economy.tax_collection *= 0.90; // -10% revenue
         playerCountry.politics.popularity += 0.03;    // +3% popularity
         std::cout << ">> Taxes LOWERED! Revenue down, Popularity up." << std::endl;
+    }
+    // --- BUDGET COMMANDS ---
+    else if (command == "invest_health") {
+        std::cout << ">> Investing $10M in Healthcare..." << std::endl;
+        playerCountry.economy.gdp -= 10000000;
+        playerCountry.welfare.health_coverage += 0.05;
+        playerCountry.politics.popularity += 0.02;
+        if (playerCountry.welfare.health_coverage > 1.0) playerCountry.welfare.health_coverage = 1.0;
+        std::cout << "   Health Coverage is now " << playerCountry.welfare.health_coverage * 100 << "%" << std::endl;
+    }
+    else if (command == "invest_security") {
+        std::cout << ">> Investing $10M in National Security..." << std::endl;
+        playerCountry.economy.gdp -= 10000000;
+        playerCountry.security.homicide_rate -= 1.0;
+        if (playerCountry.security.homicide_rate < 0.0) playerCountry.security.homicide_rate = 0.0;
+        playerCountry.politics.popularity += 0.01;
+        std::cout << "   Homicide Rate dropped to " << playerCountry.security.homicide_rate << "/100k" << std::endl;
+    }
+    else if (command == "invest_infra") {
+        std::cout << ">> Investing $50M in Infrastructure..." << std::endl;
+        playerCountry.economy.gdp -= 50000000;
+        playerCountry.infra.road_connectivity += 0.05;
+        // Investing in infra permanently boosts growth rate slightly!
+        playerCountry.economy.growth_rate += 0.001; 
+        std::cout << "   Growth Rate increased! Now " << playerCountry.economy.growth_rate * 100 << "%" << std::endl;
     }
     else {
         std::cout << ">> Unknown command." << std::endl;
@@ -85,6 +110,21 @@ void Game::update() {
     if (playerCountry.politics.popularity < 0.0) playerCountry.politics.popularity = 0.0;
 
     eventManager.triggerRandomEvent(playerCountry);
+
+    // --- ELECTION LOGIC ---
+    turnCount++;
+    if (turnCount % 4 == 0) {
+        std::cout << "\n=== ELECTION YEAR (Year " << turnCount << ") ===" << std::endl;
+        std::cout << "Current Popularity: " << playerCountry.politics.popularity * 100 << "%" << std::endl;
+        
+        if (playerCountry.politics.popularity > 0.50) {
+            std::cout << "VICTORY: The people love you! You have been re-elected for 4 more years." << std::endl;
+        } else {
+            std::cout << "DEFEAT: You have lost the support of the people." << std::endl;
+            std::cout << "GAME OVER." << std::endl;
+            isRunning = false; // Stop the game
+        }
+    }
 }
 
 void Game::render() {

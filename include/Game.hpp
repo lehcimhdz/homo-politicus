@@ -17,6 +17,7 @@ private:
     void render();        // Draw the game (text output for now)
 
     bool isRunning;
+    int turnCount; // Track years in power
     Country playerCountry; // The country instance
     EventManager eventManager; // Handles random events
 };
