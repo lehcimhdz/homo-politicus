@@ -68,6 +68,7 @@ Cada año, se genera un número aleatorio $R$ entre 0 y 99.
 | **20 - 29** | 💰 **Corrupción**| 10% | $Popularidad - 0.10$ (-10%) |
 | **Indep.** | 🥦 **Comida** | 5% | $Inflation + 0.01$ (+1%)<br>$Popularidad - 0.03$ (-3%) |
 | **Indep.** | ☢️ **Nuclear** | 0.5% | $GDP \times 0.8$ (-20%)<br>$Radiación = 1.0$ (Efecto Permanente) |
+| **Indep.** | 🚑 **Emergencia (MCI)** | 1% | Test de Estrés: `Heridos` vs `Hospitales`<br>Si Capacidad < Heridos $\rightarrow$ Popularidad -5% |
 | **30 - 99** | (Ninguno) | 70% | Sin cambios. |
 
 ### Efectos de Radiación
@@ -75,6 +76,12 @@ Si ocurre un accidente nuclear (`food_radiation_prob > 0`):
 *   **Mortalidad**: +0.5% anual (Cáncer).
 *   **Economía**: -$10M anuales (Limpieza).
 *   **Estado**: Permanente (por ahora).
+
+### Incidentes de Múltiples Víctimas (MCI)
+Eventos puntuales (incendios, derrumbes) que ponen a prueba tu capacidad instalada.
+*   **Heridos**: 500 - 2000 personas.
+*   **Capacidad**: `Hospitales * 15`.
+*   **Gestión**: Tienes 100 hospitales (Capacidad 1500). Si hay 2000 heridos, mueren 500 personas por falta de atención.
 
 ---
 

@@ -63,5 +63,26 @@ void EventManager::triggerRandomEvent(Country& country) {
             country.economy.gdp *= 0.80; // Immediate economic crash
             country.politics.popularity -= 0.20; // Massive outrage
         }
+
+        // MASS CASUALTY INCIDENT CHECK (1% Chance)
+        int mci_threshold = (int)(country.welfare.mass_casualty_prob * 100);
+        if (std::rand() % 100 < mci_threshold) {
+             std::cout << "\n[!] EMERGENCY: Mass Casualty Incident (Building Collapse/Fire)!" << std::endl;
+             
+             int casualties = 500 + (std::rand() % 1500); // 500 to 2000 injured
+             int capacity = country.welfare.hospitals * 15; // Each hospital handles 15 critical patients
+             
+             std::cout << "    Casualties: " << casualties << " | Hospital Capacity: " << capacity << std::endl;
+
+             if (capacity >= casualties) {
+                 std::cout << "    RESULT: System handled the crisis. Minimal deaths." << std::endl;
+                 country.politics.popularity += 0.01; // Competence bonus
+             } else {
+                 int excess_deaths = casualties - capacity;
+                 std::cout << "    RESULT: SYSTEM COLLAPSE. " << excess_deaths << " preventable deaths." << std::endl;
+                 country.welfare.population -= excess_deaths;
+                 country.politics.popularity -= 0.05; // Incompetence penalty
+             }
+        }
     }
 }
