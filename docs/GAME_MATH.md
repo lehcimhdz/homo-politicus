@@ -111,6 +111,20 @@ Tragedia Nacional.
 
 ---
 
+## 4. Bienestar Social y Salud Mental
+El estado de ánimo de la nación es dinámico y reactivo.
+
+### Índice de Salud Mental ($MH$)
+$$ Target_{MH} = 1.0 - (Desempleo \times 2) - (Inflación \times 1.5) - (Corrupción \times 0.5) $$
+*   **Drift**: El índice real se mueve 20% hacia el `Target` cada año (la gente tarda en recuperar la esperanza).
+
+### Tasa de Suicidio
+$$ Tasa_{Suicidio} = \frac{0.00014}{MH} $$
+*   **Base**: 14 por 100,000 habitantes.
+*   **Dinámica**: Si el $MH$ cae a 0.5 (Desesperación), la tasa de suicidios se DUPLICA. Estos muertos se suman a la mortalidad natural.
+
+---
+
 ## 5. Elecciones Democráticas
 Cada 4 años (`turnCount % 4 == 0`), se evalúa la continuidad del gobierno.
 

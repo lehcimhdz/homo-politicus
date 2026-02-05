@@ -99,10 +99,40 @@ void Game::update() {
     // Clamp Death Rate
     if (playerCountry.welfare.death_rate < 0.001) playerCountry.welfare.death_rate = 0.001;
 
+    // --- MENTAL HEALTH DYNAMICS ---
+    // Contextual Evolution:
+    // 1. Unemployment: Being jobless is the #1 cause of depression in this model.
+    // 2. Inflation: Financial stress.
+    // 3. Corruption: Loss of hope in society.
+    double target_mh = 1.0 
+                     - (playerCountry.welfare.unemployment_rate * 2.0) 
+                     - (playerCountry.economy.inflation * 1.5)
+                     - (playerCountry.politics.administrative_corruption * 0.5); // Corruption hurts soul
+    
+    // Cap Target
+    if (target_mh < 0.1) target_mh = 0.1;
+    if (target_mh > 1.0) target_mh = 1.0;
+
+    // Drift actual MH towards Target (Mood changes slowly)
+    double mh_drift = (target_mh - playerCountry.welfare.mental_health_index) * 0.2; // 20% adjustment per year
+    playerCountry.welfare.mental_health_index += mh_drift;
+
+    // --- SUICIDE RATE CALCULATION ---
+    // Inversely proportional to Mental Health.
+    // Base 0.00014 (14/100k).
+    // If MH drops to 0.5, Rate = Base / 0.5 = 2x Base.
+    playerCountry.welfare.suicide_rate = 0.00014 / playerCountry.welfare.mental_health_index;
+
     // 1. Demographics (Simple Annual Calculation)
     double births = playerCountry.welfare.population * playerCountry.welfare.birth_rate;
-    double deaths = playerCountry.welfare.population * playerCountry.welfare.death_rate;
-    playerCountry.welfare.population += (int)(births - deaths);
+    
+    // Add Suicide to Deaths
+    // Base Death Rate + Obesity + Suicide
+    double deaths_natural = playerCountry.welfare.population * playerCountry.welfare.death_rate;
+    double deaths_suicide = playerCountry.welfare.population * playerCountry.welfare.suicide_rate;
+    double total_deaths = deaths_natural + deaths_suicide;
+
+    playerCountry.welfare.population += (int)(births - total_deaths);
 
     // 2. Economy
     // GDP grows by (growth_rate - inflation) roughly
