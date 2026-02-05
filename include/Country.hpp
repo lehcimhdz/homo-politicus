@@ -16,7 +16,8 @@ struct WelfareSocietySystem {
     // products? (maybe medical supplies inventory)
     double mass_casualty_prob = 0.01;
     double severe_burn_prob = 0.01;
-    double major_accident_prob = 0.01;
+    double major_accident_prob = 0.05; // Transport Infra (Trains/Bridges)
+    double aviation_accident_prob = 0.001; // Airplanes (0.1% - Rare but Tragic)
 
     // Education
     double literacy_rate = 0.95;

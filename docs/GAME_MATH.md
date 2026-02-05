@@ -71,17 +71,43 @@ Cada año, se genera un número aleatorio $R$ entre 0 y 99.
 | **Indep.** | 🚑 **Emergencia (MCI)** | 1% | Test de Estrés: `Heridos` vs `Hospitales`<br>Si Capacidad < Heridos $\rightarrow$ Popularidad -5% |
 | **30 - 99** | (Ninguno) | 70% | Sin cambios. |
 
-### Efectos de Radiación
-Si ocurre un accidente nuclear (`food_radiation_prob > 0`):
-*   **Mortalidad**: +0.5% anual (Cáncer).
-*   **Economía**: -$10M anuales (Limpieza).
-*   **Estado**: Permanente (por ahora).
+### Efectos de Radiación y Ciencia
+*   **Requisito Nuclear**: Solo tienes reactores si `Poder Industrial > 0.6`. Países agrarios están a salvo.
+*   **Mitigación Científica**: Tu `educational_quality` mejora la seguridad.
+    *   Educación Baja: Riesgo 0.5% (Chernobyl).
+    *   Educación Alta: Riesgo 0.25% (Fukushima/Moderno).
+*   **Accidente**: `food_radiation_prob = 1.0`. Efectos permanentes.
 
 ### Incidentes de Múltiples Víctimas (MCI)
 Eventos puntuales (incendios, derrumbes) que ponen a prueba tu capacidad instalada.
 *   **Heridos**: 500 - 2000 personas.
 *   **Capacidad**: `Hospitales * 15`.
 *   **Gestión**: Tienes 100 hospitales (Capacidad 1500). Si hay 2000 heridos, mueren 500 personas por falta de atención.
+
+### Accidentes Industriales (Hidrocarburos/Químicos)
+El precio del progreso.
+*   **Probabilidad**: Calculada dinámicamente: $(DependenciaCombustibles \times 20) + (PoderIndustrial \times 10)$. Rango típico: 15-30%.
+*   **Tipos**: Explosión de Oleoducto, Incendio en Refinería, Fuga Química.
+*   **Efectos**:
+    *   **Humanos**: Cientos de quemados graves ($10\%$ mortalidad inmediata).
+    *   **Económicos**: -$50M (Infraestructura dañada).
+    *   **Ambientales**: +100 CO2 (Contaminación).
+
+### Colapso de Transporte
+Cuando los puentes caen por falta de pintura.
+*   **Probabilidad**: Inversa a la calidad de tus carreteras. Si `road_connectivity` es baja (50%), el riesgo sube al 5-6%.
+*   **Efectos**:
+    *   **Logística**: `road_connectivity` baja otro 5% (Círculo vicioso).
+    *   **Víctimas**: 50-150 muertos.
+    *   **Costo**: Frena el crecimiento del PIB (menos carreteras = menos comercio).
+
+### Accidente Aéreo
+Tragedia Nacional.
+*   **Probabilidad**: Muy baja (`0.1%` o 1 en 1000). Variable: `aviation_accident_prob`.
+*   **Efectos**:
+    *   **Psicológico**: La popularidad cae 5% (Luto Nacional) aunque mueran pocas personas comparado con otros eventos.
+    *   **Víctimas**: ~200-300.
+    *   **Diferencia**: No afecta la economía tanto como un puente, pero afecta mucho la moral.
 
 ---
 
