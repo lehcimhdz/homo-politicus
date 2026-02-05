@@ -111,7 +111,24 @@ Tragedia Nacional.
 
 ---
 
-## 4. Bienestar Social y Salud Mental
+## 4. Educación y Sociedad
+El saber es poder... y peligro.
+
+### Bonus Económico (Tech Boom)
+Si `literacy_rate > 0.90` y `educational_quality > 0.7`:
+$$ Crecimiento_{Real} = Crecimiento_{Base} + 0.015 $$
+*   Un bonus del +1.5% al PIB anual. La única forma de crecer rápido.
+
+### Trampa de la Inestabilidad
+Una población educada no tolera la corrupción.
+*   Si `literacy > 0.90` Y `corruption > 0.30`:
+    *   Aumenta `polarization_index`.
+    *   Aumentan las protestas (`marches`).
+    *   Baja la popularidad.
+
+---
+
+## 5. Bienestar Social y Salud Mental
 El estado de ánimo de la nación es dinámico y reactivo.
 
 ### Índice de Salud Mental ($MH$)

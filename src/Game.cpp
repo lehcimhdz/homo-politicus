@@ -68,9 +68,17 @@ void Game::processEvents() {
         std::cout << ">> Investing $50M in Infrastructure..." << std::endl;
         playerCountry.economy.gdp -= 50000000;
         playerCountry.infra.road_connectivity += 0.05;
-        // Investing in infra permanently boosts growth rate slightly!
-        playerCountry.economy.growth_rate += 0.001; 
-        std::cout << "   Growth Rate increased! Now " << playerCountry.economy.growth_rate * 100 << "%" << std::endl;
+        playerCountry.economy.growth_rate += 0.001; // Permanent growth boost
+        std::cout << "   Road Connectivity is now " << playerCountry.infra.road_connectivity * 100 << "%" << std::endl;
+    }
+    else if (command == "invest_education") {
+        std::cout << ">> Investing $20M in Education..." << std::endl;
+        playerCountry.economy.gdp -= 20000000;
+        playerCountry.welfare.literacy_rate += 0.01;
+        playerCountry.welfare.educational_quality += 0.01;
+        if (playerCountry.welfare.literacy_rate > 1.0) playerCountry.welfare.literacy_rate = 1.0;
+        if (playerCountry.welfare.educational_quality > 1.0) playerCountry.welfare.educational_quality = 1.0;
+        std::cout << "   Literacy: " << playerCountry.welfare.literacy_rate * 100 << "% | Quality: " << playerCountry.welfare.educational_quality * 100 << "%" << std::endl; 
     }
     else {
         std::cout << ">> Unknown command." << std::endl;
@@ -136,9 +144,31 @@ void Game::update() {
 
     // 2. Economy
     // GDP grows by (growth_rate - inflation) roughly
-    double real_growth = playerCountry.economy.growth_rate; 
+    // EDUCATION BONUS: Smart workforce = Innovation
+    double education_bonus = 0.0;
+    if (playerCountry.welfare.literacy_rate > 0.90 && playerCountry.welfare.educational_quality > 0.7) {
+        education_bonus = 0.015; // +1.5% Bonus Growth
+    }
+
+    double real_growth = playerCountry.economy.growth_rate + education_bonus;
     playerCountry.economy.gdp += playerCountry.economy.gdp * real_growth;
-    
+
+    // --- EDUCATION & DEMOGRAPHICS ---
+    // High literacy reduces birth rate naturally
+    if (playerCountry.welfare.literacy_rate > 0.95) {
+        playerCountry.welfare.birth_rate -= 0.0002;
+        if (playerCountry.welfare.birth_rate < 0.005) playerCountry.welfare.birth_rate = 0.005; // Floor
+    }
+
+    // --- POLITICAL INSTABILITY (The Modern Trap) ---
+    // If Education is High, but Corruption is High -> People get angry.
+    if (playerCountry.welfare.literacy_rate > 0.90 && playerCountry.politics.administrative_corruption > 0.30) {
+        std::cout << "[!] UNREST: Educated citizens demand transparency!" << std::endl;
+        playerCountry.politics.polarization_index += 0.05;
+        playerCountry.politics.marches += 1; // More protests
+        playerCountry.politics.popularity -= 0.02;
+    }
+
     // Inflation fluctuates slightly (randomness simulation)
     // For now, we just keep it steady or increase it slightly
     // playerCountry.economy.inflation += 0.001; 
