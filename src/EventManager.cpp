@@ -52,5 +52,16 @@ void EventManager::triggerRandomEvent(Country& country) {
             country.politics.popularity -= 0.03;    // Public anger
             if (country.politics.popularity < 0.0) country.politics.popularity = 0.0;
         }
+
+        // NUCLEAR SAFETY CHECK (0.5% Chance)
+        if (std::rand() % 200 == 0) {
+            std::cout << "\n[!!!] CATASTROPHE: NUCLEAR REACTOR MELTDOWN!" << std::endl;
+            std::cout << "      Region evacuated. Food supply contaminated." << std::endl;
+            std::cout << "      Effect: GDP -20%, Radiation Permanent." << std::endl;
+            
+            country.welfare.food_radiation_prob = 1.0; // Permanent contamination
+            country.economy.gdp *= 0.80; // Immediate economic crash
+            country.politics.popularity -= 0.20; // Massive outrage
+        }
     }
 }

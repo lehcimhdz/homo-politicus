@@ -19,6 +19,12 @@ $$
 *   **Obesidad (`obesity_rate`)**: Crece **0.5%** anual si la inflación es baja (<3%). El "bienestar" engorda.
 *   **Cobertura Salud (`health_coverage`)**: Reduce la mortalidad. ¡Invierte en hospitales!
 
+### Depreciación del Sistema de Salud
+Los hospitales no son eternos.
+*   **Decadencia Natural**: -2% anual (Mantenimiento).
+*   **Decadencia por Crisis**: Si PIB decrece, -2% EXTRA (-4% total).
+*   **Estrategia**: Debes usar `invest_health` regularmente solo para mantener el sistema, o dejarlo caer para ahorrar dinero (a costa de muertes).
+
 ---
 
 ## 2. Economía (GDP)
@@ -61,7 +67,14 @@ Cada año, se genera un número aleatorio $R$ entre 0 y 99.
 | **2 - 19** | 🤖 **Tecnología**| ~18% | $GDP \times 1.05$ (+5%) |
 | **20 - 29** | 💰 **Corrupción**| 10% | $Popularidad - 0.10$ (-10%) |
 | **Indep.** | 🥦 **Comida** | 5% | $Inflation + 0.01$ (+1%)<br>$Popularidad - 0.03$ (-3%) |
+| **Indep.** | ☢️ **Nuclear** | 0.5% | $GDP \times 0.8$ (-20%)<br>$Radiación = 1.0$ (Efecto Permanente) |
 | **30 - 99** | (Ninguno) | 70% | Sin cambios. |
+
+### Efectos de Radiación
+Si ocurre un accidente nuclear (`food_radiation_prob > 0`):
+*   **Mortalidad**: +0.5% anual (Cáncer).
+*   **Economía**: -$10M anuales (Limpieza).
+*   **Estado**: Permanente (por ahora).
 
 ---
 

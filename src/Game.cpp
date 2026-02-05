@@ -130,6 +130,23 @@ void Game::update() {
 
     eventManager.triggerRandomEvent(playerCountry);
 
+    // --- HEALTH DEPRECIATION ---
+    // Hospitals degrade. Equipment breaks. Doctors retire.
+    // You must invest CONSTANTLY to maintain coverage.
+    double health_decay = 0.02; // -2% coverage per year naturally
+    if (playerCountry.economy.growth_rate < 0) {
+        health_decay += 0.02; // Crisis exacerbates decay (budget cuts)
+    }
+    playerCountry.welfare.health_coverage -= health_decay;
+    if (playerCountry.welfare.health_coverage < 0.0) playerCountry.welfare.health_coverage = 0.0;
+    
+    // --- RADIATION EFFECTS ---
+    if (playerCountry.welfare.food_radiation_prob > 0.0) {
+        std::cout << "[!] WARNING: Radioactive contamination causes excess deaths and cleanup costs." << std::endl;
+        playerCountry.welfare.death_rate += 0.005; // +0.5% deaths per year (Cumulative if not careful, but here fixed addition)
+        playerCountry.economy.gdp -= 10000000; // $10M annual cleanup cost
+    }
+    
     // --- ELECTION LOGIC ---
     turnCount++;
     if (turnCount % 4 == 0) {
