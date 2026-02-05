@@ -80,6 +80,25 @@ void Game::processEvents() {
 void Game::update() {
     std::cout << "--- Simulating One Year ---" << std::endl;
 
+    // --- OBESITY & HEALTH MECHANICS ---
+    // If food is cheap (Low Inflation), people eat more and exercise less.
+    if (playerCountry.economy.inflation < 0.03) {
+        playerCountry.welfare.obesity_rate += 0.005; // +0.5% Obesity per year if food is cheap
+        if (playerCountry.welfare.obesity_rate > 1.0) playerCountry.welfare.obesity_rate = 1.0;
+    }
+
+    // Dynamic Death Rate Calculation
+    // Base: 0.8%. 
+    // Obesity adds up to 2.0% (at 100% obesity).
+    // Health removes up to 0.5% (at 100% coverage).
+    double base_death_rate = 0.008;
+    playerCountry.welfare.death_rate = base_death_rate 
+                                     + (playerCountry.welfare.obesity_rate * 0.02) 
+                                     - (playerCountry.welfare.health_coverage * 0.005);
+
+    // Clamp Death Rate
+    if (playerCountry.welfare.death_rate < 0.001) playerCountry.welfare.death_rate = 0.001;
+
     // 1. Demographics (Simple Annual Calculation)
     double births = playerCountry.welfare.population * playerCountry.welfare.birth_rate;
     double deaths = playerCountry.welfare.population * playerCountry.welfare.death_rate;

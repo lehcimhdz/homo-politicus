@@ -6,7 +6,7 @@
 // 1. Welfare and Society System
 struct WelfareSocietySystem {
     // Health
-    double pandemic_prob = 0.05;
+    double pandemic_prob = 0.02; // Realistic: ~2% annual chance (Every 50-100 years)
     double epidemic_prob = 0.1;
     double food_contamination_prob = 0.05;
     double obesity_rate = 0.2;
