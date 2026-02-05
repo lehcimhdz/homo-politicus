@@ -117,7 +117,13 @@ El saber es poder... y peligro.
 ### Bonus Económico (Tech Boom)
 Si `literacy_rate > 0.90` y `educational_quality > 0.7`:
 $$ Crecimiento_{Real} = Crecimiento_{Base} + 0.015 $$
-*   Un bonus del +1.5% al PIB anual. La única forma de crecer rápido.
+*   Un bonus del +1.5% al PIB anual.
+
+### La Trampa de la Pobreza (Matrícula)
+La alfabetización tiene un límite físico: `primary_enrollment`.
+*   **Erosión Económica**: Si `unemployment > 10%`, la matrícula primaria cae (Trabajo infantil).
+*   **Impacto**: Si `literacy > enrollment`, la alfabetización decae automáticamente.
+*   **Solución**: `invest_education` ahora también sube la matrícula (Transporte escolar/Becas).
 
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.

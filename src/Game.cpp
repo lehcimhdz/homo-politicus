@@ -74,11 +74,18 @@ void Game::processEvents() {
     else if (command == "invest_education") {
         std::cout << ">> Investing $20M in Education..." << std::endl;
         playerCountry.economy.gdp -= 20000000;
+        
+        // Boosts everything a bit
+        playerCountry.welfare.primary_enrollment += 0.005; // School buses/meals
         playerCountry.welfare.literacy_rate += 0.01;
         playerCountry.welfare.educational_quality += 0.01;
+        
+        // Clamps
+        if (playerCountry.welfare.primary_enrollment > 1.0) playerCountry.welfare.primary_enrollment = 1.0;
         if (playerCountry.welfare.literacy_rate > 1.0) playerCountry.welfare.literacy_rate = 1.0;
         if (playerCountry.welfare.educational_quality > 1.0) playerCountry.welfare.educational_quality = 1.0;
-        std::cout << "   Literacy: " << playerCountry.welfare.literacy_rate * 100 << "% | Quality: " << playerCountry.welfare.educational_quality * 100 << "%" << std::endl; 
+        
+        std::cout << "   Enrollment: " << playerCountry.welfare.primary_enrollment * 100 << "% | Literacy: " << playerCountry.welfare.literacy_rate * 100 << "%" << std::endl; 
     }
     else {
         std::cout << ">> Unknown command." << std::endl;
@@ -141,6 +148,20 @@ void Game::update() {
     double total_deaths = deaths_natural + deaths_suicide;
 
     playerCountry.welfare.population += (int)(births - total_deaths);
+
+    // --- ENROLLMENT DYNAMICS (The Poverty Trap) ---
+    // If Unemployment is high (> 10%), families pull kids out of school.
+    if (playerCountry.welfare.unemployment_rate > 0.10) {
+        playerCountry.welfare.primary_enrollment -= 0.01; 
+        std::cout << "[!] SOCIAL CRISIS: High unemployment lowers Primary Enrollment." << std::endl;
+    }
+    
+    // Literacy cannot exceed Primary Enrollment (Long term drag)
+    // If Literacy > Enrollment, it decays (old generation dies, new one is uneducated)
+    if (playerCountry.welfare.literacy_rate > playerCountry.welfare.primary_enrollment) {
+        double decay = (playerCountry.welfare.literacy_rate - playerCountry.welfare.primary_enrollment) * 0.1;
+        playerCountry.welfare.literacy_rate -= decay;
+    }
 
     // 2. Economy
     // GDP grows by (growth_rate - inflation) roughly
