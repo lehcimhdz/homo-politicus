@@ -30,7 +30,7 @@ struct WelfareSocietySystem {
     double university_enrollment = 0.40;
     double educational_quality = 0.7; // 0.0 to 1.0
     double brain_drain = 0.05;
-    double research_budget = 1000000.0;
+    double research_spending_gdp = 0.005; // 0.5% of GDP (Start low)
 
     // Labor and Social Security
     double unemployment_rate = 0.05;

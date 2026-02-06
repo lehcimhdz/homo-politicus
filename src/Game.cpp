@@ -118,7 +118,37 @@ void Game::update() {
     // Contextual Evolution:
     // 1. Unemployment: Being jobless is the #1 cause of depression in this model.
     // 2. Inflation: Financial stress.
-    // 3. Corruption: Loss of hope in society.
+    // --- RESEARCH & DEVELOPMENT (The Innovation Ladder) ---
+    // User Insight: "If basic needs are covered, increase budget".
+    // Basics: Unemployment < 8%, Inflation < 5%.
+    
+    if (playerCountry.welfare.unemployment_rate < 0.08 && playerCountry.economy.inflation < 0.05) {
+        // Prosperity: Government feels confident to invest in future.
+        // Target: 4% of GDP (Like Israel/Korea).
+        if (playerCountry.welfare.research_spending_gdp < 0.04) {
+            playerCountry.welfare.research_spending_gdp += 0.001; // +0.1% per year
+            std::cout << "[INFO] PROSPERITY: Research Budget increased to " << playerCountry.welfare.research_spending_gdp * 100 << "% of GDP." << std::endl;
+        }
+    } else {
+        // Crisis: Austerity measures. Cut Science first.
+        if (playerCountry.welfare.research_spending_gdp > 0.005) { // Floor 0.5%
+            playerCountry.welfare.research_spending_gdp -= 0.002;
+            std::cout << "[!] AUSTERITY: Research Budget cut due to economic instability." << std::endl;
+        }
+    }
+
+    // SPENDING EFFECT
+    // Money -> Tech Power
+    double science_budget_abs = playerCountry.economy.gdp * playerCountry.welfare.research_spending_gdp;
+    // Efficiency: Depends on Educational Quality
+    double effective_research = science_budget_abs * playerCountry.welfare.educational_quality;
+    
+    // Tech Power Growth (Slow process)
+    // Needs huge investment to move the needle.
+    playerCountry.politics.tech_power += (effective_research / 1000000000.0) * 0.05; // Arbitrary scaling
+    if (playerCountry.politics.tech_power > 1.0) playerCountry.politics.tech_power = 1.0;
+
+    // 4. Power & Securityion: Loss of hope in society.
     double target_mh = 1.0 
                      - (playerCountry.welfare.unemployment_rate * 2.0) 
                      - (playerCountry.economy.inflation * 1.5)

@@ -134,6 +134,17 @@ No basta con educar; hay que dar empleo.
     *   **Estancamiento Salarial**: El salario mínimo cae.
     *   **Fuga de Cerebros (`brain_drain`)**: Los mejores se van. Si pasa del 40%, el PIB sufre.
 
+    *   **Estancamiento Salarial**: El salario mínimo cae.
+    *   **Fuga de Cerebros (`brain_drain`)**: Los mejores se van. Si pasa del 40%, el PIB sufre.
+
+### Presupuesto de Investigación (I+D)
+La ciencia es un lujo de países estables.
+*   **Variable**: `research_spending_gdp`. Inicia en 0.5%.
+*   **Dinámica (Maslow)**:
+    *   **Prosperidad** (`Desempleo < 8%` Y `Inflación < 5%`): El gobierno invierte más (+0.1% anual) hasta llegar al 4%.
+    *   **Crisis**: Si hay problemas, se corta el presupuesto (-0.2% anual). "La ciencia no se come".
+*   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
