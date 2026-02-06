@@ -212,35 +212,60 @@ void Game::update() {
     }
 
     // --- LABOR MARKET SATURATION (The Education Paradox) ---
-    // User Insight: Education without GDP growth = Saturated Market.
     // Qualified Supply: High School + University Graduates
     double qualified_labor_supply = (playerCountry.welfare.secondary_enrollment + playerCountry.welfare.university_enrollment) / 2.0;
     
     // Economic Demand: Based on advanced sectors (Tech, Finance, modern Industry)
-    // We assume 'industrial_power' etc are normalized 0.0-1.0
-    double labor_demand = (playerCountry.politics.tech_power * 1.2) 
+    double labor_demand_quality = (playerCountry.politics.tech_power * 1.2) 
                         + (playerCountry.politics.financial_power * 1.0) 
-                        + (playerCountry.politics.industrial_power * 0.5); // Industry needs less degrees
+                        + (playerCountry.politics.industrial_power * 0.5); 
     
-    // Gap Analysis
-    if (qualified_labor_supply > labor_demand) {
-        // OVERSUPPLY: Too many graduates, not enough jobs.
-        // 1. Structural Unemployment
-        playerCountry.welfare.unemployment_rate += 0.002; 
+    // --- DYNAMIC UNEMPLOYMENT (Complex Model) ---
+    // Target Unemployment depends heavily on the economy structure.
+    
+    // 1. Cyclical: GDP Growth reduces unemployment.
+    // If growth is 2% (0.02), it reduces target by 4%.
+    double cyclical_factor = - (playerCountry.economy.growth_rate * 2.0);
+    
+    // 2. Structural (Automation): High Tech kills low-skilled jobs.
+    // If Tech is 1.0, adds +3% unemployment.
+    double automation_factor = playerCountry.politics.tech_power * 0.03;
+    
+    // 3. Policy (Rigidity): Unions and High Wages make hiring harder.
+    double rigidity_factor = (playerCountry.welfare.union_strength * 0.02) 
+                           + (playerCountry.welfare.minimum_wage / 10000.0); // Small scaling
+                           
+    // 4. Mismatch (Oversupply of graduates)
+    double mismatch_factor = 0.0;
+    if (qualified_labor_supply > labor_demand_quality) {
+        mismatch_factor = 0.05; // +5% Structural Unemployment
         
-        // 2. Wage Stagnation (Supply > Demand)
-        playerCountry.welfare.minimum_wage *= 0.995; // Real wages drop
-        
-        // 3. Brain Drain (The smartest leave)
+        // Also triggers Brain Drain
         playerCountry.welfare.brain_drain += 0.005;
-        
         if (playerCountry.welfare.brain_drain > 0.4) {
              std::cout << "[!] DEMOGRAPHIC ALERT: Massive Brain Drain! Professionals are fleeing." << std::endl;
-             // Educated people leaving lowers the average education remaining?
-             // Or at least hurts the economy next turn.
-             playerCountry.economy.gdp *= 0.998; // Loss of talent
+             playerCountry.economy.gdp *= 0.998;
         }
     }
+    
+    // CALCULATE TARGET
+    double base_unemployment = 0.04; // Friction
+    double target_unemployment = base_unemployment + cyclical_factor + automation_factor + rigidity_factor + mismatch_factor;
+    
+    // Floor
+    if (target_unemployment < 0.02) target_unemployment = 0.02; // Always some friction
+    
+    // DRIFT (Real economy adjusts slowly)
+    double labor_market_flexibility = 0.2; // 20% adjustment per year
+    double ue_drift = (target_unemployment - playerCountry.welfare.unemployment_rate) * labor_market_flexibility;
+    playerCountry.welfare.unemployment_rate += ue_drift;
+
+    // Wage Stagnation if Unemployment is High
+    if (playerCountry.welfare.unemployment_rate > 0.10) {
+        playerCountry.welfare.minimum_wage *= 0.995; // Supply/Demand
+    }
+    
+    // Secondary Enrollment Cap (Cascading from Primary)
     
     // Secondary Enrollment Cap (Cascading from Primary)
      if (playerCountry.welfare.secondary_enrollment > playerCountry.welfare.primary_enrollment) {
