@@ -145,6 +145,27 @@ La ciencia es un lujo de países estables.
     *   **Crisis**: Si hay problemas, se corta el presupuesto (-0.2% anual). "La ciencia no se come".
 *   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
 
+    *   **Crisis**: Si hay problemas, se corta el presupuesto (-0.2% anual). "La ciencia no se come".
+*   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
+
+### Sindicatos: El Escudo y la Espada
+`union_strength` (Fuerza Sindical) ya no es solo un dato.
+1.  **Indexación Salarial**: Si hay inflación, el sindicato negocia subidas automáticas del `minimum_wage` proporcionales a su fuerza. Protege al trabajador, pero puede crear espirales inflacionarias.
+2.  **Huelga General**: Si el salario no sube lo suficiente (pérdida de poder adquisitivo), la `general_strike_prob` se acumula.
+    *   **Efecto**: -3% PIB inmediato y subida forzosa de salarios (+5%).
+
+    *   **Efecto**: -3% PIB inmediato y subida forzosa de salarios (+5%).
+
+### El Colapso de las Pensiones (`pension_sustainability`)
+El sistema financiero más grande del país.
+*   **Envejecimiento**: `aging_index` sube cada año (+0.2%), aumentando el gasto. (Japón Scenario).
+*   **Ingresos**: Dependen de los trabajadores formales (`1 - Desempleo - Informalidad`).
+*   **Crisis**:
+    *   Si hay **Recesión**, los ingresos caen de golpe.
+    *   Si el fondo se vacía (Sostenibilidad < 10%):
+        *   **Bailout**: El gobierno imprime dinero para pagar.
+        *   **Efecto**: Inflación +5% inmediata y pérdida masiva de popularidad.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:

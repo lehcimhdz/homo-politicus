@@ -227,6 +227,54 @@ void Game::update() {
     // If growth is 2% (0.02), it reduces target by 4%.
     double cyclical_factor = - (playerCountry.economy.growth_rate * 2.0);
     
+
+    // --- DEMOGRAPHIC AGING (The Silent Crisis) ---
+    // People live longer, but birth rates fall (if educated).
+    // Natural Aging Drift: +0.2% per year (Global trend)
+    double aging_drift = 0.002;
+    // High birth rate slows aging (more young people)
+    if (playerCountry.welfare.birth_rate > 0.02) aging_drift -= 0.001; 
+    
+    playerCountry.welfare.aging_index += aging_drift;
+    if (playerCountry.welfare.aging_index > 0.6) playerCountry.welfare.aging_index = 0.6; // Cap (Japan scenario)
+
+    // --- PENSION SYSTEM (The Financial Time Bomb) ---
+    // Sustainable if: Workers > Retirees
+    // Income: Employment * Formal Labor (Only formal workers pay taxes/pensions)
+    double labor_market_participation = (1.0 - playerCountry.welfare.unemployment_rate) * (1.0 - playerCountry.welfare.labor_informality);
+    
+    // Expense: Aging Index (Retirees) * Generosity (Sustainability factor itself acts as coverage)
+    // We assume expense grows with Aging.
+    double pension_expense = playerCountry.welfare.aging_index * 2.0; // Retirees are expensive
+    
+    // Balance
+    double pension_balance = labor_market_participation - pension_expense;
+    
+    // Recession Multiplier: If GDP shrinks, tax revenue collapses, hurting the fund instantly.
+    if (playerCountry.economy.growth_rate < 0.0) {
+        pension_balance -= 0.05; // Crisis penalty
+        std::cout << "[!] RECESSION ALERT: Pension contributions plummeting due to economic contraction." << std::endl;
+    }
+
+    // Update Sustainability
+    // It's a slow moving fund (buffer).
+    playerCountry.welfare.pension_sustainability += (pension_balance * 0.1); 
+    
+    // Limits
+    if (playerCountry.welfare.pension_sustainability > 1.0) playerCountry.welfare.pension_sustainability = 1.0;
+    
+    // COLLAPSE CHECK
+    if (playerCountry.welfare.pension_sustainability < 0.10) {
+        std::cout << "[!!!] PENSION COLLAPSE: The Social Security system is bankrupt." << std::endl;
+        std::cout << "      Government forced to print money to pay retirees." << std::endl;
+        
+        // Bailout Consequence
+        playerCountry.economy.gdp -= 100000000; // $100M Bailout
+        playerCountry.economy.inflation += 0.05; // Printing money causes Inflation spike
+        playerCountry.politics.popularity -= 0.10; // Anger
+        playerCountry.welfare.pension_sustainability = 0.30; // Reset with bailout money
+    }
+
     // 2. Structural (Automation): High Tech kills low-skilled jobs.
     // If Tech is 1.0, adds +3% unemployment.
     double automation_factor = playerCountry.politics.tech_power * 0.03;
@@ -260,11 +308,52 @@ void Game::update() {
     double ue_drift = (target_unemployment - playerCountry.welfare.unemployment_rate) * labor_market_flexibility;
     playerCountry.welfare.unemployment_rate += ue_drift;
 
-    // Wage Stagnation if Unemployment is High
+     // Wage Stagnation if Unemployment is High (Supply/Demand)
     if (playerCountry.welfare.unemployment_rate > 0.10) {
-        playerCountry.welfare.minimum_wage *= 0.995; // Supply/Demand
+        playerCountry.welfare.minimum_wage *= 0.995; 
     }
-    
+
+    // --- UNION BARGAINING (The Counter-Force) ---
+    // Unions fight to index wages to inflation.
+    if (playerCountry.economy.inflation > 0.02) {
+        // They demand to match inflation.
+        // Power determines how much they get.
+        double wage_indexation = playerCountry.economy.inflation * playerCountry.welfare.union_strength;
+        
+        // Apply Raise
+        if (wage_indexation > 0.001) {
+            double old_wage = playerCountry.welfare.minimum_wage;
+            playerCountry.welfare.minimum_wage *= (1.0 + wage_indexation);
+            // std::cout << "[INFO] LABOUR: Unions negotiated a wage increase to match inflation." << std::endl;
+        }
+
+        // Dissatisfaction: If they didn't get full inflation match, they get angry.
+        double lost_purchasing_power = playerCountry.economy.inflation - wage_indexation;
+        if (lost_purchasing_power > 0.01) {
+             playerCountry.welfare.general_strike_prob += (lost_purchasing_power * 5.0); // Anger builds up
+        }
+    }
+
+    // GENERAL STRIKE CHECK
+    // Probability accumulates until they blow up.
+    if (playerCountry.welfare.general_strike_prob > 0.05) { // 5% risk threshold to start rolling
+        int roll = std::rand() % 100;
+        if (roll < (playerCountry.welfare.general_strike_prob * 100)) {
+            std::cout << "[!!!] GENERAL STRIKE! The country is paralyzed." << std::endl;
+            // Consequence:
+            playerCountry.economy.gdp *= 0.97; // -3% GDP (Production Halt)
+            playerCountry.politics.popularity -= 0.05; // Chaos
+            playerCountry.welfare.general_strike_prob = 0.0; // Tension released
+            
+            // Forced Negotiation
+            playerCountry.welfare.minimum_wage *= 1.05; // They win +5%
+            std::cout << "      Government forced to raise Minimum Wage by 5%." << std::endl;
+        } else {
+             // Tension cools slightly if no strike happens (fatigue)
+             playerCountry.welfare.general_strike_prob *= 0.90;
+        }
+    }
+
     // Secondary Enrollment Cap (Cascading from Primary)
     
     // Secondary Enrollment Cap (Cascading from Primary)
