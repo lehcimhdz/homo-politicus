@@ -125,6 +125,15 @@ La alfabetización tiene un límite físico: `primary_enrollment`.
 *   **Impacto**: Si `literacy > enrollment`, la alfabetización decae automáticamente.
 *   **Solución**: `invest_education` ahora también sube la matrícula (Transporte escolar/Becas).
 
+### La Paradoja de la Educación (Oferta y Demanda)
+No basta con educar; hay que dar empleo.
+*   **Oferta Cualificada**: Promedio de Educación Secundaria y Universitaria.
+*   **Demanda Laboral**: $Tech \times 1.2 + Financiero \times 1.0 + Industria \times 0.5$.
+*   **Saturación**: Si `Oferta > Demanda`:
+    *   **Desempleo Estructural**: Aumenta aunque la economía crezca (sobran abogados, faltan soldadores).
+    *   **Estancamiento Salarial**: El salario mínimo cae.
+    *   **Fuga de Cerebros (`brain_drain`)**: Los mejores se van. Si pasa del 40%, el PIB sufre.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:

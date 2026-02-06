@@ -181,6 +181,42 @@ void Game::update() {
         if (playerCountry.welfare.birth_rate < 0.005) playerCountry.welfare.birth_rate = 0.005; // Floor
     }
 
+    // --- LABOR MARKET SATURATION (The Education Paradox) ---
+    // User Insight: Education without GDP growth = Saturated Market.
+    // Qualified Supply: High School + University Graduates
+    double qualified_labor_supply = (playerCountry.welfare.secondary_enrollment + playerCountry.welfare.university_enrollment) / 2.0;
+    
+    // Economic Demand: Based on advanced sectors (Tech, Finance, modern Industry)
+    // We assume 'industrial_power' etc are normalized 0.0-1.0
+    double labor_demand = (playerCountry.politics.tech_power * 1.2) 
+                        + (playerCountry.politics.financial_power * 1.0) 
+                        + (playerCountry.politics.industrial_power * 0.5); // Industry needs less degrees
+    
+    // Gap Analysis
+    if (qualified_labor_supply > labor_demand) {
+        // OVERSUPPLY: Too many graduates, not enough jobs.
+        // 1. Structural Unemployment
+        playerCountry.welfare.unemployment_rate += 0.002; 
+        
+        // 2. Wage Stagnation (Supply > Demand)
+        playerCountry.welfare.minimum_wage *= 0.995; // Real wages drop
+        
+        // 3. Brain Drain (The smartest leave)
+        playerCountry.welfare.brain_drain += 0.005;
+        
+        if (playerCountry.welfare.brain_drain > 0.4) {
+             std::cout << "[!] DEMOGRAPHIC ALERT: Massive Brain Drain! Professionals are fleeing." << std::endl;
+             // Educated people leaving lowers the average education remaining?
+             // Or at least hurts the economy next turn.
+             playerCountry.economy.gdp *= 0.998; // Loss of talent
+        }
+    }
+    
+    // Secondary Enrollment Cap (Cascading from Primary)
+     if (playerCountry.welfare.secondary_enrollment > playerCountry.welfare.primary_enrollment) {
+        playerCountry.welfare.secondary_enrollment -= 0.01; // Decays if base is missing
+    }
+
     // --- POLITICAL INSTABILITY (The Modern Trap) ---
     // If Education is High, but Corruption is High -> People get angry.
     if (playerCountry.welfare.literacy_rate > 0.90 && playerCountry.politics.administrative_corruption > 0.30) {
