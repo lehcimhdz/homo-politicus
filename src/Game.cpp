@@ -313,6 +313,41 @@ void Game::update() {
         playerCountry.welfare.minimum_wage *= 0.995; 
     }
 
+    // --- WAGE POLITICS (The Goldilocks Zone) ---
+    // User Insight: Wage should be Median Income (~40% GDP per Capita).
+    double gdp_per_capita = playerCountry.economy.gdp / playerCountry.welfare.population;
+    double living_wage_target = gdp_per_capita * 0.40; // Rough heuristic for "Median"
+    
+    // CASE A: TOO LOW (Neoliberal Trap)
+    // Wage < 80% of Living Wage
+    if (playerCountry.welfare.minimum_wage < (living_wage_target * 0.8)) {
+        // Inequality and Poverty Rise
+        playerCountry.welfare.poverty_rate += 0.02; 
+        // Low Consumption hurts GDP
+        playerCountry.economy.growth_rate -= 0.002; 
+        // Popularity hit (Working Poor)
+        playerCountry.politics.popularity -= 0.01;
+        std::cout << "[INFO] INEQUALITY: Wages too low. Poverty rises to " << playerCountry.welfare.poverty_rate * 100 << "%" << std::endl;
+    }
+    
+    // CASE B: TOO HIGH (Populist Trap)
+    // Wage > 120% of Living Wage
+    else if (playerCountry.welfare.minimum_wage > (living_wage_target * 1.2)) {
+        // Businesses pass cost to prices -> Inflation
+        playerCountry.economy.inflation += 0.015; 
+        // Businesses stop hiring -> Unemployment
+        playerCountry.welfare.unemployment_rate += 0.01;
+        // Businesses go illegal -> Informality
+        playerCountry.welfare.labor_informality += 0.01;
+        std::cout << "[!] WAGE SPIRAL: High wages causing Inflation & Informality." << std::endl;
+    }
+    
+    // CASE C: SWEET SPOT
+    else {
+        // Reduce Poverty slowly
+        if (playerCountry.welfare.poverty_rate > 0.05) playerCountry.welfare.poverty_rate -= 0.01;
+    }
+
     // --- UNION BARGAINING (The Counter-Force) ---
     // Unions fight to index wages to inflation.
     if (playerCountry.economy.inflation > 0.02) {

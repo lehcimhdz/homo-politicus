@@ -166,6 +166,21 @@ El sistema financiero más grande del país.
         *   **Bailout**: El gobierno imprime dinero para pagar.
         *   **Efecto**: Inflación +5% inmediata y pérdida masiva de popularidad.
 
+        *   **Bailout**: El gobierno imprime dinero para pagar.
+        *   **Efecto**: Inflación +5% inmediata y pérdida masiva de popularidad.
+
+### Política Salarial (`wage+`, `wage-`)
+El gobierno decide el salario mínimo, pero el mercado juzga.
+*   **Target (Salario Digno)**: Se calcula como `PIB per Cápita * 0.4`.
+*   **Zona Baja (< 80% Target)**:
+    *   **Pobreza**: Aumenta.
+    *   **Crecimiento**: Se frena (bajo consumo).
+*   **Zona Alta (> 120% Target)**:
+    *   **Inflación**: Se dispara (Espiral Precios-Salarios).
+    *   **Informalidad**: Las empresas contratan en negro para no pagar.
+    *   **Desempleo**: Aumenta.
+*   *Comando*: Usa `wage+` con cuidado. Ganarás popularidad hoy, pero inflación mañana.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:

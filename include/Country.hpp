@@ -39,6 +39,7 @@ struct WelfareSocietySystem {
     double minimum_wage = 1000.0;
     double labor_informality = 0.15;
     double general_strike_prob = 0.02;
+    double poverty_rate = 0.25; // 25% of population below poverty line
 
     // Demographics
     double birth_rate = 0.015;
