@@ -1,76 +1,69 @@
-# Homo Politicus
+# Homo Politicus - Simulator
 
-**Homo Politicus** es un simulador político y económico de estrategia por turnos escrito en C++.
-Asumes el papel de Presidente de una nación ficticia. Tu objetivo: mantenerte en el poder ganando elecciones cada 4 años, mientras gestionas la economía, el bienestar social y evitas el caos.
+**Homo Politicus** es un simulador político y económico de estrategia por turnos profundo y realista.
+Asumes el papel de Presidente. Tu objetivo es sobrevivir a las elecciones democráticas mientras gestionas una economía interconectada y una sociedad viva.
 
-## 🚀 Cómo Empezar
+---
 
-### Requisitos
-- Compilador de C++ (clang++ o g++)
-- Make
+## 🚀 Nuevas Mecánicas Avanzadas
+Este simulador ya no es lineal. Cada decisión tiene consecuencias interconectadas.
 
-### Compilación
-Abre tu terminal en la carpeta del proyecto y ejecuta:
+### 🧠 Índice de Salud Mental y Suicidios
+Tus ciudadanos sienten desesperación económica.
+*   **Depresión**: Aumenta con el **Desempleo**, la **Inflación** y la **Corrupción**.
+*   **Consecuencia**: Si la Salud Mental cae, la **Tasa de Suicidios** se dispara.
+*   *Consejo*: No basta con tener hospitales; la gente necesita esperanza.
+
+### 🎓 La Trampa de la Educación
+Educar a tu población es un arma de doble filo.
+1.  **Tech Boom**: Si tienes `Alfabetización > 90%` y `Calidad > 70%`, obtienes un **Bonus de +1.5% al PIB**.
+2.  **La Trampa**:
+    *   Si educas a la gente pero eres **Corrupto** -> **Protestas Masivas**.
+    *   Si educas a la gente pero no creas **Industria** -> **Fuga de Cerebros** y **Desempleo Estructural**.
+3.  **Techo de Cristal**: La alfabetización está limitada por la **Matrícula Primaria**. Si hay crisis (Desempleo > 10%), los niños dejan la escuela y el futuro se pierde.
+
+### 📉 Mercado Laboral Dinámico (Target Drift)
+El desempleo es un monstruo de 4 cabezas:
+1.  **Ciclo**: Crecer reduce el paro.
+2.  **Automatización**: Alta tecnología (`tech_power`) destruye empleos básicos.
+3.  **Rigidez**: Sindicatos fuertes protegen salarios pero dificultan la contratación.
+4.  **Drift**: El mercado laboral es lento. Tarda años en recuperarse de una crisis.
+
+### 🧪 Presupuesto de Ciencia Inteligente (Maslow)
+El gobierno invierte en ciencia según la prosperidad.
+*   **Prosperidad**: Si la economía va bien, el presupuesto de I+D sube solo hasta el 4% del PIB.
+*   **Austeridad**: En crisis, la ciencia es lo primero que se corta.
+
+### 🏗️ Mantenimiento de Infraestructura
+Todo se degrada un 5% al año.
+*   Si `maintenance_level < 50%`:
+    *   Riesgo de **Colapso de Puentes** (Maja el PIB).
+    *   Riesgo de **Incendios/Explosiones** (Mata gente).
+    *   Riesgo de **MCI (Mass Casualty Incidents)**: Si tus hospitales no dan abasto ante un desastre, el sistema colapsa.
+*   *Comando*: `invest_maintenance` ($10M) para reparar.
+
+---
+
+## 🎮 Guía de Comandos
+
+| Comando | Coste | Efecto Principal | Efecto Secundario |
+| :--- | :--- | :--- | :--- |
+| **`next`** | - | **Avanzar Año** | Ejecuta toda la simulación (PIB, Población, Eventos). |
+| **`invest_infra`** | $50M | **+Crecimiento PIB** | Mejora carreteras. Vital a largo plazo. |
+| **`invest_education`**| $20M | **+Alfabetización** | Sube calidad y matrícula. Cuidado con la fuga de cerebros. |
+| **`invest_health`** | $10M | **+Salud / -Muertes** | Aumenta cobertura. Vital para pandemias. |
+| **`invest_security`** | $10M | **-Crimen** | Reduce homicidios. Mejora popularidad. |
+| **`invest_maintenance`**| $10M | **Repara Infra** | Evita desastres catastróficos (Puentes, Incendios). |
+| **`tax+` / `tax-`** | - | **Ajuste Fiscal** | Sube/Baja recaudación a costa de popularidad. |
+| **`exit`** | - | **Salir** | Guarda (mentalmente) y cierra. |
+
+---
+
+## Compile & Run
+
 ```bash
 make
-```
-
-### Ejecución
-```bash
 ./HomoPoliticus
 ```
 
----
-
-## 🎮 Cómo Jugar
-
-El juego es **por turnos**. En cada año, puedes tomar decisiones antes de avanzar.
-
-### Comandos Principales
-| Comando | Acción | Efecto |
-| :--- | :--- | :--- |
-| **`next`** | Avanzar Año | Pasa el tiempo. La población crece, el PIB cambia, ocurren eventos. |
-| **`exit`** | Salir | Cierra el juego. |
-
-### 💰 Gestión Fiscal
-| Comando | Acción | Efecto |
-| :--- | :--- | :--- |
-| **`tax+`** | Subir Impuestos | 📈 +10% Recaudación, 📉 -5% Popularidad, 📈 +1% Inflación. |
-| **`tax-`** | Bajar Impuestos | 📉 -10% Recaudación, 📈 +3% Popularidad. |
-
-### 🏗️ Presupuesto e Inversión
-Gasta tu PIB para mejorar el país permanentemente.
-
-| Comando | Coste | Efecto |
-| :--- | :--- | :--- |
-| **`invest_health`** | $10M | Mejora la Cobertura de Salud (+5%) y Popularidad (+2%). |
-| **`invest_security`**| $10M | Reduce la Tasa de Homicidios (-1.0) y mejora Popularidad (+1%). |
-| **`invest_infra`** | $50M | **Aumenta la Tasa de Crecimiento (+0.1%)**. La mejor inversión a largo plazo. |
-
----
-
-## ⚙️ Mecánicas del Juego
-
-### 🗳️ Elecciones
-Cada **4 años** se celebran elecciones democráticas.
-- Si tu **Popularidad > 50%**: Ganas la reelección.
-- Si tu **Popularidad <= 50%**: Pierdes y el juego termina (**GAME OVER**).
-
-### 🎲 Eventos Aleatorios
-Cada año hay un 30% de probabilidad de que ocurra un evento:
-- **Pandemia**: La población muere y la economía se contrae.
-- **Escándalo de Corrupción**: Tu popularidad cae drásticamente.
-- **Avance Tecnológico**: El PIB crece rápidamente.
-
-### 📊 Economía
-- **PIB (GDP)**: Crece anualmente basado en la `growth_rate`.
-- **Población**: Crece basado en nacimientos vs muertes.
-
----
-
-## 📂 Estructura del Código
-- `src/main.cpp`: Punto de entrada.
-- `src/Game.cpp`: Bucle principal y lógica de comandos.
-- `src/Country.cpp`: Datos del país.
-- `src/EventManager.cpp`: Lógica de eventos aleatorios.
-- `include/`: Archivos de cabecera (.hpp).
+*Desarrollado para simular la complejidad real de gobernar.*
