@@ -348,6 +348,29 @@ void Game::update() {
         if (playerCountry.welfare.poverty_rate > 0.05) playerCountry.welfare.poverty_rate -= 0.01;
     }
 
+    // --- DYNAMIC UNION STRENGTH (Organizational Power) ---
+    // Unions grow when labor is scarce (Low Unemployment) and Inflation scares people.
+    if (playerCountry.welfare.unemployment_rate < 0.06) {
+        playerCountry.welfare.union_strength += 0.005; // Workers have leverage
+    } else if (playerCountry.welfare.unemployment_rate > 0.12) {
+        playerCountry.welfare.union_strength -= 0.005; // Workers are desperate, accept anything
+    }
+    
+    // Inflation drives membership (Safety outcome)
+    if (playerCountry.economy.inflation > 0.05) {
+        playerCountry.welfare.union_strength += 0.002;
+    }
+    
+    // Informality kills unions (Can't organize ghost workers)
+    if (playerCountry.welfare.labor_informality > 0.40) {
+        playerCountry.welfare.union_strength -= 0.01;
+    }
+    
+    // Cap
+    if (playerCountry.welfare.union_strength > 0.9) playerCountry.welfare.union_strength = 0.9;
+    if (playerCountry.welfare.union_strength < 0.05) playerCountry.welfare.union_strength = 0.05;
+
+
     // --- UNION BARGAINING (The Counter-Force) ---
     // Unions fight to index wages to inflation.
     if (playerCountry.economy.inflation > 0.02) {
@@ -365,8 +388,20 @@ void Game::update() {
         // Dissatisfaction: If they didn't get full inflation match, they get angry.
         double lost_purchasing_power = playerCountry.economy.inflation - wage_indexation;
         if (lost_purchasing_power > 0.01) {
-             playerCountry.welfare.general_strike_prob += (lost_purchasing_power * 5.0); // Anger builds up
+             // ECONOMIC STRIKE MOTIVATION
+             playerCountry.welfare.general_strike_prob += (lost_purchasing_power * 5.0); 
         }
+    }
+    
+    // POLITICAL STRIKE MOTIVATION
+    // Unions also strike against Corruption and Unpopularity.
+    if (playerCountry.politics.administrative_corruption > 0.30) {
+        // "Moral Strike" against the regime
+        playerCountry.welfare.general_strike_prob += 0.005; 
+    }
+    if (playerCountry.politics.popularity < 0.25) {
+        // "Opportunistic Strike": They smell blood.
+        playerCountry.welfare.general_strike_prob += 0.01;
     }
 
     // GENERAL STRIKE CHECK

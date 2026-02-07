@@ -148,11 +148,20 @@ La ciencia es un lujo de países estables.
     *   **Crisis**: Si hay problemas, se corta el presupuesto (-0.2% anual). "La ciencia no se come".
 *   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
 
-### Sindicatos: El Escudo y la Espada
-`union_strength` (Fuerza Sindical) ya no es solo un dato.
-1.  **Indexación Salarial**: Si hay inflación, el sindicato negocia subidas automáticas del `minimum_wage` proporcionales a su fuerza. Protege al trabajador, pero puede crear espirales inflacionarias.
-2.  **Huelga General**: Si el salario no sube lo suficiente (pérdida de poder adquisitivo), la `general_strike_prob` se acumula.
-    *   **Efecto**: -3% PIB inmediato y subida forzosa de salarios (+5%).
+    *   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
+
+### Sindicatos Dinámicos (`union_strength`)
+La fuerza laboral ya no es estática.
+*   **Crece**: Si hay **Pleno Empleo** (Desempleo < 6%) o **Alta Inflación** (Necesidad de defensa).
+*   **Decrece**: Si hay **Desempleo Masivo** (> 12%) o **Alta Informalidad** (Imposible organizar).
+
+### Huelga General: Multicausal
+Un paro nacional ya no es solo por dinero. Se activa por 3 factores acumulativos:
+1.  **Económico**: Pérdida de poder adquisitivo (Inflación > Salarios).
+2.  **Moral**: Corrupción alta (> 30%). "Huelga contra la casta".
+3.  **Político**: Popularidad baja (< 25%). "Huelga para tumbar al gobierno".
+
+### El Colapso de las Pensiones (`pension_sustainability`)
 
     *   **Efecto**: -3% PIB inmediato y subida forzosa de salarios (+5%).
 
