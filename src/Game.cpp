@@ -419,9 +419,46 @@ void Game::update() {
             playerCountry.welfare.minimum_wage *= 1.05; // They win +5%
             std::cout << "      Government forced to raise Minimum Wage by 5%." << std::endl;
         } else {
-             // Tension cools slightly if no strike happens (fatigue)
+            // Tension cools slightly if no strike happens (fatigue)
              playerCountry.welfare.general_strike_prob *= 0.90;
         }
+    }
+
+    // --- THE CYCLE OF POVERTY (Misery Index) ---
+    // Unemployment feeds poverty directly.
+    // If 10% are unemployed, they are poor.
+    double new_poor = playerCountry.welfare.unemployment_rate * 0.5; // Half of unemployed become destitute
+    playerCountry.welfare.poverty_rate += new_poor;
+    
+    // Inflation also creates poverty (Working Poor)
+    if (playerCountry.economy.inflation > 0.10) {
+        playerCountry.welfare.poverty_rate += 0.01; // Erosion of savings
+    }
+    
+    // Mitigation: Education (Social Mobility)
+    // High Literacy allows people to escape poverty over time.
+    if (playerCountry.welfare.literacy_rate > 0.80) {
+        playerCountry.welfare.poverty_rate -= 0.005; 
+    }
+    
+    // Cap Poverty
+    if (playerCountry.welfare.poverty_rate > 0.90) playerCountry.welfare.poverty_rate = 0.90;
+    
+    // --- CRIME & INSTABILITY (Consequences of Poverty) ---
+    // Desperation leads to Crime.
+    // Base Homicide Rate grows with Poverty.
+    double crime_driver = (playerCountry.welfare.poverty_rate * 2.0) 
+                        + (playerCountry.welfare.unemployment_rate * 1.0)
+                        + (playerCountry.politics.administrative_corruption * 0.5); // Impunity
+    
+    playerCountry.security.homicide_rate += crime_driver;
+    
+    // Security Spending (invest_security) is the only counter-force (Manual command reducing it).
+    // So if you don't invest, crime spirals.
+    
+    // Radicalization: Poor people lose faith in the system.
+    if (playerCountry.welfare.poverty_rate > 0.30) {
+        playerCountry.politics.polarization_index += 0.02;
     }
 
     // Secondary Enrollment Cap (Cascading from Primary)

@@ -190,6 +190,20 @@ El gobierno decide el salario mínimo, pero el mercado juzga.
     *   **Desempleo**: Aumenta.
 *   *Comando*: Usa `wage+` con cuidado. Ganarás popularidad hoy, pero inflación mañana.
 
+    *   **Desempleo**: Aumenta.
+*   *Comando*: Usa `wage+` con cuidado. Ganarás popularidad hoy, pero inflación mañana.
+
+### El Ciclo de la Miseria (Pobreza y Crimen)
+`poverty_rate` ya no es estático.
+1.  **Causas**:
+    *   **Desempleo**: Alimenta la pobreza directamente (+0.5% por cada 1% de paro).
+    *   **Inflación**: Erosiona los ahorros (+1% si Inflación > 10%).
+    *   **Mitigación**: La Educación reduce la pobreza a largo plazo (Movilidad Social).
+2.  **Consecuencias**:
+    *   **Crimen**: La desesperación aumenta la `homicide_rate`.
+        *   Fórmula: $Pobreza \times 2 + Desempleo \times 1 + Corrupción \times 0.5$.
+    *   **Radicalización**: Si `pobreza > 30%`, la gente se polariza (+2% anual).
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
