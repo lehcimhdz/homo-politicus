@@ -48,6 +48,30 @@ void Game::processEvents() {
         std::cout << ">> Taxes LOWERED! Revenue down, Popularity up." << std::endl;
     }
     // --- BUDGET COMMANDS ---
+    else if (command == "wage-") {
+        playerCountry.welfare.minimum_wage *= 0.90; // -10%
+        std::cout << ">> DECREE: Cutting Minimum Wage to $" << playerCountry.welfare.minimum_wage << std::endl;
+        std::cout << "   (Competitiveness +, Poverty ++, Popularity --)" << std::endl;
+        playerCountry.politics.popularity -= 0.06;
+    }
+    // PENSION REFORM
+    else if (command == "retire+") {
+        playerCountry.welfare.retirement_age += 1.0;
+        std::cout << ">> REFORM: Raising Retirement Age to " << playerCountry.welfare.retirement_age << " years." << std::endl;
+        std::cout << "   (Pension Sustainability ++, Popularity ---)" << std::endl;
+        playerCountry.politics.popularity -= 0.05; // Very Unpopular
+        // Immediate Protest Risk
+        if (std::rand() % 100 < 30) {
+            std::cout << "[!] PROTESTS: Seniors take the streets!" << std::endl;
+            playerCountry.welfare.general_strike_prob += 0.05;
+        }
+    }
+    else if (command == "retire-") {
+        playerCountry.welfare.retirement_age -= 1.0;
+        std::cout << ">> REFORM: Lowering Retirement Age to " << playerCountry.welfare.retirement_age << " years." << std::endl;
+        std::cout << "   (Popularity ++, Pension Sustainability --)" << std::endl;
+        playerCountry.politics.popularity += 0.03;
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;
@@ -305,9 +329,15 @@ void Game::update() {
     // Income: Employment * Formal Labor (Only formal workers pay taxes/pensions)
     double labor_market_participation = (1.0 - playerCountry.welfare.unemployment_rate) * (1.0 - playerCountry.welfare.labor_informality);
     
-    // Expense: Aging Index (Retirees) * Generosity (Sustainability factor itself acts as coverage)
-    // We assume expense grows with Aging.
-    double pension_expense = playerCountry.welfare.aging_index * 2.0; // Retirees are expensive
+    // RETIREMENT AGE MODIFIER
+    // Standard: 65.
+    // Every year above 65 reduces burden by 10%.
+    // Every year below 65 increases burden by 10%.
+    double age_diff = playerCountry.welfare.retirement_age - 65.0;
+    double expense_modifier = 1.0 - (age_diff * 0.10); 
+    if (expense_modifier < 0.5) expense_modifier = 0.5; // Min 50% cost (People still get sick)
+
+    double pension_expense = (playerCountry.welfare.aging_index * 2.0) * expense_modifier; // Adjusted Cost
     
     // Balance
     double pension_balance = labor_market_participation - pension_expense;
@@ -319,6 +349,7 @@ void Game::update() {
     }
 
     // Update Sustainability
+    playerCountry.welfare.pension_sustainability = pension_balance;
     // It's a slow moving fund (buffer).
     playerCountry.welfare.pension_sustainability += (pension_balance * 0.1); 
     

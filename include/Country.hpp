@@ -36,6 +36,7 @@ struct WelfareSocietySystem {
     double unemployment_rate = 0.05;
     double union_strength = 0.4;
     double pension_sustainability = 0.6;
+    double retirement_age = 65.0; // Years
     double minimum_wage = 1000.0;
     double labor_informality = 0.15;
     double general_strike_prob = 0.02;
