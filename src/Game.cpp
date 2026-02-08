@@ -171,6 +171,38 @@ void Game::update() {
     // 1. Demographics (Simple Annual Calculation)
     double births = playerCountry.welfare.population * playerCountry.welfare.birth_rate;
     
+    // --- DEMOGRAPHIC TRANSITION PART 2 (Death Rate) ---
+    // Base Biological Death Rate (Young Population): 0.5%
+    double target_death_rate = 0.005;
+    
+    // 1. Aging Effect (The inevitable)
+    // Old people die. +1.5% at max aging.
+    target_death_rate += (playerCountry.welfare.aging_index * 0.015);
+    
+    // 2. Health System (The Shield)
+    // High coverage saves lives. -0.5% impact.
+    target_death_rate -= (playerCountry.welfare.health_coverage * 0.005);
+    
+    // 3. Poverty (The Killer)
+    // Lack of access, nutrition, stress. +0.5% impact.
+    target_death_rate += (playerCountry.welfare.poverty_rate * 0.005);
+    
+    // 4. Lifestyle (Obesity)
+    target_death_rate += (playerCountry.welfare.obesity_rate * 0.005);
+    
+    // 5. Environment (Pollution)
+    // CO2 as proxy for air quality.
+    if (playerCountry.infra.co2_emissions > 5000.0) {
+        target_death_rate += 0.002;
+    }
+    
+    // Drift (Health changes slowly)
+    double death_drift = (target_death_rate - playerCountry.welfare.death_rate) * 0.1;
+    playerCountry.welfare.death_rate += death_drift;
+
+    // Floor (Nobody lives forever)
+    if (playerCountry.welfare.death_rate < 0.005) playerCountry.welfare.death_rate = 0.005;
+
     // Add Suicide to Deaths
     // Base Death Rate + Obesity + Suicide
     double deaths_natural = playerCountry.welfare.population * playerCountry.welfare.death_rate;
@@ -205,11 +237,41 @@ void Game::update() {
     playerCountry.economy.gdp += playerCountry.economy.gdp * real_growth;
 
     // --- EDUCATION & DEMOGRAPHICS ---
-    // High literacy reduces birth rate naturally
-    if (playerCountry.welfare.literacy_rate > 0.95) {
-        playerCountry.welfare.birth_rate -= 0.0002;
-        if (playerCountry.welfare.birth_rate < 0.005) playerCountry.welfare.birth_rate = 0.005; // Floor
+    // --- DEMOGRAPHIC TRANSITION (The Birth Rate Formula) ---
+    // User Insight: "Education and Urbanization reduce birth rates."
+    
+    // Base Fertility (Developing Nation): 3.5%
+    double target_birth_rate = 0.035;
+    
+    // 1. Education Effect (Female Empowerment)
+    // High literacy delays marriage/childbirth significantly.
+    // -1.5% at 100% Literacy.
+    target_birth_rate -= (playerCountry.welfare.literacy_rate * 0.015);
+    
+    // 2. Urbanization Effect (Cost of Living)
+    // Kids are expensive in cities.
+    // -1.0% at 100% Urbanization.
+    target_birth_rate -= (playerCountry.welfare.urban_population_ratio * 0.010);
+    
+    // 3. Poverty Effect (Survival Strategy)
+    // Poor families have more kids for labor/security.
+    // +0.5% at 100% Poverty.
+    target_birth_rate += (playerCountry.welfare.poverty_rate * 0.005);
+    
+    // 4. Unemployment Effect (Economic Uncertainty)
+    // High unemployment delays family formation.
+    // -0.5% impact.
+    if (playerCountry.welfare.unemployment_rate > 0.08) {
+         target_birth_rate -= 0.002;
     }
+
+    // Apply Drift (Demographics change slowly)
+    double demo_drift = (target_birth_rate - playerCountry.welfare.birth_rate) * 0.1; // 10% adjustment/year
+    playerCountry.welfare.birth_rate += demo_drift;
+    
+    // Clamp
+    if (playerCountry.welfare.birth_rate < 0.005) playerCountry.welfare.birth_rate = 0.005; // Japan/Korea floor
+    if (playerCountry.welfare.birth_rate > 0.05) playerCountry.welfare.birth_rate = 0.05; // Niger ceiling
 
     // --- LABOR MARKET SATURATION (The Education Paradox) ---
     // Qualified Supply: High School + University Graduates

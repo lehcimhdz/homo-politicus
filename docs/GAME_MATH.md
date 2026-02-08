@@ -204,6 +204,31 @@ El gobierno decide el salario mínimo, pero el mercado juzga.
         *   Fórmula: $Pobreza \times 2 + Desempleo \times 1 + Corrupción \times 0.5$.
     *   **Radicalización**: Si `pobreza > 30%`, la gente se polariza (+2% anual).
 
+    *   **Radicalización**: Si `pobreza > 30%`, la gente se polariza (+2% anual).
+
+### Transición Demográfica (`birth_rate`)
+La demografía es el destino.
+*   **Fórmula**: $Base (3.5\%) - Educación - Urbanización + Pobreza - Desempleo$.
+*   **Efectos**:
+    *   **Educación**: La mujer educada tiene menos hijos (-1.5%).
+    *   **Urbanización**: La ciudad es cara para criar hijos (-1.0%).
+    *   **Pobreza**: Las familias pobres tienen más hijos por supervivencia (+0.5%).
+    *   **Incertidumbre**: El desempleo retrasa la natalidad (-0.2%).
+*   **Consecuencia**: Si tienes éxito (País Rico/Educado), tu natalidad caerá, acelerando el **Envejecimiento** y la **Crisis de Pensiones**.
+
+*   **Consecuencia**: Si tienes éxito (País Rico/Educado), tu natalidad caerá, acelerando el **Envejecimiento** y la **Crisis de Pensiones**.
+
+### Mortalidad Dinámica (`death_rate`)
+La muerte nos iguala a todos, pero las variables deciden cuándo.
+*   **Base**: 0.5% (Biológica).
+*   **Aceleradores**:
+    *   **Envejecimiento**: +1.5% si el país es viejo.
+    *   **Pobreza**: +0.5% (Falta de recursos).
+    *   **Obesidad**: +0.5% (Enfermedades crónicas).
+    *   **Contaminación**: +0.2% si CO2 > 5000.
+*   **Freno**:
+    *   **Cobertura de Salud**: -0.5% (Hospitales y medicinas).
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
