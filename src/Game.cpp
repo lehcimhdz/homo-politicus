@@ -277,6 +277,32 @@ void Game::update() {
     // -1.0% at 100% Urbanization.
     target_birth_rate -= (playerCountry.welfare.urban_population_ratio * 0.010);
     
+    // --- URBANIZATION DYNAMICS (The Great Migration) ---
+    // Rural -> Urban Drift.
+    
+    // Pull Factors (Jobs):
+    double modern_economy_score = (playerCountry.politics.tech_power 
+                                 + playerCountry.politics.industrial_power 
+                                 + playerCountry.politics.financial_power) / 3.0; // 0.0 to ~1.0
+    
+    // Push Factors (Mechanization & Poverty):
+    // High Ag Power = Machines replace farmers.
+    double rural_push = (playerCountry.politics.agricultural_power * 0.2) 
+                      + (playerCountry.welfare.poverty_rate * 0.1); // Fleeing rural poverty
+    
+    double target_urbanization = 0.5 + (modern_economy_score * 0.4) + rural_push;
+    
+    // Resistance (Old people don't move)
+    double migration_speed = 0.01 * (1.0 - playerCountry.welfare.aging_index); 
+    
+    // Apply Drift
+    double urbanization_drift = (target_urbanization - playerCountry.welfare.urban_population_ratio) * migration_speed;
+    playerCountry.welfare.urban_population_ratio += urbanization_drift;
+    
+    // Clamp
+    if (playerCountry.welfare.urban_population_ratio > 0.95) playerCountry.welfare.urban_population_ratio = 0.95; // Singapore
+    if (playerCountry.welfare.urban_population_ratio < 0.10) playerCountry.welfare.urban_population_ratio = 0.10; // Subsistence farming
+    
     // 3. Poverty Effect (Survival Strategy)
     // Poor families have more kids for labor/security.
     // +0.5% at 100% Poverty.
@@ -552,6 +578,17 @@ void Game::update() {
     // Radicalization: Poor people lose faith in the system.
     if (playerCountry.welfare.poverty_rate > 0.30) {
         playerCountry.politics.polarization_index += 0.02;
+    }
+    
+    // Urban/Rural Divide (The Culture War)
+    // Polarization is highest when society is split 50/50.
+    // It is lowest when society is homogeneous (mostly rural or mostly urban).
+    double urban_split = std::abs(playerCountry.welfare.urban_population_ratio - 0.5); // 0.0 (Split) to 0.5 (Homogeneous)
+    // If split is close to 0 (50/50), add polarization.
+    if (urban_split < 0.1) {
+        playerCountry.politics.polarization_index += 0.01; // Tension between lifestyles
+    } else if (urban_split > 0.3) {
+        playerCountry.politics.polarization_index -= 0.005; // Homogeneous society
     }
 
     // Secondary Enrollment Cap (Cascading from Primary)

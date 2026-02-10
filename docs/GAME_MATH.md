@@ -229,6 +229,19 @@ La muerte nos iguala a todos, pero las variables deciden cuándo.
 *   **Freno**:
     *   **Cobertura de Salud**: -0.5% (Hospitales y medicinas).
 
+*   **Freno**:
+    *   **Cobertura de Salud**: -0.5% (Hospitales y medicinas).
+
+### La Gran Migración (`urban_population_ratio`)
+La gente se mueve a donde está el dinero.
+*   **Atracción (Pull)**:
+    *   Industria + Tech + Finanzas = Empleos Urbanos.
+*   **Expulsión (Push)**:
+    *   Alta Productividad Agrícola = Máquinas reemplazan campesinos.
+    *   Pobreza Rural = Huida a la ciudad.
+*   **Resistencia**:
+    *   La gente mayor (`aging_index`) no migra.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
