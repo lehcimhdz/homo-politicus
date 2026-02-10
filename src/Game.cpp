@@ -72,6 +72,38 @@ void Game::processEvents() {
         std::cout << "   (Popularity ++, Pension Sustainability --)" << std::endl;
         playerCountry.politics.popularity += 0.03;
     }
+    
+    // --- RELIGIOUS FREEDOM COMMANDS ---
+    else if (command == "worship+") {
+        playerCountry.welfare.freedom_of_worship += 0.1;
+        if (playerCountry.welfare.freedom_of_worship > 1.0) playerCountry.welfare.freedom_of_worship = 1.0;
+        
+        std::cout << ">> POLICY: Religious Freedom increased to " << playerCountry.welfare.freedom_of_worship << std::endl;
+        std::cout << "   (Happiness +, Secularism +, Tension +)" << std::endl;
+        
+        // Benefits of Liberty
+        playerCountry.welfare.mental_health_index += 0.02; // People are happier
+        playerCountry.welfare.clerical_political_influence -= 0.05; // Separation of Church/State
+        
+        // Risks of Liberty (Diversity Tension)
+        // Initial shock of new ideas/cults can cause friction
+        playerCountry.welfare.interreligious_tension += 0.05; 
+    }
+    else if (command == "worship-") {
+        playerCountry.welfare.freedom_of_worship -= 0.1;
+        if (playerCountry.welfare.freedom_of_worship < 0.0) playerCountry.welfare.freedom_of_worship = 0.0;
+        
+        std::cout << ">> POLICY: State Religion enforced." << std::endl;
+        std::cout << "   (Control +, Radicalism +, Happiness -)" << std::endl;
+        
+        // Costs of Repression
+        playerCountry.welfare.mental_health_index -= 0.03; // Oppression
+        playerCountry.welfare.radicalism_prob += 0.04; // Underground resistance
+        playerCountry.welfare.clerical_political_influence += 0.10; // Church empowers State
+        
+        // Benefit of Homogeneity
+        playerCountry.welfare.interreligious_tension -= 0.10; // Enforced peace
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;

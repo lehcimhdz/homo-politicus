@@ -304,6 +304,17 @@ El precio del extremismo.
 *   **Defensa**:
     *   Invertir en `attack_detection_prob` (Espionaje/Policía) reduce drásticamente el riesgo real, incluso si el radicalismo es alto.
 
+    *   Invertir en `attack_detection_prob` (Espionaje/Policía) reduce drásticamente el riesgo real, incluso si el radicalismo es alto.
+
+### Políticas de Libertad de Culto
+Tú decides el nivel de tolerancia.
+*   `worship+` (Estado Laico/Liberal):
+    *   **Beneficios**: Aumenta Felicidad (`mental_health`) y reduce el poder clerical.
+    *   **Costos**: Aumenta temporalmente la `interreligious_tension` (choque de ideas) y el riesgo de terrorismo si hay radicalismo previo.
+*   `worship-` (Estado Teocrático/Control):
+    *   **Beneficios**: Reduce la `interreligious_tension` (Homogeneidad forzada).
+    *   **Costos**: Aumenta el Radicalismo latente (resistencia) y golpea la Felicidad.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
