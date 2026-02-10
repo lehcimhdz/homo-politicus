@@ -568,8 +568,7 @@ void Game::update() {
         
         // Apply Raise
         if (wage_indexation > 0.001) {
-            double old_wage = playerCountry.welfare.minimum_wage;
-            playerCountry.welfare.minimum_wage *= (1.0 + wage_indexation);
+            playerCountry.welfare.minimum_wage *= 1.05; // +5% wage_indexation);
             // std::cout << "[INFO] LABOUR: Unions negotiated a wage increase to match inflation." << std::endl;
         }
 
@@ -705,6 +704,86 @@ void Game::update() {
     double rights_penalty = playerCountry.welfare.clerical_political_influence * 0.1;
     playerCountry.welfare.minority_protection -= (rights_penalty * 0.01); // Slow erosion
     if (playerCountry.welfare.minority_protection < 0.1) playerCountry.welfare.minority_protection = 0.1;
+
+    // --- RELIGIOUS TENSION & RADICALISM ---
+    // 1. Radicalization Drivers:
+    // - Poverty (Despair).
+    // - High Clerical Influence (Dogmatism).
+    // - Low Education (Lack of critical thinking).
+    // - Repression (Reaction to state control).
+    
+    double radicalism_drivers = (playerCountry.welfare.poverty_rate * 0.4) 
+                              + (playerCountry.welfare.clerical_political_influence * 0.3)
+                              + (playerCountry.welfare.torture_index * 0.3);
+                              
+    double radicalism_inhibitors = (playerCountry.welfare.literacy_rate * 0.5) 
+                                 + (playerCountry.welfare.freedom_of_worship * 0.5); // Tolerance
+                                 
+    double target_radicalism = 0.05 + radicalism_drivers - (radicalism_inhibitors * 0.5);
+    if (target_radicalism < 0.0) target_radicalism = 0.0;
+    
+    playerCountry.welfare.radicalism_prob += (target_radicalism - playerCountry.welfare.radicalism_prob) * 0.1;
+    
+    // 2. Inter-religious Tension
+    // Tension rises if there is Radicalism AND Diversity (assumed if freedom > 0.5).
+    // If freedom is low, state enforces one religion -> Tension is "suppressed" but latent?
+    // Let's model it as: Radicalism * Diversity Factor.
+    
+    double diversity_factor = playerCountry.welfare.freedom_of_worship; // Proxy for having multiple faiths
+    
+    double target_tension = playerCountry.welfare.radicalism_prob * 2.0 * diversity_factor;
+    
+    // Mitigation: Effective police/intelligence can reduce violence (tension manifestation).
+    double security_mitigation = playerCountry.security.attack_detection_prob * 0.5;
+    target_tension -= security_mitigation;
+    
+    if (target_tension < 0.0) target_tension = 0.0;
+    if (target_tension > 1.0) target_tension = 1.0; // Civil War risk
+    
+    playerCountry.welfare.interreligious_tension += (target_tension - playerCountry.welfare.interreligious_tension) * 0.1;
+
+    // EFFECTS
+    // Tension fuels Polarization.
+    if (playerCountry.welfare.interreligious_tension > 0.3) {
+        playerCountry.politics.polarization_index += 0.005;
+    }
+    
+    // --- TERRORISM RISK (The Radicalism Trap) ---
+    // If Radicalism is high, attacks can happen regardless of general tension.
+    // Threshold: 15% Radicalism.
+    if (playerCountry.welfare.radicalism_prob > 0.15) {
+        double attack_chance = (playerCountry.welfare.radicalism_prob - 0.15); // Base risk
+        
+        // Intelligence Mitigation (The Shield)
+        double intel_shield = playerCountry.security.attack_detection_prob * 0.8;
+        double net_risk = attack_chance * (1.0 - intel_shield);
+        
+        // Roll Dice (Annual Check)
+        // Simple random: rand() / RAND_MAX < net_risk
+        double roll = (double)rand() / RAND_MAX;
+        
+        if (roll < net_risk) {
+            std::cout << "[!!!] TERRORIST ATTACK: Radical extremists struck a major city!" << std::endl;
+            
+            // Consequences
+            int casualties = 50 + (rand() % 500); // 50-550 deaths
+            playerCountry.welfare.population -= casualties;
+            
+            playerCountry.politics.popularity -= 0.05; // Leader blamed
+            playerCountry.economy.gdp *= 0.995; // Economic shock (-0.5%)
+            
+            // Panic reaction: Demand for security
+            playerCountry.politics.polarization_index += 0.02; // Fear divides
+            
+            std::cout << "      " << casualties << " casualties reported. Market panics." << std::endl;
+        } else if (net_risk > 0.05) {
+            // Near Miss (Intelligence Victory?)
+            if ((double)rand() / RAND_MAX < 0.3) {
+                 std::cout << "[INFO] INTELLIGENCE: A major terror plot was foiled by security services." << std::endl;
+                 playerCountry.politics.popularity += 0.02; // Credit for safety
+            }
+        }
+    }
 
     // --- POLITICAL INSTABILITY (The Modern Trap) ---
     // If Education is High, but Corruption is High -> People get angry.

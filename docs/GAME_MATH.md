@@ -280,6 +280,30 @@ Fe versus Razón.
     *   **Derechos**: Alta influencia religiosa erosiona la `minority_protection`.
     *   **Estabilidad**: (Implícito) Ayuda a mantener el orden en sociedades pobres.
 
+    *   **Derechos**: Alta influencia religiosa erosiona la `minority_protection`.
+    *   **Estabilidad**: (Implícito) Ayuda a mantener el orden en sociedades pobres.
+
+### Tensión Religiosa (`interreligious_tension`)
+El peligro del fanatismo.
+*   **Radicalismo (`radicalism_prob`)**:
+    *   Se alimenta de la Pobreza, la Represión y la Influencia Clerical excesiva.
+    *   Se combate con Educación y Libertad de Culto (Tolerancia).
+*   **Tensión**:
+    *   Surge cuando hay Radicalismo + Diversidad (`freedom_of_worship`).
+    *   **Seguridad**: Una buena inteligencia (`attack_detection`) puede mitigar la violencia.
+*   **Efecto**: Aumenta la **Polarización** y el riesgo de conflicto civil.
+
+*   **Efecto**: Aumenta la **Polarización** y el riesgo de conflicto civil.
+
+### Radicalismo y Terrorismo (`radicalism_prob`)
+El precio del extremismo.
+*   **Umbral de Peligro**: Si `radicalism > 15%`, comienzan los atentados.
+*   **Ataques Terroristas**:
+    *   **Probabilidad**: `(Radicalismo - 0.15) * (1 - Inteligencia)`.
+    *   **Consecuencias**: Muertes, Caída del PIB (-0.5%), Pánico (Polarización +2%).
+*   **Defensa**:
+    *   Invertir en `attack_detection_prob` (Espionaje/Policía) reduce drásticamente el riesgo real, incluso si el radicalismo es alto.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
