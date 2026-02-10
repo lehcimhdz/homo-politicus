@@ -667,6 +667,45 @@ void Game::update() {
         playerCountry.welfare.secondary_enrollment -= 0.01; // Decays if base is missing
     }
 
+    // --- CLERICAL INFLUENCE (Faith vs Reason) ---
+    // Base: 0.3 (Modern Secular State).
+    // Increasers:
+    // - Rural Population (Traditionalism).
+    // - Poverty (Faith as refuge).
+    // Decreasers:
+    // - Education (Scientific worldview).
+    // - Urbanization (Cosmopolitanism).
+    
+    double traditionalism = (1.0 - playerCountry.welfare.urban_population_ratio) * 0.5 
+                          + playerCountry.welfare.poverty_rate * 0.5;
+                          
+    double secularization = playerCountry.welfare.literacy_rate * 0.4 
+                          + playerCountry.welfare.university_enrollment * 0.4;
+                          
+    double target_clerical_influence = 0.3 + traditionalism - secularization;
+    
+    // Clamp
+    if (target_clerical_influence < 0.05) target_clerical_influence = 0.05; // Atheist State
+    if (target_clerical_influence > 0.95) target_clerical_influence = 0.95; // Theocracy
+    
+    // Drift
+    playerCountry.welfare.clerical_political_influence += (target_clerical_influence - playerCountry.welfare.clerical_political_influence) * 0.05; // Culture changes slowly
+
+    // EFFECTS of Clerical Influence
+    // 1. Birth Rate Bonus (Pro-family values)
+    // If influence > 0.5, boost birth rate.
+    if (playerCountry.welfare.clerical_political_influence > 0.5) {
+        // Can offset urbanization effect by up to 0.5%
+        double religious_bonus = (playerCountry.welfare.clerical_political_influence - 0.5) * 0.01;
+        playerCountry.welfare.birth_rate += religious_bonus;
+    }
+
+    // 2. Minority Rights (Conservative pushback)
+    // High influence reduces minority protection.
+    double rights_penalty = playerCountry.welfare.clerical_political_influence * 0.1;
+    playerCountry.welfare.minority_protection -= (rights_penalty * 0.01); // Slow erosion
+    if (playerCountry.welfare.minority_protection < 0.1) playerCountry.welfare.minority_protection = 0.1;
+
     // --- POLITICAL INSTABILITY (The Modern Trap) ---
     // If Education is High, but Corruption is High -> People get angry.
     if (playerCountry.welfare.literacy_rate > 0.90 && playerCountry.politics.administrative_corruption > 0.30) {

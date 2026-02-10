@@ -266,6 +266,20 @@ La gente vota con los pies.
 *   **Efecto (Brain Drain)**:
     *   Si la gente se va (`rate < -0.5%`) y tienes buena educación universitaria, pierdes Innovación (se van los listos).
 
+*   **Efecto (Brain Drain)**:
+    *   Si la gente se va (`rate < -0.5%`) y tienes buena educación universitaria, pierdes Innovación (se van los listos).
+
+### Religión y Poder (`clerical_political_influence`)
+Fe versus Razón.
+*   **Tradición (Increasers)**:
+    *   Población Rural y Pobreza alimentan la influencia religiosa.
+*   **Secularización (Decreasers)**:
+    *   Educación y Vida Urbana reducen la influencia de la iglesia.
+*   **Efectos**:
+    *   **Natalidad**: La religión frena la caída de la natalidad (+Familia).
+    *   **Derechos**: Alta influencia religiosa erosiona la `minority_protection`.
+    *   **Estabilidad**: (Implícito) Ayuda a mantener el orden en sociedades pobres.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
