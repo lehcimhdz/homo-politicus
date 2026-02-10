@@ -195,6 +195,52 @@ void Game::update() {
     // 1. Demographics (Simple Annual Calculation)
     double births = playerCountry.welfare.population * playerCountry.welfare.birth_rate;
     
+    // --- MIGRATION DYNAMICS (Vote with your feet) ---
+    {
+        // Net Migration Rate: Per 1000 people.
+        // Positive = Immigration (Brain Gain / Cheap Labor).
+        // Negative = Emigration (Brain Drain / Refugee Crisis).
+        
+        // 1. Economic Pull (GDP per Capita vs Global Average)
+        // Assuming Global Avg GDP per Cap is $10k.
+        double mig_gdp_per_capita = playerCountry.economy.gdp / playerCountry.welfare.population;
+        double economic_pull = (mig_gdp_per_capita - 10000.0) / 10000.0; // Normalized
+        
+        // 2. Freedom Pull (Rights & Liberties)
+        // People flee dictatorships.
+        double freedom_score = (playerCountry.welfare.freedom_of_expression 
+                              + playerCountry.welfare.freedom_of_worship 
+                              + playerCountry.security.press_freedom) / 3.0; // Corrected structs
+        double repression_push = playerCountry.welfare.torture_index * 2.0;
+
+        // 3. Safety Pull
+        // People flee war and crime.
+        double safety_score = 1.0 - (playerCountry.security.homicide_rate / 50.0); // 50 is chaotic
+        
+        // Total Migration Score (-1.0 to +1.0 roughly)
+        double migration_target = (economic_pull * 0.5) 
+                                + (freedom_score * 0.3) 
+                                + (safety_score * 0.2) 
+                                - repression_push;
+                                
+        // Scale to Rate (Max +/- 2% per year)
+        double target_net_migration = migration_target * 0.02;
+        
+        // Smooth transition
+        playerCountry.welfare.net_migration_rate += (target_net_migration - playerCountry.welfare.net_migration_rate) * 0.1;
+        
+        // Apply Migration
+        int net_migrants = playerCountry.welfare.population * playerCountry.welfare.net_migration_rate;
+        playerCountry.welfare.population += net_migrants;
+
+        // Brain Drain Logic
+        // If migration is negative AND education is high -> Lose Innovation.
+        if (playerCountry.welfare.net_migration_rate < -0.005 && playerCountry.welfare.university_enrollment > 0.5) {
+            playerCountry.infra.innovation_index -= 0.002; // Smart people leave first
+            std::cout << "[!] BRAIN DRAIN: Talented youth are leaving the country." << std::endl;
+        }
+    }
+
     // --- DEMOGRAPHIC TRANSITION PART 2 (Death Rate) ---
     // Base Biological Death Rate (Young Population): 0.5%
     double target_death_rate = 0.005;
@@ -234,6 +280,29 @@ void Game::update() {
     double total_deaths = deaths_natural + deaths_suicide;
 
     playerCountry.welfare.population += (int)(births - total_deaths);
+    
+    // --- POPULATION DENSITY (The Pressure Cooker) ---
+    // Recalculate based on new population
+    playerCountry.welfare.population_density = playerCountry.welfare.population / playerCountry.welfare.land_area;
+    
+    // EFFECT 1: Agglomeration Bonus (Innovation)
+    // High density fosters idea exchange.
+    // > 100 people/sqkm starts giving bonus.
+    if (playerCountry.welfare.population_density > 100.0) {
+        playerCountry.infra.innovation_index += 0.001; 
+        if (playerCountry.infra.innovation_index > 1.0) playerCountry.infra.innovation_index = 1.0;
+    }
+    
+    // EFFECT 2: Health Risk (Epidemics)
+    // High density eases virus transmission.
+    // > 200 people/sqkm increases risk.
+    if (playerCountry.welfare.population_density > 200.0) {
+        playerCountry.welfare.epidemic_prob += 0.005; 
+        if (playerCountry.welfare.epidemic_prob > 0.5) playerCountry.welfare.epidemic_prob = 0.5;
+    } else {
+        // Natural decay of risk if density is low
+        if (playerCountry.welfare.epidemic_prob > 0.1) playerCountry.welfare.epidemic_prob -= 0.001;
+    }
 
     // --- ENROLLMENT DYNAMICS (The Poverty Trap) ---
     // If Unemployment is high (> 10%), families pull kids out of school.

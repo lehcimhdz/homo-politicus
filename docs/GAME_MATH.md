@@ -242,6 +242,30 @@ La gente se mueve a donde está el dinero.
 *   **Resistencia**:
     *   La gente mayor (`aging_index`) no migra.
 
+*   **Estabilidad**: Los países más estables son los homogéneos (o muy rurales o muy urbanos).
+
+### Densidad de Población y Territorio
+El espacio es finito.
+*   **Variable**: `land_area` (200,000 km² fijos).
+*   **Densidad (`population_density`)**: Se recalcula cada año (`Población / Área`).
+*   **Efectos**:
+    *   **Innovación**: Si `> 100 hab/km²`, las ideas fluyen mejor (+Innovación).
+    *   **Epidemias**: Si `> 200 hab/km²`, los virus se propagan más rápido (+Riesgo Epidemia).
+
+    *   **Epidemias**: Si `> 200 hab/km²`, los virus se propagan más rápido (+Riesgo Epidemia).
+
+### Migración (`net_migration_rate`)
+La gente vota con los pies.
+*   **Atracción (Pull)**:
+    *   **Economía**: PIB per cápita > Promedio Global ($10k).
+    *   **Libertad**: Libertad de Prensa/Culto y Derechos Civiles.
+    *   **Seguridad**: Baja tasa de homicidios.
+*   **Expulsión (Push)**:
+    *   **Represión**: Tortura, Censura.
+    *   **Pobreza**: Falta de oportunidades.
+*   **Efecto (Brain Drain)**:
+    *   Si la gente se va (`rate < -0.5%`) y tienes buena educación universitaria, pierdes Innovación (se van los listos).
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:

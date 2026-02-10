@@ -47,7 +47,9 @@ struct WelfareSocietySystem {
     double death_rate = 0.008;
     double aging_index = 0.3;
     double urban_population_ratio = 0.8; // vs rural
+    double land_area = 200000.0; // sq km (Fixed)
     double population_density = 50.0; // people per sq km
+    double net_migration_rate = 0.0; // +/- per 1000 people
     int population = 10000000;
 
     // Religion
