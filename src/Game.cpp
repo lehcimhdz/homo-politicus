@@ -104,6 +104,36 @@ void Game::processEvents() {
         // Benefit of Homogeneity
         playerCountry.welfare.interreligious_tension -= 0.10; // Enforced peace
     }
+    
+    // --- HUMAN RIGHTS COMMANDS ---
+    else if (command == "torture+") {
+        playerCountry.welfare.torture_index += 0.1;
+        if (playerCountry.welfare.torture_index > 1.0) playerCountry.welfare.torture_index = 1.0;
+        
+        std::cout << ">> SECRET ORDER: Enhanced Interrogation techniques authorized." << std::endl;
+        std::cout << "   (Intel ++, Radicalism +, UN Score -, Rights -)" << std::endl;
+        
+        // The Dark Trade-off
+        playerCountry.security.attack_detection_prob += 0.15; // Useful info extracted
+        if (playerCountry.security.attack_detection_prob > 1.0) playerCountry.security.attack_detection_prob = 1.0;
+        
+        playerCountry.welfare.radicalism_prob += 0.05; // Revenge/Martyrdom
+        playerCountry.welfare.un_score -= 0.15; // International Condemnation
+    }
+    else if (command == "torture-") {
+        playerCountry.welfare.torture_index -= 0.1;
+        if (playerCountry.welfare.torture_index < 0.0) playerCountry.welfare.torture_index = 0.0;
+        
+        std::cout << ">> REFORM: Banning torture and closing secret prisons." << std::endl;
+        std::cout << "   (Intel --, Radicalism -, UN Score ++)" << std::endl;
+        
+        // Restoring Dignity
+        playerCountry.security.attack_detection_prob -= 0.10; // Harder to get info?
+        if (playerCountry.security.attack_detection_prob < 0.0) playerCountry.security.attack_detection_prob = 0.0;
+        
+        playerCountry.welfare.radicalism_prob -= 0.03; // Healing society
+        playerCountry.welfare.un_score += 0.10; // International Praise
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;

@@ -315,6 +315,17 @@ Tú decides el nivel de tolerancia.
     *   **Beneficios**: Reduce la `interreligious_tension` (Homogeneidad forzada).
     *   **Costos**: Aumenta el Radicalismo latente (resistencia) y golpea la Felicidad.
 
+    *   **Costos**: Aumenta el Radicalismo latente (resistencia) y golpea la Felicidad.
+
+### Derechos Humanos y Tortura (`torture_index`)
+El fin justifica los medios?
+*   `torture+` (Mano Dura):
+    *   **Beneficios**: La Inteligencia (`attack_detection`) sube bruscamente (+0.15). Atrapas a los terroristas.
+    *   **Costos**: El Radicalismo aumenta (+0.05). Tu prestigio internacional (`un_score`) se desploma.
+*   `torture-` (Estado de Derecho):
+    *   **Beneficios**: Recuperas prestigio en la ONU y reduces el reclutamiento terrorista.
+    *   **Costos**: Pierdes capacidad de inteligencia inmediata (-0.10).
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
