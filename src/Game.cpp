@@ -134,6 +134,41 @@ void Game::processEvents() {
         playerCountry.welfare.radicalism_prob -= 0.03; // Healing society
         playerCountry.welfare.un_score += 0.10; // International Praise
     }
+    
+    // --- FORCED DISAPPEARANCES (Dirty War) ---
+    else if (command == "disappear+") {
+        playerCountry.welfare.forced_disappearances += 0.2;
+        if (playerCountry.welfare.forced_disappearances > 1.0) playerCountry.welfare.forced_disappearances = 1.0;
+
+        std::cout << ">> SECRET OPERATION: ' Night and Fog ' decree signed." << std::endl;
+        std::cout << "   (Protests --, Fear ++, UN Score ---, Hate +++)" << std::endl;
+
+        // The Logic of Terror
+        // 1. Fear paralyzes the streets
+        playerCountry.politics.mobilizations = 0; // Immediate silence
+        playerCountry.welfare.general_strike_prob *= 0.5; 
+        
+        // 2. The cost is deep hatred
+        playerCountry.welfare.radicalism_prob += 0.08; 
+        playerCountry.welfare.un_score -= 0.20; // Pariah state
+        playerCountry.politics.popularity -= 0.10; // People are terrified, not happy
+    }
+    else if (command == "disappear-") {
+        playerCountry.welfare.forced_disappearances -= 0.2;
+        if (playerCountry.welfare.forced_disappearances < 0.0) playerCountry.welfare.forced_disappearances = 0.0;
+
+        std::cout << ">> JUSTICE: Truth Commission established to find the missing." << std::endl;
+        std::cout << "   (Justice ++, Protests ++, UN Score ++)" << std::endl;
+
+        // The Cost of Truth
+        // 1. Justice emboldens people to speak out
+        playerCountry.politics.mobilizations += 2; // "Never Again!" marches
+        
+        // 2. Healing
+        playerCountry.welfare.radicalism_prob -= 0.05; 
+        playerCountry.welfare.un_score += 0.15;
+        playerCountry.politics.popularity += 0.05; 
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;

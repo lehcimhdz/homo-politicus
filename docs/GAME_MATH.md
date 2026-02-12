@@ -326,6 +326,18 @@ El fin justifica los medios?
     *   **Beneficios**: Recuperas prestigio en la ONU y reduces el reclutamiento terrorista.
     *   **Costos**: Pierdes capacidad de inteligencia inmediata (-0.10).
 
+    *   **Beneficios**: Recuperas prestigio en la ONU y reduces el reclutamiento terrorista.
+    *   **Costos**: Pierdes capacidad de inteligencia inmediata (-0.10).
+
+### Desapariciones Forzadas (`forced_disappearances`)
+Sembrar el terror.
+*   `disappear+` (Noche y Niebla):
+    *   **Objetivo**: Silenciar las calles. Si tienes `mobilizations` masivas, esto las detiene en seco (Miedo absoluto).
+    *   **Costo**: Destruyes tu legitimidad internacional (`un_score`) y generas un odio profundo (`radicalism` ++).
+*   `disappear-` (Comisión de la Verdad):
+    *   **Objetivo**: Sanar las heridas de la sociedad.
+    *   **Riesgo**: La gente pierde el miedo. Al investigar el pasado, las protestas aumentarán temporalmente ("¡Juicio y Castigo!").
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:
