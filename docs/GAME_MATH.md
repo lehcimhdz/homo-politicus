@@ -338,6 +338,17 @@ Sembrar el terror.
     *   **Objetivo**: Sanar las heridas de la sociedad.
     *   **Riesgo**: La gente pierde el miedo. Al investigar el pasado, las protestas aumentarán temporalmente ("¡Juicio y Castigo!").
 
+    *   **Riesgo**: La gente pierde el miedo. Al investigar el pasado, las protestas aumentan temporalmente ("¡Juicio y Castigo!").
+
+### Libertad de Expresión (`freedom_of_expression`)
+La verdad os hará libres... pero infelices.
+*   `press+` (Prensa Libre):
+    *   **Beneficios**: La Innovación florece (+0.05) y la Corrupción baja (Efecto Watchdog).
+    *   **Costos**: Los escándalos salen a la luz. Tu popularidad puede caer (-0.08) si descubren trapos sucios.
+*   `press-` (Censura):
+    *   **Beneficio**: Controlas la narrativa. La popularidad se mantiene estable ("Aquí no pasa nada").
+    *   **Costo**: La Corrupción se dispara (Impunidad) y la Innovación muere (-0.08). Creas una olla a presión.
+
 ### Trampa de la Inestabilidad
 Una población educada no tolera la corrupción.
 *   Si `literacy > 0.90` Y `corruption > 0.30`:

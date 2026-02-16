@@ -169,6 +169,43 @@ void Game::processEvents() {
         playerCountry.welfare.un_score += 0.15;
         playerCountry.politics.popularity += 0.05; 
     }
+
+    // --- FREEDOM OF EXPRESSION (The Fourth Estate) ---
+    else if (command == "press+") {
+        playerCountry.welfare.freedom_of_expression += 0.1;
+        if (playerCountry.welfare.freedom_of_expression > 1.0) playerCountry.welfare.freedom_of_expression = 1.0;
+        
+        std::cout << ">> POLICY: Censorship lifted. Press is free." << std::endl;
+        std::cout << "   (Innovation ++, Corruption --, Stability -)" << std::endl;
+        
+        // Benefits of Truth
+        playerCountry.infra.innovation_index += 0.05; // Ideas flow freely
+        playerCountry.politics.administrative_corruption -= 0.05; // Watchdog effect
+        
+        // The Pain of Truth
+        // Scandals are revealed!
+        if ((double)rand() / RAND_MAX < 0.4) {
+            std::cout << "[!] SCANDAL: Free press exposes government corruption!" << std::endl;
+            playerCountry.politics.popularity -= 0.08;
+            playerCountry.politics.polarization_index += 0.03;
+        }
+    }
+    else if (command == "press-") {
+        playerCountry.welfare.freedom_of_expression -= 0.1;
+        if (playerCountry.welfare.freedom_of_expression < 0.0) playerCountry.welfare.freedom_of_expression = 0.0;
+        
+        std::cout << ">> POLICY: Media access restricted. Internet filtered." << std::endl;
+        std::cout << "   (Control ++, Innovation --, Corruption ++)" << std::endl;
+        
+        // Benefits of Silence
+        // Leader controls the narrative.
+        playerCountry.politics.popularity += 0.02; // "Everything is fine"
+        
+        // Costs of Silence
+        playerCountry.infra.innovation_index -= 0.08; // Stagnation
+        playerCountry.politics.administrative_corruption += 0.05; // Impunity
+        playerCountry.welfare.radicalism_prob += 0.02; // Anger builds in dark corners
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;
