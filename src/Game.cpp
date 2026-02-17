@@ -403,13 +403,12 @@ void Game::update() {
             playerCountry.infra.innovation_index -= 0.002; // Smart people leave first
             std::cout << "[!] BRAIN DRAIN: Talented youth are leaving the country." << std::endl;
         }
-        }
+    }
 
-        // 3. Minority Persecution -> Brain Drain
-        if (playerCountry.welfare.minority_protection < 0.3) {
-             playerCountry.welfare.brain_drain += 0.005; // Minorities (often educated/merchant class) leave
-             std::cout << "[!] EXODUS: Persecuted minorities are fleeing the country." << std::endl;
-        }
+    // 3. Minority Persecution -> Brain Drain
+    if (playerCountry.welfare.minority_protection < 0.3) {
+        playerCountry.welfare.brain_drain += 0.005; // Minorities (often educated/merchant class) leave
+        std::cout << "[!] EXODUS: Persecuted minorities are fleeing the country." << std::endl;
     }
 
     // --- DEMOGRAPHIC TRANSITION PART 2 (Death Rate) ---
@@ -846,7 +845,7 @@ void Game::update() {
     // Secondary Enrollment Cap (Cascading from Primary)
     
     // Secondary Enrollment Cap (Cascading from Primary)
-     if (playerCountry.welfare.secondary_enrollment > playerCountry.welfare.primary_enrollment) {
+    if (playerCountry.welfare.secondary_enrollment > playerCountry.welfare.primary_enrollment) {
         playerCountry.welfare.secondary_enrollment -= 0.01; // Decays if base is missing
     }
 
@@ -991,8 +990,6 @@ void Game::update() {
        playerCountry.politics.popularity -= 0.03; // -3% popularity if unemployment High
     }
     
-    // Clamp popularity between 0 and 1
-    if (playerCountry.politics.popularity > 1.0) playerCountry.politics.popularity = 1.0;
     // Clamp popularity between 0 and 1
     if (playerCountry.politics.popularity > 1.0) playerCountry.politics.popularity = 1.0;
     if (playerCountry.politics.popularity < 0.0) playerCountry.politics.popularity = 0.0;
