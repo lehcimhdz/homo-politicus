@@ -206,6 +206,36 @@ void Game::processEvents() {
         playerCountry.politics.administrative_corruption += 0.05; // Impunity
         playerCountry.welfare.radicalism_prob += 0.02; // Anger builds in dark corners
     }
+    // --- MINORITY RIGHTS (The Diversity Paradox) ---
+    else if (command == "minority+") {
+        playerCountry.welfare.minority_protection += 0.1;
+        if (playerCountry.welfare.minority_protection > 1.0) playerCountry.welfare.minority_protection = 1.0;
+        
+        std::cout << ">> POLICY: Anti-discrimination laws passed." << std::endl;
+        std::cout << "   (UN Score ++, Radicalism --, Popularity -, Polarization +)" << std::endl;
+        
+        // International Praise & Social Peace
+        playerCountry.welfare.un_score += 0.05;
+        playerCountry.welfare.radicalism_prob -= 0.03; // Minorities feel included
+        
+        // The Backlash (if society is conservative/polarized)
+        playerCountry.politics.popularity -= 0.03; // "Woke agenda" backlash
+        playerCountry.politics.polarization_index += 0.02; // Culture war
+    }
+    else if (command == "minority-") {
+        playerCountry.welfare.minority_protection -= 0.1;
+        if (playerCountry.welfare.minority_protection < 0.0) playerCountry.welfare.minority_protection = 0.0;
+        
+        std::cout << ">> POLICY: Nationalistic rhetoric adopted. Minorities scapegoated." << std::endl;
+        std::cout << "   (Popularity ++, UN Score --, Radicalism ++, Brain Drain ++)" << std::endl;
+        
+        // Populist Boost
+        playerCountry.politics.popularity += 0.04; // "Put our people first"
+        
+        // The Human Cost
+        playerCountry.welfare.un_score -= 0.08;
+        playerCountry.welfare.radicalism_prob += 0.05; // Margins become dangerous
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;
@@ -373,6 +403,13 @@ void Game::update() {
             playerCountry.infra.innovation_index -= 0.002; // Smart people leave first
             std::cout << "[!] BRAIN DRAIN: Talented youth are leaving the country." << std::endl;
         }
+        }
+
+        // 3. Minority Persecution -> Brain Drain
+        if (playerCountry.welfare.minority_protection < 0.3) {
+             playerCountry.welfare.brain_drain += 0.005; // Minorities (often educated/merchant class) leave
+             std::cout << "[!] EXODUS: Persecuted minorities are fleeing the country." << std::endl;
+        }
     }
 
     // --- DEMOGRAPHIC TRANSITION PART 2 (Death Rate) ---
@@ -425,6 +462,13 @@ void Game::update() {
     if (playerCountry.welfare.population_density > 100.0) {
         playerCountry.infra.innovation_index += 0.001; 
         if (playerCountry.infra.innovation_index > 1.0) playerCountry.infra.innovation_index = 1.0;
+    }
+    
+    // EFFECT 2: Diversity Dividend (Innovation)
+    // High minority protection fosters diverse perspectives.
+    if (playerCountry.welfare.minority_protection > 0.8) {
+        playerCountry.infra.innovation_index += 0.002; 
+        // std::cout << "[INFO] DIVERSITY: Inclusive society boosting creativity." << std::endl;
     }
     
     // EFFECT 2: Health Risk (Epidemics)
@@ -760,6 +804,12 @@ void Game::update() {
     // High Literacy allows people to escape poverty over time.
     if (playerCountry.welfare.literacy_rate > 0.80) {
         playerCountry.welfare.poverty_rate -= 0.005; 
+    }
+    
+    // Structural Poverty due to Discrimination
+    // If protection is low, minorities are excluded from economy.
+    if (playerCountry.welfare.minority_protection < 0.4) {
+        playerCountry.welfare.poverty_rate += 0.005; 
     }
     
     // Cap Poverty

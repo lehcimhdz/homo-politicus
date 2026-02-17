@@ -340,6 +340,22 @@ Sembrar el terror.
 
     *   **Riesgo**: La gente pierde el miedo. Al investigar el pasado, las protestas aumentan temporalmente ("¡Juicio y Castigo!").
 
+### Derechos de las Minorías (`minority_protection`)
+La diversidad como motor o como chivo expiatorio.
+*   `minority+` (Leyes Antidiscriminación):
+    *   **Beneficios**:
+        *   **Innovación**: Si `protection > 0.8`, la diversidad de ideas aumenta la innovación (+0.002).
+        *   **Paz Social**: Reduce el Radicalismo (-0.03) y mejora el prestigio internacional (+0.05).
+    *   **Costos**:
+        *   **Guerra Cultural**: Sectores conservadores reaccionan. Popularidad baja (-0.03) y Polarización sube (+0.02).
+*   `minority-` (Nacionalismo Excluyente):
+    *   **Beneficios**:
+        *   **Popularidad Populista**: +0.04 inmediato (Culpar al "otro" funciona).
+    *   **Costos**:
+        *   **Fuga de Cerebros**: Si `protection < 0.3`, las minorías (a menudo comerciantes o intelectuales) huyen (+0.005 Brain Drain).
+        *   **Pobreza Estructural**: Si `protection < 0.4`, la exclusión económica aumenta la pobreza (+0.005).
+        *   **Paria Internacional**: El prestigio ONU cae fuerte (-0.08).
+
 ### Libertad de Expresión (`freedom_of_expression`)
 La verdad os hará libres... pero infelices.
 *   `press+` (Prensa Libre):
