@@ -356,6 +356,25 @@ La diversidad como motor o como chivo expiatorio.
         *   **Pobreza Estructural**: Si `protection < 0.4`, la exclusión económica aumenta la pobreza (+0.005).
         *   **Paria Internacional**: El prestigio ONU cae fuerte (-0.08).
 
+### Diplomacia y Sanciones (`un_score`)
+Tu reputación en el mundo tiene un precio.
+
+#### Comandos Diplomáticos
+*   `diplomacy+` (Lobby Internacional):
+    *   **Costo**: $50M (Gasto directo del PIB).
+    *   **Efecto**: `un_score` +0.05. Reduce el riesgo de sanciones (-0.05).
+*   `diplomacy-` (Soberanía Nacionalista):
+    *   **Beneficio**: Popularidad +0.03 (Nacionalismo).
+    *   **Costo**: `un_score` -0.10. Aumenta el riesgo de sanciones (+0.05).
+
+#### Consecuencias Económicas
+1.  **Sanciones Internacionales (Castigo)**:
+    *   **Riesgo**: Aumenta si `un_score < 0.3`.
+    *   **Efecto**: Si se activan, el PIB cae un **5%** inmediato y la inflación sube un **2%** (Bloqueo de importaciones).
+2.  **Inversión Extranjera (Premio)**:
+    *   **Condición**: `un_score > 0.7`.
+    *   **Efecto**: El crecimiento del PIB recibe un bonus (hasta +1.5%) basado en la confianza global.
+
 ### Libertad de Expresión (`freedom_of_expression`)
 La verdad os hará libres... pero infelices.
 *   `press+` (Prensa Libre):

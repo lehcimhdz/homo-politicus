@@ -236,6 +236,30 @@ void Game::processEvents() {
         playerCountry.welfare.un_score -= 0.08;
         playerCountry.welfare.radicalism_prob += 0.05; // Margins become dangerous
     }
+    // --- DIPLOMACY (The World Stage) ---
+    else if (command == "diplomacy+") {
+        std::cout << ">> MISSION: Diplomatic lobby launched." << std::endl;
+        playerCountry.economy.gdp -= 50000000; // $50M cost
+        playerCountry.welfare.un_score += 0.05;
+        if (playerCountry.welfare.un_score > 1.0) playerCountry.welfare.un_score = 1.0;
+        
+        // Lower Sanctions Risk
+        playerCountry.economy.international_sanctions_prob -= 0.05;
+        if (playerCountry.economy.international_sanctions_prob < 0.0) playerCountry.economy.international_sanctions_prob = 0.0;
+        
+        std::cout << "   (UN Score ++, Sanctions Risk --, Cost $50M)" << std::endl;
+    }
+    else if (command == "diplomacy-") {
+        std::cout << ">> POLICY: 'Sovereignty First' doctrine." << std::endl;
+        playerCountry.politics.popularity += 0.03; // Nationalist boost
+        playerCountry.welfare.un_score -= 0.10;
+        if (playerCountry.welfare.un_score < 0.0) playerCountry.welfare.un_score = 0.0;
+        
+        // Sanctions Risk increases
+        playerCountry.economy.international_sanctions_prob += 0.05;
+        
+        std::cout << "   (Popularity ++, UN Score --, Sanctions Risk ++)" << std::endl;
+    }
     else if (command == "invest_health") {
         std::cout << ">> Investing $10M in Healthcare..." << std::endl;
         playerCountry.economy.gdp -= 10000000;
@@ -993,6 +1017,36 @@ void Game::update() {
     // Clamp popularity between 0 and 1
     if (playerCountry.politics.popularity > 1.0) playerCountry.politics.popularity = 1.0;
     if (playerCountry.politics.popularity < 0.0) playerCountry.politics.popularity = 0.0;
+
+    // --- INTERNATIONAL RELATIONS (Sanctions & Investment) ---
+    // 1. Sanctions Check
+    // Risk depends on UN Score. If Score < 0.3, risk spikes.
+    if (playerCountry.welfare.un_score < 0.3) {
+        playerCountry.economy.international_sanctions_prob += 0.05;
+    } else {
+        playerCountry.economy.international_sanctions_prob -= 0.01; // Decays if behaving
+    }
+    // Clamp
+    if (playerCountry.economy.international_sanctions_prob > 1.0) playerCountry.economy.international_sanctions_prob = 1.0;
+    if (playerCountry.economy.international_sanctions_prob < 0.0) playerCountry.economy.international_sanctions_prob = 0.0;
+    
+    // Trigger Sanctions
+    double sanctions_roll = (double)rand() / RAND_MAX;
+    if (sanctions_roll < playerCountry.economy.international_sanctions_prob) {
+        std::cout << "[!!!] SANCTIONS: The International Community has imposed a blockade." << std::endl;
+        std::cout << "      (GDP -5%, Inflation +2%)" << std::endl;
+        
+        playerCountry.economy.gdp *= 0.95; 
+        playerCountry.economy.inflation += 0.02; 
+    }
+    
+    // 2. Foreign Investment
+    // If UN Score > 0.7 (Stable, respected), capital flows in.
+    if (playerCountry.welfare.un_score > 0.7) {
+        double investment_boost = (playerCountry.welfare.un_score - 0.7) * 0.05; // Max 1.5% boost
+        playerCountry.economy.growth_rate += investment_boost;
+        std::cout << "[INFO] FOREIGN INVESTMENT: Global confidence boosts growth by " << investment_boost * 100 << "%" << std::endl;
+    }
 
     eventManager.triggerRandomEvent(playerCountry);
 
