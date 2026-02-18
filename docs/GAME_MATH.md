@@ -95,6 +95,16 @@ La inflación ya no es un número estático, sino un equilibrio de fuerzas:
 2.  **Pull de Demanda**: Si la gente tiene demasiado dinero (`net_purchasing_power > 1.1`), los precios suben.
 3.  **Shock de Costos**: Si las reservas internacionales caen por debajo de los $20M, la moneda se devalúa (+3% inflación).
 4.  **Enfriamiento**: Subir la tasa de interés (`interest+`) reduce la inflación pero frena el crecimiento del PIB.
+5.  **Autonomía**: Si `central_bank_autonomy > 0.7`, la inflación baja sola (-0.5%) por la "Credibilidad".
+
+### Autonomía del Banco Central
+El guardián de la moneda.
+*   **Alta Autonomía**:
+    *   **Ventaja**: Multiplica la Inversión Extranjera (FDI) y ancla la inflación.
+    *   **Desventaja**: Bloquea el comando `print+`. No puedes monetizar deuda. Interferir con la tasa de interés cuesta Popularidad.
+*   **Baja Autonomía**:
+    *   **Ventaja**: Control total (`print+` habilitado).
+    *   **Desventaja**: Fuga de capitales y menor inversión.
 
 ### Espiral Salarios-Precios
 Si la **Inflación > 5%** y los sindicatos son fuertes (`> 0.3`), exigirán aumentos automáticos de sueldo.

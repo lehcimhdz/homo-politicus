@@ -304,9 +304,33 @@ void Game::processEvents() {
         playerCountry.welfare.radicalism_prob += 0.05; 
         playerCountry.welfare.un_score -= 0.08; 
         std::cout << ">> POLICY: Nationalist rhetoric enforced. Popularity up, minorities excluded." << std::endl;
+        std::cout << ">> POLICY: Nationalist rhetoric enforced. Popularity up, minorities excluded." << std::endl;
     }
     // --- CENTRAL BANK & MONETARY COMMANDS ---
+    else if (command == "autonomy+") {
+        playerCountry.economy.central_bank_autonomy += 0.2;
+        if (playerCountry.economy.central_bank_autonomy > 1.0) playerCountry.economy.central_bank_autonomy = 1.0;
+        
+        playerCountry.welfare.un_score += 0.05; // Investors like it
+        std::cout << ">> INSTITUTION: Central Bank granted more independence." << std::endl;
+        std::cout << "   (FDI ++, Inflation Expectations --, Control --)" << std::endl;
+    }
+    else if (command == "autonomy-") {
+        playerCountry.economy.central_bank_autonomy -= 0.2;
+        if (playerCountry.economy.central_bank_autonomy < 0.0) playerCountry.economy.central_bank_autonomy = 0.0;
+        
+        playerCountry.welfare.un_score -= 0.10; // Investors hate it
+        playerCountry.economy.international_reserves *= 0.90; // Capital Flight immediate shock
+        std::cout << ">> INSTITUTION: Central Bank intervened by the Executive." << std::endl;
+        std::cout << "   (Control ++, FDI --, Capital Flight !!!)" << std::endl;
+    }
     else if (command == "interest+") {
+        // Autonomy Check: If high autonomy, politician interfering costs popularity
+        if (playerCountry.economy.central_bank_autonomy > 0.6) {
+             playerCountry.politics.popularity -= 0.05;
+             std::cout << "[!] INTERFERENCE: The Central Bank resents your pressure. (Popularity -5%)" << std::endl;
+        }
+        
         playerCountry.economy.interest_rate += 0.01; // +1%
         playerCountry.politics.popularity -= 0.02;    // People hate high mortgage rates
         std::cout << ">> MONETARY: Interest Rate raised to " << playerCountry.economy.interest_rate * 100 << "%" << std::endl;
@@ -319,11 +343,17 @@ void Game::processEvents() {
         std::cout << "   (Growth ++, Inflation Risk ++)" << std::endl;
     }
     else if (command == "print+") {
-        // Emergency Funding: Print $100M
-        playerCountry.economy.monetary_emission += 0.05; // 5% increase in money supply
-        playerCountry.economy.international_reserves += 100000000.0;
-        std::cout << "[!!!] DECREE: Central Bank ordered to print money for the Treasury." << std::endl;
-        std::cout << "      $100M injected into Reserves. (Inflation Surge Incoming!)" << std::endl;
+        // Autonomy Check: Cannot print money if Bank is Independent
+         if (playerCountry.economy.central_bank_autonomy > 0.5) {
+             std::cout << ">> BLOCKED: Central Bank Governor refuses to monetize debt. Autonomy is too high." << std::endl;
+             std::cout << "   (Lower Autonomy first with 'autonomy-', but beware capital flight)" << std::endl;
+         } else {
+            // Emergency Funding: Print $100M
+            playerCountry.economy.monetary_emission += 0.05; // 5% increase in money supply
+            playerCountry.economy.international_reserves += 100000000.0;
+            std::cout << "[!!!] DECREE: Central Bank ordered to print money for the Treasury." << std::endl;
+            std::cout << "      $100M injected into Reserves. (Inflation Surge Incoming!)" << std::endl;
+         }
     }
     else if (command == "reform_currency") {
         if (playerCountry.economy.inflation > 0.20) {
@@ -1283,8 +1313,10 @@ void Game::update() {
         std::cout << "[!] CAPITAL FLIGHT: Investors are fleeing instability." << std::endl;
     }
     
+    
     // FDI (Long term)
-    double fdi = (playerCountry.welfare.un_score * 0.02) * playerCountry.economy.gdp; 
+    // Autonomy is a Multiplier for TRUST.
+    double fdi = (playerCountry.welfare.un_score * 0.02) * playerCountry.economy.gdp * (0.5 + playerCountry.economy.central_bank_autonomy); 
     
     // 3. Debt Service
     // We pay interest on external debt.
