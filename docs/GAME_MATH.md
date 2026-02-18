@@ -78,6 +78,19 @@ La inflación ya no es un número estático, sino un equilibrio de fuerzas:
 3.  **Shock de Costos**: Si las reservas internacionales caen por debajo de los $20M, la moneda se devalúa (+3% inflación).
 4.  **Enfriamiento**: Subir la tasa de interés (`interest+`) reduce la inflación pero frena el crecimiento del PIB.
 
+### Espiral Salarios-Precios
+Si la **Inflación > 5%** y los sindicatos son fuertes (`> 0.3`), exigirán aumentos automáticos de sueldo.
+*   **Mecanismo**: El salario mínimo sube automáticamente para casi igualar la inflación.
+*   **Consecuencia**: Las empresas suben precios para pagar los nuevos sueldos (+1% Inflación extra). Se crea un círculo vicioso difícil de romper.
+
+### Hiperinflación
+El cementerio de los gobiernos.
+*   **Umbral**: Si **Inflación > 50%**.
+*   **Colapso**: El PIB cae **10%** anual. La inversión se detiene. El caos social (`polarization`) se dispara.
+*   **Salida**: Únicamente mediante el comando `reform_currency` (Plan de Austeridad).
+    *   **Costo**: -25% Popularidad (la gente pierde sus ahorros).
+    *   **Efecto**: Resetea la inflación al 2%.
+
 ### Remesas y Diáspora
 La emigración tiene un lado positivo: El dinero que vuelve a casa.
 *   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.

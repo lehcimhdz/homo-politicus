@@ -325,6 +325,19 @@ void Game::processEvents() {
         std::cout << "[!!!] DECREE: Central Bank ordered to print money for the Treasury." << std::endl;
         std::cout << "      $100M injected into Reserves. (Inflation Surge Incoming!)" << std::endl;
     }
+    else if (command == "reform_currency") {
+        if (playerCountry.economy.inflation > 0.20) {
+            std::cout << "[!!!] CURRENCY REFORM: The Government slashes zeros from the currency." << std::endl;
+            std::cout << "      Savings wiped out. Austerity imposed. Inflation reset." << std::endl;
+            
+            playerCountry.economy.inflation = 0.02; // Reset to 2%
+            playerCountry.economy.monetary_emission = 0.0;
+            playerCountry.politics.popularity -= 0.25; // Massive anger
+            playerCountry.welfare.poverty_rate += 0.05; // Short term pain
+        } else {
+             std::cout << ">> REJECTED: Inflation is not high enough for such a drastic measure." << std::endl;
+        }
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
@@ -885,6 +898,18 @@ void Game::update() {
         std::cout << "[!] WAGE SPIRAL: High wages causing Inflation & Informality." << std::endl;
     }
     
+    // --- WAGE-PRICE SPIRAL (Automatic Indexation) ---
+    // If Inflation is high, Unions demand catch-up raises.
+    if (playerCountry.economy.inflation > 0.05 && playerCountry.welfare.union_strength > 0.30) {
+        double forced_raise = playerCountry.welfare.minimum_wage * (playerCountry.economy.inflation * 0.8);
+        playerCountry.welfare.minimum_wage += forced_raise;
+        
+        // This causes even MORE inflation next turn (Feedback Loop)
+        playerCountry.economy.inflation += 0.01; 
+        
+        std::cout << "[!] INDEXATION: Unions forced a wage hike of $" << forced_raise << " to match inflation." << std::endl;
+    }
+    
     // CASE C: SWEET SPOT
     else {
         // Reduce Poverty slowly
@@ -1202,6 +1227,15 @@ void Game::update() {
     
     // Monetary Emission Decays (The one-time printing shock fades)
     playerCountry.economy.monetary_emission *= 0.5;
+    
+    // --- HYPERINFLATION DISASTER ---
+    if (playerCountry.economy.inflation > 0.50) { // 50% Inflation
+         std::cout << "[!!!] HYPERINFLATION: The currency has collapsed. Economy is in freefall." << std::endl;
+         playerCountry.economy.gdp *= 0.90; // -10% GDP per year
+         playerCountry.politics.polarization_index += 0.10; // Chaos
+         playerCountry.economy.international_reserves *= 0.5; // Capital Flight
+         playerCountry.welfare.poverty_rate += 0.05;
+    }
 
     // 3. Politics (Populatiry calculation)
     // People hate inflation and unemployment.
