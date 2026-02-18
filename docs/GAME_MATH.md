@@ -65,9 +65,19 @@ La economía necesita compradores.
 *   **Bajo (< 80%)**: La gente no tiene dinero. El crecimiento se frena (-1%).
 *   **Alto (> 120%)**: La demanda impulsa la economía (+1%), (pero cuidado con la inflación).
 
-### Fiscalidad Dinámica
-*   La recaudación (`tax_collection`) es ahora un porcentaje del PIB.
-*   Si el PIB crece, recaudas más. Si hay recesión, recaudas menos (y el déficit sube).
+### Fiscalidad Dinámica y Curva de Laffer
+*   **Impuesto Efectivo**: `tax_collection / GDP`.
+*   **Recaudación**: Si el PIB crece, recaudas más.
+*   **Freno a la Inversión**: Si `Impuesto Efectivo > 25%`, los inversores huyen. El crecimiento potencial se penaliza (-0.1% por cada 1% extra de impuestos).
+*   **Freno al Consumo**: Los impuestos reducen el **Ingreso Disponible**. Si la gente paga muchos impuestos, compra menos, y la economía se estanca.
+
+### Remesas y Diáspora
+La emigración tiene un lado positivo: El dinero que vuelve a casa.
+*   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.
+*   **Remesas**: `Diáspora * $2000` (anual).
+*   **Efecto en Pobreza**: Si las remesas superan el 5% del PIB, la pobreza se reduce considerablemente (-1% anual directo).
+*   **Efecto en Consumo**: Las remesas cuentan como ingreso para el consumo, amortiguando recesiones.
+*   **Bloqueo**: Si hay **Sanciones Internacionales**, las remesas se bloquean (90% de pérdida).
 
 ---
 

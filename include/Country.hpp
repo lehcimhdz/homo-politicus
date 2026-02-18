@@ -50,7 +50,9 @@ struct WelfareSocietySystem {
     double land_area = 200000.0; // sq km (Fixed)
     double population_density = 50.0; // people per sq km
     double net_migration_rate = 0.0; // +/- per 1000 people
+    double net_migration_rate = 0.0; // +/- per 1000 people
     int population = 10000000;
+    int diaspora_population = 500000; // Citizens living abroad
 
     // Religion
     double clerical_political_influence = 0.3;

@@ -418,6 +418,18 @@ void Game::update() {
         int net_migrants = playerCountry.welfare.population * playerCountry.welfare.net_migration_rate;
         playerCountry.welfare.population += net_migrants;
 
+        // DIASPORA LOGIC
+        // If people leave (net_migrants < 0), they join the Diaspora.
+        // If people enter (net_migrants > 0), they are immigrants (not diaspora, but we could track them too).
+        // For now, only outgoing adds to diaspora.
+        if (net_migrants < 0) {
+            playerCountry.welfare.diaspora_population += std::abs(net_migrants);
+        }
+        
+        // Assimilation / Death in Diaspora
+        // 2% of the diaspora stops sending money or dies annually.
+        playerCountry.welfare.diaspora_population *= 0.98; 
+
         // Brain Drain Logic
         // If migration is negative AND education is high -> Lose Innovation.
         if (playerCountry.welfare.net_migration_rate < -0.005 && playerCountry.welfare.university_enrollment > 0.5) {
@@ -543,17 +555,49 @@ void Game::update() {
                      + (playerCountry.politics.tech_power * 0.05)
                      - (playerCountry.politics.administrative_corruption * 0.10); // Corruption is inefficiency
                      
+                     
     // 4. Consumption Engine (Demand Side)
     // Spending Power: Wage / GDP per Capita
     // Ideal: Wage is ~40-50% of GDP/Capita.
+    
+    // REMITTANCES EFFECT:
+    // Remittances act as a direct cash injection to households, effectively boosting purchasing power.
+    // Calculate Remittances first:
+    // Avg sending: $2000 per diaspora member annually (Standard assumption)
+    double remittance_income = playerCountry.welfare.diaspora_population * 2000.0;
+    
+    // Sanctions block money transfer!
+    if (playerCountry.economy.international_sanctions_prob > 0.5) { // If blockade is active
+         remittance_income *= 0.1; // 90% blocked
+         std::cout << "[!] BLOCKADE: Remittances cannot reach the country." << std::endl;
+    }
+    
+    playerCountry.economy.remittances = remittance_income;
+    
+    // Total Household Income for Consumption = Wages (simplified) + Remittances
+    // We treat Remittances as a % boost to the Wage purchasing power logic.
     double gdp_per_capita_prev = playerCountry.economy.gdp / playerCountry.welfare.population;
-    double purchasing_power = playerCountry.welfare.minimum_wage / (gdp_per_capita_prev * 0.4); 
+    
+    // Remittance per capita involved in consumption
+    double rem_per_capita = remittance_income / playerCountry.welfare.population;
+    
+    // FISCAL DRAG (Laffer Curve / Disposable Income)
+    // Taxes reduce the money people actually have to spend.
+    // Calculate Effective Tax Rate
+    double effective_tax_rate = playerCountry.economy.tax_collection / playerCountry.economy.gdp;
+    
+    // Disposable Income = (Wage + Remittances) * (1 - TaxRate)
+    // We apply tax rate to the purchasing power calculation.
+    // However, poor people pay less taxes (progressive), but let's assume flat VAT/Income blend for simplicity or average burden.
+    
+    double gross_purchasing_power = (playerCountry.welfare.minimum_wage + rem_per_capita) / (gdp_per_capita_prev * 0.4); 
+    double net_purchasing_power = gross_purchasing_power * (1.0 - effective_tax_rate);
     
     // If purchasing power is low (< 0.8), consumption drags growth.
     // If high (> 1.2), it overheats (handled in inflation already), captures demand here.
     double consumption_modifier = 0.0;
-    if (purchasing_power < 0.8) consumption_modifier = -0.01; // Low demand
-    if (purchasing_power > 1.0) consumption_modifier = 0.01; // High demand
+    if (net_purchasing_power < 0.8) consumption_modifier = -0.01; // Low demand
+    if (net_purchasing_power > 1.0) consumption_modifier = 0.01; // High demand
     
     // CALCULATE ORGANIC GROWTH RATE
     // Base potential growth
@@ -568,6 +612,14 @@ void Game::update() {
     // Capital & TFP Bonus
     if (physical_capital > 0.7) potential_growth += 0.01;
     if (tfp > 1.0) potential_growth += (tfp - 1.0);
+    
+    // TAX DRAG on Investment (Laffer Curve Part 2)
+    // If taxes > 25%, capital flight / lack of investment.
+    if (effective_tax_rate > 0.25) {
+        double tax_penalty = (effective_tax_rate - 0.25) * 0.1; // 10% penalty for every point over 25%
+        potential_growth -= tax_penalty;
+        // std::cout << "[INFO] HIGH TAXES: Investors are wary. Growth slowed." << std::endl;
+    }
     
     // Apply Consumption
     potential_growth += consumption_modifier;
@@ -901,6 +953,16 @@ void Game::update() {
     // If protection is low, minorities are excluded from economy.
     if (playerCountry.welfare.minority_protection < 0.4) {
         playerCountry.welfare.poverty_rate += 0.005; 
+    }
+    
+    // Remittances buffer (Poverty Reduction)
+    // If Remittances are > 5% of GDP, they significantly reduce poverty.
+    double rem_gdp_ratio = playerCountry.economy.remittances / playerCountry.economy.gdp;
+    if (rem_gdp_ratio > 0.05) {
+        playerCountry.welfare.poverty_rate -= 0.01; // Direct relief
+        // std::cout << "[INFO] DIASPORA: Remittances are keeping families above water." << std::endl;
+    } else if (rem_gdp_ratio > 0.01) {
+        playerCountry.welfare.poverty_rate -= 0.002;
     }
     
     // Cap Poverty
