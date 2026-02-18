@@ -1309,11 +1309,15 @@ void Game::update() {
     // We need to re-fetch net_purchasing_power from the scope (it's in Game::update)
     // If net_purchasing_power > 1.1, add (net_purchasing_power - 1.1) * 0.1 to inflation.
     
-    // 3. Cost Push (Devaluation / Resilience)
+    // 3. Cost Push (Devaluation / Pass-through)
     double cost_push = 0.0;
-    // If reserves are low, currency devalues
+    
+    // Chronic Pass-through: Low stability causes internal price increases (imported goods)
+    cost_push += 0.05 * (1.0 - playerCountry.economy.exchange_rate_stability);
+    
+    // Shock: If reserves are low, currency devalues sharply
     if (playerCountry.economy.international_reserves < 20000000.0) {
-        cost_push += 0.03; // Devaluation inflation
+        cost_push += 0.03; 
     }
     
     // 4. Policy Cooling (Central Bank Interest Rates)
@@ -1340,6 +1344,28 @@ void Game::update() {
     double imports = playerCountry.economy.gdp * playerCountry.economy.import_dependency * (net_purchasing_power > 0.8 ? net_purchasing_power : 0.8);
     
     playerCountry.economy.trade_balance = exports - imports;
+    
+    // --- CALCULATE DYNAMIC EXCHANGE RATE STABILITY ---
+    // Stability depends on: Institutions (Autonomy) + War Chest (Reserves) + Fundamentals (Trade)
+    double base_stability = 0.4 + (playerCountry.economy.central_bank_autonomy * 0.4);
+    
+    // Reserves Bonus: If reserves cover > 3 turns of imports
+    if (playerCountry.economy.international_reserves > (imports * 3.0)) {
+        base_stability += 0.1;
+    }
+    
+    // Trade Bonus: Surplus boosts confidence
+    if (playerCountry.economy.trade_balance > 0) {
+        base_stability += 0.1;
+    }
+    
+    // Shock Penalty: Crisis destroys all confidence
+    if (playerCountry.economy.international_reserves <= 0) {
+        base_stability = 0.1;
+    }
+    
+    if (base_stability > 0.95) base_stability = 0.95;
+    playerCountry.economy.exchange_rate_stability = base_stability;
     
     // 2. Financial Account (FDI and Capital Flow)
     // Determinants: Interest Rate (Carry Trade) + Stability (UN Score/Polarization)
