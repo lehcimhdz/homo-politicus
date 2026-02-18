@@ -1257,6 +1257,60 @@ void Game::update() {
     // Monetary Emission Decays (The one-time printing shock fades)
     playerCountry.economy.monetary_emission *= 0.5;
     
+    // --- BALANCE OF PAYMENTS (Reserves Logic) ---
+    // 1. Trade Balance (Current Account)
+    // Exports depend on Tech/Industry + Global Growth + Exchange Rate (Cost Push)
+    // Imports depend on Consumption Power + Import Dependency
+    
+    double exports = playerCountry.economy.gdp * 0.20 * export_exposure * (1.0 + (global_growth_trend - 0.02) * 2.0);
+    double imports = playerCountry.economy.gdp * playerCountry.economy.import_dependency * (net_purchasing_power > 0.8 ? net_purchasing_power : 0.8);
+    
+    playerCountry.economy.trade_balance = exports - imports;
+    
+    // 2. Financial Account (FDI and Capital Flow)
+    // Determinants: Interest Rate (Carry Trade) + Stability (UN Score/Polarization)
+    
+    double capital_flow_base = 0.0;
+    
+    // Carry Trade: High Interest attracts Hot Money
+    if (playerCountry.economy.interest_rate > 0.05) {
+        capital_flow_base += (playerCountry.economy.interest_rate - 0.05) * 1000000000.0; // $1B per 1% spread
+    }
+    
+    // Stability Factor
+    if (playerCountry.welfare.un_score < 0.3 || playerCountry.politics.polarization_index > 0.7) {
+        capital_flow_base -= 500000000.0; // Capital Flight ($500M)
+        std::cout << "[!] CAPITAL FLIGHT: Investors are fleeing instability." << std::endl;
+    }
+    
+    // FDI (Long term)
+    double fdi = (playerCountry.welfare.un_score * 0.02) * playerCountry.economy.gdp; 
+    
+    // 3. Debt Service
+    // We pay interest on external debt.
+    double external_debt_interest = playerCountry.economy.gdp * playerCountry.economy.debt_to_gdp_ratio * 0.05; // 5% avg interest
+    
+    // Net Change in Reserves
+    double reserves_change = playerCountry.economy.trade_balance + fdi + capital_flow_base - external_debt_interest;
+    
+    playerCountry.economy.international_reserves += reserves_change;
+    
+    // Display BoP
+    // std::cout << "[ECON] BoP: Trade $" << playerCountry.economy.trade_balance / 1000000 << "M | Capital $" << (fdi+capital_flow_base)/1000000 << "M | DebtServ -$" << external_debt_interest/1000000 << "M" << std::endl;
+    std::cout << "[ECON] Reserves Change: " << (reserves_change >= 0 ? "+" : "") << reserves_change / 1000000.0 << "M USD. Total: $" << playerCountry.economy.international_reserves / 1000000.0 << "M" << std::endl;
+    
+    // --- CURRENCY CRISIS (Reserves < 0) ---
+    if (playerCountry.economy.international_reserves < 0.0) {
+        std::cout << "[!!!] CURRENCY CRISIS: The Central Bank has run out of dollars." << std::endl;
+        
+        // Massive Devaluation
+        playerCountry.economy.inflation += 0.10; // +10% Inflation instantly
+        playerCountry.economy.gdp *= 0.95;       // -5% GDP Shock
+        playerCountry.politics.popularity -= 0.10; // Anger
+        playerCountry.economy.international_reserves = 0.0; // IMF Bailout (reset to zero, debt increases)
+        playerCountry.economy.debt_to_gdp_ratio += 0.05; // Forced borrowing
+    }
+
     // --- HYPERINFLATION DISASTER ---
     if (playerCountry.economy.inflation > 0.50) { // 50% Inflation
          std::cout << "[!!!] HYPERINFLATION: The currency has collapsed. Economy is in freefall." << std::endl;

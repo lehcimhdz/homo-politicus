@@ -66,6 +66,17 @@ El mundo se mueve en olas de expansión y recesión (Ciclo de 12 años).
     *   **Recesión Global**: Te estancas o contraes.
 *   **Economía Cerrada**: Si no tienes industria, creces lento pero seguro (aislado del caos global).
 
+### Balanza de Pagos (Reservas Internacionales)
+Tus dólares. Si se acaban, quiebras.
+*   `Cambio en Reservas` = (Exportaciones - Importaciones) + (Inversión Extranjera - Fuga Capitales) - Servicio Deuda.
+*   **Exportaciones**: Dependen de tu industria, tecnología y el Ciclo Global ("Boom").
+*   **Importaciones**: Dependen del consumo. Si tu gente es rica, compra iPhones e importa autos, drenando reservas.
+*   **Servicio Deuda**: Pagas intereses sobre tu deuda externa cada año.
+*   **Crisis Cambiaria**: Si `Reservas < 0`:
+    *   Devaluación masiva (+10% inflación).
+    *   Caída del PIB (-5%).
+    *   Rescate forzoso (Aumenta Deuda).
+
 ### Motor de Consumo
 La economía necesita compradores.
 *   **Poder Adquisitivo**: `Salario Mínimo / PIB per Cápita`.
