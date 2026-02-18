@@ -71,6 +71,13 @@ La economía necesita compradores.
 *   **Freno a la Inversión**: Si `Impuesto Efectivo > 25%`, los inversores huyen. El crecimiento potencial se penaliza (-0.1% por cada 1% extra de impuestos).
 *   **Freno al Consumo**: Los impuestos reducen el **Ingreso Disponible**. Si la gente paga muchos impuestos, compra menos, y la economía se estanca.
 
+### Motor de Inflación
+La inflación ya no es un número estático, sino un equilibrio de fuerzas:
+1.  **Emisión Monetaria**: Imprimir dinero (`print+`) genera presión inmediata.
+2.  **Pull de Demanda**: Si la gente tiene demasiado dinero (`net_purchasing_power > 1.1`), los precios suben.
+3.  **Shock de Costos**: Si las reservas internacionales caen por debajo de los $20M, la moneda se devalúa (+3% inflación).
+4.  **Enfriamiento**: Subir la tasa de interés (`interest+`) reduce la inflación pero frena el crecimiento del PIB.
+
 ### Remesas y Diáspora
 La emigración tiene un lado positivo: El dinero que vuelve a casa.
 *   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.

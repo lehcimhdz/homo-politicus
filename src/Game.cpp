@@ -296,6 +296,35 @@ void Game::processEvents() {
         
         std::cout << "   Enrollment: " << playerCountry.welfare.primary_enrollment * 100 << "% | Literacy: " << playerCountry.welfare.literacy_rate * 100 << "%" << std::endl; 
     }
+    else if (command == "minority-") {
+        playerCountry.welfare.minority_protection -= 0.1;
+        if (playerCountry.welfare.minority_protection < 0.0) playerCountry.welfare.minority_protection = 0.0;
+        
+        playerCountry.politics.popularity += 0.04;    // Populist boost
+        playerCountry.welfare.radicalism_prob += 0.05; 
+        playerCountry.welfare.un_score -= 0.08; 
+        std::cout << ">> POLICY: Nationalist rhetoric enforced. Popularity up, minorities excluded." << std::endl;
+    }
+    // --- CENTRAL BANK & MONETARY COMMANDS ---
+    else if (command == "interest+") {
+        playerCountry.economy.interest_rate += 0.01; // +1%
+        playerCountry.politics.popularity -= 0.02;    // People hate high mortgage rates
+        std::cout << ">> MONETARY: Interest Rate raised to " << playerCountry.economy.interest_rate * 100 << "%" << std::endl;
+        std::cout << "   (Inflation Control ++, Growth --)" << std::endl;
+    }
+    else if (command == "interest-") {
+        playerCountry.economy.interest_rate -= 0.01; 
+        if (playerCountry.economy.interest_rate < 0.0) playerCountry.economy.interest_rate = 0.0;
+        std::cout << ">> MONETARY: Interest Rate lowered. Borrowing is cheap!" << std::endl;
+        std::cout << "   (Growth ++, Inflation Risk ++)" << std::endl;
+    }
+    else if (command == "print+") {
+        // Emergency Funding: Print $100M
+        playerCountry.economy.monetary_emission += 0.05; // 5% increase in money supply
+        playerCountry.economy.international_reserves += 100000000.0;
+        std::cout << "[!!!] DECREE: Central Bank ordered to print money for the Treasury." << std::endl;
+        std::cout << "      $100M injected into Reserves. (Inflation Surge Incoming!)" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
@@ -619,6 +648,12 @@ void Game::update() {
         double tax_penalty = (effective_tax_rate - 0.25) * 0.1; // 10% penalty for every point over 25%
         potential_growth -= tax_penalty;
         // std::cout << "[INFO] HIGH TAXES: Investors are wary. Growth slowed." << std::endl;
+    }
+
+    // INTEREST RATE DRAG (Monetary Policy Cost)
+    // High rates make borrowing for machines/tech expensive.
+    if (playerCountry.economy.interest_rate > 0.08) {
+        potential_growth -= (playerCountry.economy.interest_rate - 0.08) * 0.5;
     }
     
     // Apply Consumption
@@ -1132,9 +1167,41 @@ void Game::update() {
         playerCountry.politics.popularity -= 0.02;
     }
 
-    // Inflation fluctuates slightly (randomness simulation)
-    // For now, we just keep it steady or increase it slightly
-    // playerCountry.economy.inflation += 0.001; 
+    // --- INFLATION ENGINE (Dynamic Model) ---
+    // Inflation = Base + MonetaryPull + DemandPull + CostPush - PolicyCooling
+    
+    double base_inflation = 0.02; // 2% natural target
+    
+    // 1. Monetary Pull (Printing money)
+    double monetary_pull = playerCountry.economy.monetary_emission * 0.2;
+    
+    // 2. Demand Pull (Overheated consumption)
+    // net_purchasing_power is already adjusted by taxes and remittances in previous section
+    double demand_pull = 0.0;
+    // We need to re-fetch net_purchasing_power from the scope (it's in Game::update)
+    // If net_purchasing_power > 1.1, add (net_purchasing_power - 1.1) * 0.1 to inflation.
+    
+    // 3. Cost Push (Devaluation / Resilience)
+    double cost_push = 0.0;
+    // If reserves are low, currency devalues
+    if (playerCountry.economy.international_reserves < 20000000.0) {
+        cost_push += 0.03; // Devaluation inflation
+    }
+    
+    // 4. Policy Cooling (Central Bank Interest Rates)
+    // High interest rates reduce inflation.
+    double policy_cooling = playerCountry.economy.interest_rate * 0.5;
+    
+    // Target Inflation Calculation
+    // We'll use the local net_purchasing_power variable from earlier in the function
+    double target_inflation = base_inflation + monetary_pull + ( (net_purchasing_power > 1.1) ? (net_purchasing_power - 1.1) * 0.1 : 0.0 ) + cost_push - policy_cooling;
+    if (target_inflation < -0.02) target_inflation = -0.02; // Deflation floor
+    
+    // Drift actual inflation towards Target
+    playerCountry.economy.inflation += (target_inflation - playerCountry.economy.inflation) * 0.3;
+    
+    // Monetary Emission Decays (The one-time printing shock fades)
+    playerCountry.economy.monetary_emission *= 0.5;
 
     // 3. Politics (Populatiry calculation)
     // People hate inflation and unemployment.
