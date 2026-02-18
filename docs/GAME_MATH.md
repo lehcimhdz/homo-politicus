@@ -59,6 +59,13 @@ El crecimiento potencial se basa en tres pilares:
 *   Innovación (`innovation_index`) + Tecnología (`tech_power`).
 *   **Penalización**: La `corrupción` resta eficiencia directamante.
 
+### Ciclos Económicos Globales
+El mundo se mueve en olas de expansión y recesión (Ciclo de 12 años).
+*   **Economía Exportadora**: Si tienes alta Industria y Tech, dependes del mundo.
+    *   **Boom Global**: Creces muchísimo más rápido (+1.5x bonificación).
+    *   **Recesión Global**: Te estancas o contraes.
+*   **Economía Cerrada**: Si no tienes industria, creces lento pero seguro (aislado del caos global).
+
 ### Motor de Consumo
 La economía necesita compradores.
 *   **Poder Adquisitivo**: `Salario Mínimo / PIB per Cápita`.

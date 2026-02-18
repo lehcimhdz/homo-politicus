@@ -642,8 +642,37 @@ void Game::update() {
     if (net_purchasing_power > 1.0) consumption_modifier = 0.01; // High demand
     
     // CALCULATE ORGANIC GROWTH RATE
+    
+    // --- GLOBAL BUSINESS CYCLE & TRADE ---
+    // The world economy fluctuates in a sine wave (Booms and Recessions).
+    // turnCount drives the cycle. Period = ~12 years (0.5 multiplier).
+    double global_growth_trend = 0.03 + (0.02 * sin(turnCount * 0.5));
+    // Add noise
+    std::uniform_real_distribution<> noise_dist(-0.005, 0.005);
+    global_growth_trend += noise_dist(rng);
+    
+    // Trade Exposure (Export Orientation)
+    // High Tech + High Industry = Export Economy.
+    double export_exposure = (playerCountry.politics.industrial_power + playerCountry.politics.tech_power) / 2.0;
+    
+    // Internal Market Strength (Consumption Base)
+    // Large population with money shields from global shocks.
+    // Normalized somewhat to 10M pop baseline.
+    double internal_market_strength = (playerCountry.welfare.population / 10000000.0) * consumption_modifier; 
+    
+    // Display Global Context
+    if (global_growth_trend > 0.04) std::cout << "[INFO] GLOBAL ECONOMY: Boom Times! World trade is surging." << std::endl;
+    else if (global_growth_trend < 0.015) std::cout << "[INFO] GLOBAL ECONOMY: Recession. World demand is weak." << std::endl;
+    
     // Base potential growth
-    double potential_growth = 0.02; // 2% base
+    // Starts with Global Trend, modified by exposure.
+    // If you are closed economy (exposure 0), you get a flat 0.02 base.
+    // If you are open (exposure 1), you get the full global volatile rate.
+    
+    double growth_from_trade = (global_growth_trend - 0.02) * export_exposure * 1.5; // Leveraged effect
+    
+    double potential_growth = 0.02 + growth_from_trade; 
+
     
     // Labor Contribution (Okun's Law approximate)
     // If unemployment > 5%, growth suffers.
