@@ -348,11 +348,15 @@ void Game::processEvents() {
              std::cout << ">> BLOCKED: Central Bank Governor refuses to monetize debt. Autonomy is too high." << std::endl;
              std::cout << "   (Lower Autonomy first with 'autonomy-', but beware capital flight)" << std::endl;
          } else {
-            // Emergency Funding: Print $100M
-            playerCountry.economy.monetary_emission += 0.05; // 5% increase in money supply
-            playerCountry.economy.international_reserves += 100000000.0;
-            std::cout << "[!!!] DECREE: Central Bank ordered to print money for the Treasury." << std::endl;
-            std::cout << "      $100M injected into Reserves. (Inflation Surge Incoming!)" << std::endl;
+            // Emergency Funding: Seigniorage (1% of GDP)
+            double print_amount = playerCountry.economy.gdp * 0.01;
+            
+            playerCountry.economy.monetary_emission += 0.01; // +1% Money Supply
+            playerCountry.economy.international_reserves += print_amount;
+            
+            std::cout << "[!!!] DECREE: Central Bank ordered to print money." << std::endl;
+            std::cout << "      Seigniorage Revenue: $" << print_amount / 1000000 << "M added to Reserves." << std::endl;
+            std::cout << "      (Inflation Surge Incoming!)" << std::endl;
          }
     }
     else if (command == "reform_currency") {
@@ -1249,6 +1253,46 @@ void Game::update() {
         playerCountry.politics.polarization_index += 0.05;
         playerCountry.politics.marches += 1; // More protests
         playerCountry.politics.popularity -= 0.02;
+    }
+
+    // --- FISCAL BALANCE & AUTOMATIC MONETIZATION (Fiscal Dominance) ---
+    // 1. Calculate Fiscal Balance
+    // Revenue
+    double govt_revenue = playerCountry.economy.tax_collection;
+    
+    // Spending (Simulated)
+    // Governments tend to spend slightly more than they tax (Deficit Bias).
+    // Plus Debt Service (Interest Payments).
+    double effective_tax_rate_now = playerCountry.economy.tax_collection / playerCountry.economy.gdp;
+    double base_spending = playerCountry.economy.gdp * (effective_tax_rate_now + 0.01); // 1% Structural Deficit
+    double debt_service_cost = playerCountry.economy.gdp * playerCountry.economy.debt_to_gdp_ratio * playerCountry.economy.interest_rate;
+    
+    double total_spending = base_spending + debt_service_cost;
+    double fiscal_balance = govt_revenue - total_spending;
+    
+    // 2. Fiscal Dominance Check
+    if (fiscal_balance < 0) {
+        // We have a DEFICIT
+        double deficit = -fiscal_balance;
+        
+        if (playerCountry.economy.central_bank_autonomy < 0.3) {
+            // LOW AUTONOMY: The Government forces the Bank to print money to cover the deficit.
+            // This is "Monetization of the Deficit".
+            
+            double monetization_pct = deficit / playerCountry.economy.gdp;
+            
+            playerCountry.economy.monetary_emission += monetization_pct;
+            // The printed money theoretically enters reserves/economy
+            playerCountry.economy.international_reserves += deficit;
+            
+            std::cout << "[!] FISCAL DOMINANCE: Deficit of $" << deficit/1000000 << "M covered by printing money." << std::endl;
+            std::cout << "    (Autonomy too low to refuse. Inflation increasing by " << monetization_pct*100 << "%)" << std::endl;
+            
+        } else {
+            // HIGH AUTONOMY: The Bank refuses. Govt must issue DEBT.
+            playerCountry.economy.debt_to_gdp_ratio += (deficit / playerCountry.economy.gdp);
+             // std::cout << "[INFO] DEFICIT FUNDED BY DEBT. (Bank is Autonomous)" << std::endl;
+        }
     }
 
     // --- INFLATION ENGINE (Dynamic Model) ---

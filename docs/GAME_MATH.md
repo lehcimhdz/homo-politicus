@@ -128,6 +128,16 @@ La tasa de interés no es gratis.
 *   **Sector Construcción**: Si `tasa > 12%`, el sector inmobiliario se congela (+0.5% Desempleo).
 *   **Crisis Bancaria**: Si `tasa > 20%`, los deudores quiebran y los bancos colapsan (-4% PIB).
 
+*   **Crisis Bancaria**: Si `tasa > 20%`, los deudores quiebran y los bancos colapsan (-4% PIB).
+
+### Señoreaje y Monetización del Déficit
+Imprimir dinero es adictivo.
+*   **Balance Fiscal**: `Ingresos Fiscales - (Gasto Público + Servicio Deuda)`.
+*   **Dominancia Fiscal**: Si tienes **Déficit** y **Baja Autonomía** (< 0.3), el gobierno obliga al Banco Central a imprimir la diferencia.
+    *   Resultado: Inflación automática, aunque no uses comandos.
+*   **Alta Autonomía**: El banco se niega a imprimir. El déficit se cubre con **Deuda** (+Deuda/PIB).
+*   **Comando `print+`**: Imprime 1% del PIB. Ingresa a reservas pero dispara la inflación.
+
 ### Remesas y Diáspora
 La emigración tiene un lado positivo: El dinero que vuelve a casa.
 *   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.
