@@ -40,6 +40,37 @@ $$
 
 ---
 
+## 2. Economía (Modelo Profundo)
+El PIB ya no es un número mágico. Es el resultado de la estructura de tu país.
+
+### Fórmula de Crecimiento (Tipo Cobb-Douglas)
+El crecimiento potencial se basa en tres pilares:
+
+#### 1. Trabajo (Labor)
+*   **Cantidad**: `Población * (1 - Desempleo)`.
+*   **Calidad (Capital Humano)**: Promedio de `Alfabetización`, `Educación Secundaria` y `Salud`.
+*   **Efecto**: Si tienes desempleo > 5%, el crecimiento se penaliza (Ley de Okun).
+
+#### 2. Capital Físico
+*   Infraestructura (`road_connectivity`, `port_capacity`) + Poder Industrial.
+*   **Bonus**: Si tu capital físico > 0.7, recibes un +1% de crecimiento extra.
+
+#### 3. Productividad (TFP)
+*   Innovación (`innovation_index`) + Tecnología (`tech_power`).
+*   **Penalización**: La `corrupción` resta eficiencia directamante.
+
+### Motor de Consumo
+La economía necesita compradores.
+*   **Poder Adquisitivo**: `Salario Mínimo / PIB per Cápita`.
+*   **Bajo (< 80%)**: La gente no tiene dinero. El crecimiento se frena (-1%).
+*   **Alto (> 120%)**: La demanda impulsa la economía (+1%), (pero cuidado con la inflación).
+
+### Fiscalidad Dinámica
+*   La recaudación (`tax_collection`) es ahora un porcentaje del PIB.
+*   Si el PIB crece, recaudas más. Si hay recesión, recaudas menos (y el déficit sube).
+
+---
+
 ## 3. Política (Popularidad)
 La popularidad es un valor entre 0.0 (0%) y 1.0 (100%). Determina si ganas las elecciones.
 

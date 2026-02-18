@@ -519,16 +519,86 @@ void Game::update() {
         playerCountry.welfare.literacy_rate -= decay;
     }
 
-    // 2. Economy
-    // GDP grows by (growth_rate - inflation) roughly
-    // EDUCATION BONUS: Smart workforce = Innovation
-    double education_bonus = 0.0;
-    if (playerCountry.welfare.literacy_rate > 0.90 && playerCountry.welfare.educational_quality > 0.7) {
-        education_bonus = 0.015; // +1.5% Bonus Growth
-    }
+    // --- DEEP ECONOMIC MODEL (GDP Calculation) ---
+    // GDP = Consumption + Investment + Government + (Exports - Imports)
+    // We simulate growth based on factors of production: Labor, Capital, TFP.
 
-    double real_growth = playerCountry.economy.growth_rate + education_bonus;
-    playerCountry.economy.gdp += playerCountry.economy.gdp * real_growth;
+    // 1. Labor Factor (Workforce Quality & Quantity)
+    // Quantity: 
+    double workforce_participation = (1.0 - playerCountry.welfare.unemployment_rate) 
+                                   * (1.0 - (playerCountry.welfare.aging_index * 0.5)); // Age reduces active workforce
+    
+    // Quality (Human Capital):
+    double human_capital = (playerCountry.welfare.literacy_rate * 0.4) 
+                         + (playerCountry.welfare.secondary_enrollment * 0.3)
+                         + (playerCountry.welfare.health_coverage * 0.3); // Healthy workers work better
+                         
+    double labor_factor = workforce_participation * human_capital;
+
+    // 2. Capital Factor (Infrastructure & Machines)
+    double physical_capital = (playerCountry.infra.road_connectivity * 0.3)
+                            + (playerCountry.infra.port_capacity * 0.2)
+                            + (playerCountry.politics.industrial_power * 0.3)
+                            + (playerCountry.politics.financial_power * 0.2);
+
+    // 3. TFP (Total Factor Productivity - Innovation/Efficiency)
+    double tfp = 1.0 + (playerCountry.infra.innovation_index * 0.05) // Tech bonus
+                     + (playerCountry.politics.tech_power * 0.05)
+                     - (playerCountry.politics.administrative_corruption * 0.10); // Corruption is inefficiency
+                     
+    // 4. Consumption Engine (Demand Side)
+    // Spending Power: Wage / GDP per Capita
+    // Ideal: Wage is ~40-50% of GDP/Capita.
+    double gdp_per_capita_prev = playerCountry.economy.gdp / playerCountry.welfare.population;
+    double purchasing_power = playerCountry.welfare.minimum_wage / (gdp_per_capita_prev * 0.4); 
+    
+    // If purchasing power is low (< 0.8), consumption drags growth.
+    // If high (> 1.2), it overheats (handled in inflation already), captures demand here.
+    double consumption_modifier = 0.0;
+    if (purchasing_power < 0.8) consumption_modifier = -0.01; // Low demand
+    if (purchasing_power > 1.0) consumption_modifier = 0.01; // High demand
+    
+    // CALCULATE ORGANIC GROWTH RATE
+    // Base potential growth
+    double potential_growth = 0.02; // 2% base
+    
+    // Labor Contribution (Okun's Law approximate)
+    // If unemployment > 5%, growth suffers.
+    if (playerCountry.welfare.unemployment_rate > 0.05) {
+        potential_growth -= (playerCountry.welfare.unemployment_rate - 0.05) * 0.5;
+    }
+    
+    // Capital & TFP Bonus
+    if (physical_capital > 0.7) potential_growth += 0.01;
+    if (tfp > 1.0) potential_growth += (tfp - 1.0);
+    
+    // Apply Consumption
+    potential_growth += consumption_modifier;
+    
+    // Update the tracked growth rate (for display/trends)
+    playerCountry.economy.growth_rate = potential_growth;
+    
+    // Final Real Growth (adjusted by external shocks elsewhere like Sanctions)
+    // Note: Sanctions are applied later as a multiplier on GDP directly, so here we set the "Trend".
+    
+    // Apply Growth to GDP
+    playerCountry.economy.gdp += playerCountry.economy.gdp * playerCountry.economy.growth_rate;
+    
+    // --- FISCAL LINKAGE (Taxes) ---
+    // Tax Collection is now derived from GDP.
+    // Base Tax Rate: ~20% of GDP implied by initial values ($10M / $500M = 2%). Wait, initial is low ($10M tax on $500M GDP = 2%).
+    // Let's assume a "Systemic Tax Rate" that the player modifies via tax+/tax-.
+    // We'll calculate the *Effective Rate* from current values and maintain it unless changed.
+    
+    double current_effective_rate = playerCountry.economy.tax_collection / playerCountry.economy.gdp;
+    // Bounds check to prevent weirdness after GDP jumps
+    if (current_effective_rate < 0.01) current_effective_rate = 0.01;
+    if (current_effective_rate > 0.50) current_effective_rate = 0.50;
+    
+    // Recalculate Collection based on new GDP
+    playerCountry.economy.tax_collection = playerCountry.economy.gdp * current_effective_rate;
+
+    // --- ENROLLMENT DYNAMICS (The Poverty Trap) ---
 
     // --- EDUCATION & DEMOGRAPHICS ---
     // --- DEMOGRAPHIC TRANSITION (The Birth Rate Formula) ---
