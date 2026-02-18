@@ -121,6 +121,13 @@ El cementerio de los gobiernos.
     *   **Costo**: -25% Popularidad (la gente pierde sus ahorros).
     *   **Efecto**: Resetea la inflación al 2%.
 
+### Canal de Crédito (Tasa de Interés)
+La tasa de interés no es gratis.
+*   **Inversión Privada**: `Inversión = 5% * (1 - 3 * Tasa)`.
+    *   Si subes la tasa, las empresas dejan de invertir (Crowding Out).
+*   **Sector Construcción**: Si `tasa > 12%`, el sector inmobiliario se congela (+0.5% Desempleo).
+*   **Crisis Bancaria**: Si `tasa > 20%`, los deudores quiebran y los bancos colapsan (-4% PIB).
+
 ### Remesas y Diáspora
 La emigración tiene un lado positivo: El dinero que vuelve a casa.
 *   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.
