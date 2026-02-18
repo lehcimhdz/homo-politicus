@@ -1335,12 +1335,24 @@ void Game::update() {
     if (playerCountry.economy.international_reserves < 0.0) {
         std::cout << "[!!!] CURRENCY CRISIS: The Central Bank has run out of dollars." << std::endl;
         
-        // Massive Devaluation
-        playerCountry.economy.inflation += 0.10; // +10% Inflation instantly
+        // Massive Devaluation (Mitigated by Stability)
+        // Base shock: 15% inflation increase.
+        // Stability Factor reduces it. Max stability (0.9) -> Shock ~1.5%.
+        double devaluation_shock = 0.15 * (1.0 - playerCountry.economy.exchange_rate_stability);
+        if (devaluation_shock < 0.02) devaluation_shock = 0.02; // Minimum shock
+        
+        playerCountry.economy.inflation += devaluation_shock; 
         playerCountry.economy.gdp *= 0.95;       // -5% GDP Shock
         playerCountry.politics.popularity -= 0.10; // Anger
         playerCountry.economy.international_reserves = 0.0; // IMF Bailout (reset to zero, debt increases)
         playerCountry.economy.debt_to_gdp_ratio += 0.05; // Forced borrowing
+        
+        std::cout << "      Devaluation Shock: +" << devaluation_shock * 100 << "% Inflation." << std::endl;
+        if (playerCountry.economy.central_bank_autonomy > 0.7) {
+            std::cout << "      (Autonomous Bank mitigated the panic)." << std::endl;
+        } else {
+             std::cout << "      (Politicized Bank caused a run on the currency)." << std::endl;
+        }
     }
 
     // --- HYPERINFLATION DISASTER ---

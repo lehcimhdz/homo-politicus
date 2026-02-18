@@ -105,6 +105,8 @@ El guardián de la moneda.
 *   **Baja Autonomía**:
     *   **Ventaja**: Control total (`print+` habilitado).
     *   **Desventaja**: Fuga de capitales y menor inversión.
+*   **Defensa de la Moneda**: Autonomía alta = Alta Estabilidad Cambiaria.
+    *   Si hay Crisis de Reservas, un banco autónomo reduce el shock inflacionario (del 15% al 2%).
 
 ### Espiral Salarios-Precios
 Si la **Inflación > 5%** y los sindicatos son fuertes (`> 0.3`), exigirán aumentos automáticos de sueldo.
