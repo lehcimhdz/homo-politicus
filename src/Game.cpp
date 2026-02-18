@@ -2,16 +2,11 @@
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
-#include <cstdlib> // For rand
-#include <ctime>   // For time
 
-Game::Game() : isRunning(true), turnCount(0) {
+Game::Game() : isRunning(true), nextTurn(false), turnCount(0), rng(std::random_device{}()) {
     std::cout << "Initializing Game..." << std::endl;
-    std::srand(std::time(nullptr)); // Seed the random number generator
+    // std::srand removed, using std::mt19937 initialized in member initializer list
 }
-
-// Helper state to ensure we only update when "next" is called
-bool nextTurn = false;
 
 void Game::run() {
     while (isRunning) {
@@ -61,7 +56,8 @@ void Game::processEvents() {
         std::cout << "   (Pension Sustainability ++, Popularity ---)" << std::endl;
         playerCountry.politics.popularity -= 0.05; // Very Unpopular
         // Immediate Protest Risk
-        if (std::rand() % 100 < 30) {
+        std::uniform_int_distribution<> dist(0, 99);
+        if (dist(rng) < 30) {
             std::cout << "[!] PROTESTS: Seniors take the streets!" << std::endl;
             playerCountry.welfare.general_strike_prob += 0.05;
         }
@@ -184,7 +180,8 @@ void Game::processEvents() {
         
         // The Pain of Truth
         // Scandals are revealed!
-        if ((double)rand() / RAND_MAX < 0.4) {
+        std::uniform_real_distribution<> dist(0.0, 1.0);
+        if (dist(rng) < 0.4) {
             std::cout << "[!] SCANDAL: Free press exposes government corruption!" << std::endl;
             playerCountry.politics.popularity -= 0.08;
             playerCountry.politics.polarization_index += 0.03;
@@ -865,7 +862,8 @@ void Game::update() {
     // GENERAL STRIKE CHECK
     // Probability accumulates until they blow up.
     if (playerCountry.welfare.general_strike_prob > 0.05) { // 5% risk threshold to start rolling
-        int roll = std::rand() % 100;
+        std::uniform_int_distribution<> dist(0, 99);
+        int roll = dist(rng);
         if (roll < (playerCountry.welfare.general_strike_prob * 100)) {
             std::cout << "[!!!] GENERAL STRIKE! The country is paralyzed." << std::endl;
             // Consequence:
@@ -1036,14 +1034,15 @@ void Game::update() {
         double net_risk = attack_chance * (1.0 - intel_shield);
         
         // Roll Dice (Annual Check)
-        // Simple random: rand() / RAND_MAX < net_risk
-        double roll = (double)rand() / RAND_MAX;
+        std::uniform_real_distribution<> dist(0.0, 1.0);
+        double roll = dist(rng);
         
         if (roll < net_risk) {
             std::cout << "[!!!] TERRORIST ATTACK: Radical extremists struck a major city!" << std::endl;
             
             // Consequences
-            int casualties = 50 + (rand() % 500); // 50-550 deaths
+            std::uniform_int_distribution<> casualties_dist(50, 549); // 50 + (0 to 499)
+            int casualties = casualties_dist(rng); 
             playerCountry.welfare.population -= casualties;
             
             playerCountry.politics.popularity -= 0.05; // Leader blamed
@@ -1055,7 +1054,7 @@ void Game::update() {
             std::cout << "      " << casualties << " casualties reported. Market panics." << std::endl;
         } else if (net_risk > 0.05) {
             // Near Miss (Intelligence Victory?)
-            if ((double)rand() / RAND_MAX < 0.3) {
+            if (dist(rng) < 0.3) {
                  std::cout << "[INFO] INTELLIGENCE: A major terror plot was foiled by security services." << std::endl;
                  playerCountry.politics.popularity += 0.02; // Credit for safety
             }
@@ -1101,7 +1100,8 @@ void Game::update() {
     if (playerCountry.economy.international_sanctions_prob < 0.0) playerCountry.economy.international_sanctions_prob = 0.0;
     
     // Trigger Sanctions
-    double sanctions_roll = (double)rand() / RAND_MAX;
+    std::uniform_real_distribution<> dist(0.0, 1.0);
+    double sanctions_roll = dist(rng);
     if (sanctions_roll < playerCountry.economy.international_sanctions_prob) {
         std::cout << "[!!!] SANCTIONS: The International Community has imposed a blockade." << std::endl;
         std::cout << "      (GDP -5%, Inflation +2%)" << std::endl;

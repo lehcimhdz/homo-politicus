@@ -1,6 +1,7 @@
 #ifndef GAME_HPP
 #define GAME_HPP
 
+#include <random>
 #include "Country.hpp"
 #include "EventManager.hpp"
 
@@ -17,9 +18,12 @@ private:
     void render();        // Draw the game (text output for now)
 
     bool isRunning;
+    bool nextTurn; // Moved from global
     int turnCount; // Track years in power
     Country playerCountry; // The country instance
     EventManager eventManager; // Handles random events
+    
+    std::mt19937 rng; // Mersenne Twister Random Number Generator
 };
 
 #endif // GAME_HPP
