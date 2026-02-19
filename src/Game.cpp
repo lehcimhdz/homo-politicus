@@ -1265,7 +1265,12 @@ void Game::update() {
     // Plus Debt Service (Interest Payments).
     double effective_tax_rate_now = playerCountry.economy.tax_collection / playerCountry.economy.gdp;
     double base_spending = playerCountry.economy.gdp * (effective_tax_rate_now + 0.01); // 1% Structural Deficit
-    double debt_service_cost = playerCountry.economy.gdp * playerCountry.economy.debt_to_gdp_ratio * playerCountry.economy.interest_rate;
+    
+    // Debt Service with RISK PREMIUM
+    // If Debt > 60%, the market charges a risk premium.
+    double risk_premium = (playerCountry.economy.debt_to_gdp_ratio > 0.6) ? (playerCountry.economy.debt_to_gdp_ratio - 0.6) * 0.2 : 0.0;
+    double effective_debt_interest = playerCountry.economy.interest_rate + risk_premium;
+    double debt_service_cost = playerCountry.economy.gdp * playerCountry.economy.debt_to_gdp_ratio * effective_debt_interest;
     
     double total_spending = base_spending + debt_service_cost;
     double fiscal_balance = govt_revenue - total_spending;
@@ -1383,6 +1388,11 @@ void Game::update() {
         std::cout << "[!] CAPITAL FLIGHT: Investors are fleeing instability." << std::endl;
     }
     
+    // Sovereign Default FDI Penalty:
+    if (playerCountry.economy.debt_to_gdp_ratio > 1.2 && playerCountry.economy.international_reserves <= 0) {
+        capital_flow_base = -1000000000.0; // Massive divestment
+    }
+    
     
     // FDI (Long term)
     // Autonomy is a Multiplier for TRUST.
@@ -1391,6 +1401,28 @@ void Game::update() {
     // 3. Debt Service
     // We pay interest on external debt.
     double external_debt_interest = playerCountry.economy.gdp * playerCountry.economy.debt_to_gdp_ratio * 0.05; // 5% avg interest
+    
+    // 3. Sovereign Default (The Ultimate Economic Failure)
+    // Triggered by high debt and zero liquidity.
+    if (playerCountry.economy.debt_to_gdp_ratio > 1.2 && playerCountry.economy.international_reserves < 0) {
+        std::cout << "[!!!] SOVEREIGN DEFAULT: The country has suspended debt payments!" << std::endl;
+        
+        // GDP Crash (-10%)
+        playerCountry.economy.gdp *= 0.90;
+        
+        // Reputation destruction
+        playerCountry.politics.popularity -= 0.30;
+        playerCountry.politics.financial_power -= 0.5;
+        playerCountry.welfare.un_score -= 0.4;
+        
+        // Social Panic
+        playerCountry.politics.polarization_index += 0.20;
+        
+        // The "Default Trap" resets reserves to 0 but cuts you off from markets (FDI hit handled below).
+        playerCountry.economy.international_reserves = 0;
+        
+        std::cout << "      Market chaos. Banking system frozen. FDI fleeing." << std::endl;
+    }
     
     // Net Change in Reserves
     double reserves_change = playerCountry.economy.trade_balance + fdi + capital_flow_base - external_debt_interest;

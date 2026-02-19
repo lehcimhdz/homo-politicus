@@ -140,6 +140,14 @@ Imprimir dinero es adictivo.
 *   **Alta Autonomía**: El banco se niega a imprimir. El déficit se cubre con **Deuda** (+Deuda/PIB).
 *   **Comando `print+`**: Imprime 1% del PIB. Ingresa a reservas pero dispara la inflación.
 
+### Sustentabilidad de la Deuda y Default
+La deuda es barata... hasta que deja de serlo.
+*   **Prima de Riesgo**: Si la Deuda > 60% del PIB, los mercados cobran un interés extra (hasta +20% si llega al 120%).
+*   **Sovereign Default (Gran Crisis)**: Si la `Deuda > 120%` y las `Reservas < 0`:
+    *   **Colapso**: El PIB cae un 10% instantáneamente.
+    *   **Paria Financiero**: La Inversión Extranjera (FDI) se detiene por completo.
+    *   **Costo Político**: Pérdida masiva de popularidad (-30%) y poder financiero.
+
 ### Remesas y Diáspora
 La emigración tiene un lado positivo: El dinero que vuelve a casa.
 *   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.
