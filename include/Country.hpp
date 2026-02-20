@@ -3,6 +3,17 @@
 
 #include <string>
 
+// Credit Rating Enum
+enum class CreditRating {
+    AAA, AA, A,
+    BBB, BB, B,
+    CCC, CC, C,
+    SD, // Selective Default
+    D   // Default
+};
+
+std::string CreditRatingToString(CreditRating rating);
+
 // 1. Welfare and Society System
 struct WelfareSocietySystem {
     // Health
@@ -85,7 +96,7 @@ struct EconomicFinancialSystem {
 
     // Sovereign Debt
     double debt_to_gdp_ratio = 0.4;
-    std::string credit_rating = "AA";
+    CreditRating credit_rating = CreditRating::AA;
     double default_prob = 0.01;
     double debt_interest = 2000000.0;
 

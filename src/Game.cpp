@@ -1266,11 +1266,74 @@ void Game::update() {
     double effective_tax_rate_now = playerCountry.economy.tax_collection / playerCountry.economy.gdp;
     double base_spending = playerCountry.economy.gdp * (effective_tax_rate_now + 0.01); // 1% Structural Deficit
     
-    // Debt Service with RISK PREMIUM
+    // --- NEW: SOVEREIGN CREDIT RATING ---
+    // Calculate economic health score (0.0 theoretically horrible to 1.0+ great)
+    // - High debt hurts.
+    // - Growth helps.
+    // - High inflation hurts.
+    // - Stability (autonomy) helps.
+    double economic_health_score = 
+        (1.0 - playerCountry.economy.debt_to_gdp_ratio) * 0.4 + 
+        (playerCountry.economy.growth_rate * 10.0) * 0.3 + 
+        (1.0 - playerCountry.economy.inflation * 5.0) * 0.2 +
+        playerCountry.economy.central_bank_autonomy * 0.1;
+
+    // Default prob logic tied to rating
+    playerCountry.economy.default_prob = 0.01; // Base
+
+    // Assign Enum and Penalty based on score bounds
+    double credit_interest_penalty = 0.0;
+    if (economic_health_score > 0.8) {
+        playerCountry.economy.credit_rating = CreditRating::AAA;
+        credit_interest_penalty = -0.01; // Reward for great rating
+    } else if (economic_health_score > 0.7) {
+        playerCountry.economy.credit_rating = CreditRating::AA;
+    } else if (economic_health_score > 0.6) {
+        playerCountry.economy.credit_rating = CreditRating::A;
+        credit_interest_penalty = 0.01;
+    } else if (economic_health_score > 0.5) {
+        playerCountry.economy.credit_rating = CreditRating::BBB;
+        credit_interest_penalty = 0.02;
+    } else if (economic_health_score > 0.4) {
+        playerCountry.economy.credit_rating = CreditRating::BB; // Junk tier begins
+        credit_interest_penalty = 0.04;
+        playerCountry.economy.default_prob = 0.05;
+    } else if (economic_health_score > 0.3) {
+        playerCountry.economy.credit_rating = CreditRating::B;
+        credit_interest_penalty = 0.08;
+        playerCountry.economy.default_prob = 0.15;
+    } else if (economic_health_score > 0.15) {
+        playerCountry.economy.credit_rating = CreditRating::CCC;
+        credit_interest_penalty = 0.15;
+        playerCountry.economy.default_prob = 0.30;
+    } else if (economic_health_score > 0.0) {
+        playerCountry.economy.credit_rating = CreditRating::CC;
+        credit_interest_penalty = 0.25;
+        playerCountry.economy.default_prob = 0.50;
+    } else if (playerCountry.economy.debt_to_gdp_ratio > 1.2 && playerCountry.economy.international_reserves < 0) {
+        playerCountry.economy.credit_rating = CreditRating::D;
+        credit_interest_penalty = 0.50; // Nobody lends, punitive default rates
+        playerCountry.economy.default_prob = 1.0;
+    } else {
+        playerCountry.economy.credit_rating = CreditRating::C;
+        credit_interest_penalty = 0.35;
+        playerCountry.economy.default_prob = 0.80;
+    }
+
+    // Debt Service with RISK PREMIUM and CREDIT RATING PENALTY
     // If Debt > 60%, the market charges a risk premium.
     double risk_premium = (playerCountry.economy.debt_to_gdp_ratio > 0.6) ? (playerCountry.economy.debt_to_gdp_ratio - 0.6) * 0.2 : 0.0;
-    double effective_debt_interest = playerCountry.economy.interest_rate + risk_premium;
+    double effective_debt_interest = playerCountry.economy.interest_rate + risk_premium + credit_interest_penalty;
+    
+    // Ensure interest doesn't go below 0
+    if (effective_debt_interest < 0.0) effective_debt_interest = 0.0;
+    
+    // Calculate total service cost
     double debt_service_cost = playerCountry.economy.gdp * playerCountry.economy.debt_to_gdp_ratio * effective_debt_interest;
+    
+    // Track it in the country struct
+    playerCountry.economy.debt_interest = debt_service_cost;
+
     
     double total_spending = base_spending + debt_service_cost;
     double fiscal_balance = govt_revenue - total_spending;
