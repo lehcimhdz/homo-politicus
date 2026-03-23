@@ -1,533 +1,536 @@
-# Modelo Matemático de Homo Politicus
+# Mathematical Model of Homo Politicus
 
-Este documento detalla las fórmulas exactas que rigen la simulación.
-
-## 1. Demografía (Population)
-La población cambia anualmente basada en tasas fijas de natalidad y mortalidad.
-
-$$
-P_{t+1} = P_t + (P_t \times T_{natalidad}) - (P_t \times T_{mortalidad})
-$$
-
-### Tasa de Mortalidad Dinámica
-La gente no muere a un ritmo fijo. Depende de su salud y estilo de vida.
-
-$$
-T_{mortalidad} = 0.008 + (Obesidad \times 0.02) - (CoberturaSalud \times 0.005)
-$$
-
-*   **Obesidad (`obesity_rate`)**: Crece **0.5%** anual si la inflación es baja (<3%). El "bienestar" engorda.
-*   **Cobertura Salud (`health_coverage`)**: Reduce la mortalidad. ¡Invierte en hospitales!
-
-### Depreciación del Sistema de Salud
-Los hospitales no son eternos.
-*   **Decadencia Natural**: -2% anual (Mantenimiento).
-*   **Decadencia por Crisis**: Si PIB decrece, -2% EXTRA (-4% total).
-*   **Estrategia**: Debes usar `invest_health` regularmente solo para mantener el sistema, o dejarlo caer para ahorrar dinero (a costa de muertes).
+This document details the exact formulas and mechanisms governing the simulation. Every year (`next`) executes all these equations in order.
 
 ---
 
-## 2. Economía (GDP)
-El Producto Interno Bruto (PIB) crece exponencialmente basado en la tasa de crecimiento.
+## Table of Contents
 
-$$
-GDP_{t+1} = GDP_t + (GDP_t \times T_{crecimiento})
-$$
-
-*   **PIB Inicial**: $500,000,000
-*   **Tasa Crecimiento Base (`growth_rate`)**: 2.0% (`0.02`)
-*   **Efecto Inversión**: Cada vez que inviertes en **Infraestructura** (`invest_infra`), la tasa de crecimiento aumenta permanentemente en **0.1%** (`0.001`).
-
----
-
-## 2. Economía (Modelo Profundo)
-El PIB ya no es un número mágico. Es el resultado de la estructura de tu país.
-
-### Fórmula de Crecimiento (Tipo Cobb-Douglas)
-El crecimiento potencial se basa en tres pilares:
-
-#### 1. Trabajo (Labor)
-*   **Cantidad**: `Población * (1 - Desempleo)`.
-*   **Calidad (Capital Humano)**: Promedio de `Alfabetización`, `Educación Secundaria` y `Salud`.
-*   **Efecto**: Si tienes desempleo > 5%, el crecimiento se penaliza (Ley de Okun).
-
-#### 2. Capital Físico
-*   Infraestructura (`road_connectivity`, `port_capacity`) + Poder Industrial.
-*   **Bonus**: Si tu capital físico > 0.7, recibes un +1% de crecimiento extra.
-
-#### 3. Productividad (TFP)
-*   Innovación (`innovation_index`) + Tecnología (`tech_power`).
-*   **Penalización**: La `corrupción` resta eficiencia directamante.
-
-### Ciclos Económicos Globales
-El mundo se mueve en olas de expansión y recesión (Ciclo de 12 años).
-*   **Economía Exportadora**: Si tienes alta Industria y Tech, dependes del mundo.
-    *   **Boom Global**: Creces muchísimo más rápido (+1.5x bonificación).
-    *   **Recesión Global**: Te estancas o contraes.
-*   **Economía Cerrada**: Si no tienes industria, creces lento pero seguro (aislado del caos global).
-
-### Balanza de Pagos (Reservas Internacionales)
-Tus dólares. Si se acaban, quiebras.
-*   `Cambio en Reservas` = (Exportaciones - Importaciones) + (Inversión Extranjera - Fuga Capitales) - Servicio Deuda.
-*   **Exportaciones**: Dependen de tu industria, tecnología y el Ciclo Global ("Boom").
-*   **Importaciones**: Dependen del consumo. Si tu gente es rica, compra iPhones e importa autos, drenando reservas.
-*   **Servicio Deuda**: Pagas intereses sobre tu deuda externa cada año.
-*   **Crisis Cambiaria**: Si `Reservas < 0`:
-    *   Devaluación masiva (+10% inflación).
-    *   Caída del PIB (-5%).
-    *   Rescate forzoso (Aumenta Deuda).
-
-### Motor de Consumo
-La economía necesita compradores.
-*   **Poder Adquisitivo**: `Salario Mínimo / PIB per Cápita`.
-*   **Bajo (< 80%)**: La gente no tiene dinero. El crecimiento se frena (-1%).
-*   **Alto (> 120%)**: La demanda impulsa la economía (+1%), (pero cuidado con la inflación).
-
-### Fiscalidad Dinámica y Curva de Laffer
-*   **Impuesto Efectivo**: `tax_collection / GDP`.
-*   **Recaudación**: Si el PIB crece, recaudas más.
-*   **Freno a la Inversión**: Si `Impuesto Efectivo > 25%`, los inversores huyen. El crecimiento potencial se penaliza (-0.1% por cada 1% extra de impuestos).
-*   **Freno al Consumo**: Los impuestos reducen el **Ingreso Disponible**. Si la gente paga muchos impuestos, compra menos, y la economía se estanca.
-
-### Motor de Inflación
-La inflación ya no es un número estático, sino un equilibrio de fuerzas:
-1.  **Emisión Monetaria**: Imprimir dinero (`print+`) genera presión inmediata.
-2.  **Pull de Demanda**: Si la gente tiene demasiado dinero (`net_purchasing_power > 1.1`), los precios suben.
-3.  **Shock de Costos**: Si las reservas internacionales caen por debajo de los $20M, la moneda se devalúa (+3% inflación).
-4.  **Enfriamiento**: Subir la tasa de interés (`interest+`) reduce la inflación pero frena el crecimiento del PIB.
-5.  **Autonomía**: Si `central_bank_autonomy > 0.7`, la inflación baja sola (-0.5%) por la "Credibilidad".
-
-### Autonomía del Banco Central
-El guardián de la moneda.
-*   **Alta Autonomía**:
-    *   **Ventaja**: Multiplica la Inversión Extranjera (FDI) y ancla la inflación.
-    *   **Desventaja**: Bloquea el comando `print+`. No puedes monetizar deuda. Interferir con la tasa de interés cuesta Popularidad.
-*   **Baja Autonomía**:
-    *   **Ventaja**: Control total (`print+` habilitado).
-    *   **Desventaja**: Fuga de capitales y menor inversión.
-*   **Estabilidad Cambiaria**: Ahora es dinámica.
-    *   **Factores**: Autonomía (Base) + Reservas (Si cubren >3 meses de importaciones) + Balanza Comercial (Superávit).
-    *   **Efecto Pass-through**: Si la estabilidad es baja, hay una inflación constante por el encarecimiento de bienes importados (hasta +5% anual).
-*   **Defensa de la Moneda**: Si hay Crisis de Reservas, un banco autónomo reduce el shock inflacionario (del 15% al 2%).
-
-### Espiral Salarios-Precios
-Si la **Inflación > 5%** y los sindicatos son fuertes (`> 0.3`), exigirán aumentos automáticos de sueldo.
-*   **Mecanismo**: El salario mínimo sube automáticamente para casi igualar la inflación.
-*   **Consecuencia**: Las empresas suben precios para pagar los nuevos sueldos (+1% Inflación extra). Se crea un círculo vicioso difícil de romper.
-
-### Hiperinflación
-El cementerio de los gobiernos.
-*   **Umbral**: Si **Inflación > 50%**.
-*   **Colapso**: El PIB cae **10%** anual. La inversión se detiene. El caos social (`polarization`) se dispara.
-*   **Salida**: Únicamente mediante el comando `reform_currency` (Plan de Austeridad).
-    *   **Costo**: -25% Popularidad (la gente pierde sus ahorros).
-    *   **Efecto**: Resetea la inflación al 2%.
-
-### Canal de Crédito (Tasa de Interés)
-La tasa de interés no es gratis.
-*   **Inversión Privada**: `Inversión = 5% * (1 - 3 * Tasa)`.
-    *   Si subes la tasa, las empresas dejan de invertir (Crowding Out).
-*   **Sector Construcción**: Si `tasa > 12%`, el sector inmobiliario se congela (+0.5% Desempleo).
-*   **Crisis Bancaria**: Si `tasa > 20%`, los deudores quiebran y los bancos colapsan (-4% PIB).
-
-*   **Crisis Bancaria**: Si `tasa > 20%`, los deudores quiebran y los bancos colapsan (-4% PIB).
-
-### Señoreaje y Monetización del Déficit
-Imprimir dinero es adictivo.
-*   **Balance Fiscal**: `Ingresos Fiscales - (Gasto Público + Servicio Deuda)`.
-*   **Dominancia Fiscal**: Si tienes **Déficit** y **Baja Autonomía** (< 0.3), el gobierno obliga al Banco Central a imprimir la diferencia.
-    *   Resultado: Inflación automática, aunque no uses comandos.
-*   **Alta Autonomía**: El banco se niega a imprimir. El déficit se cubre con **Deuda** (+Deuda/PIB).
-*   **Comando `print+`**: Imprime 1% del PIB. Ingresa a reservas pero dispara la inflación.
-
-### Sustentabilidad de la Deuda y Default
-La deuda es barata... hasta que deja de serlo.
-*   **Prima de Riesgo**: Si la Deuda > 60% del PIB, los mercados cobran un interés extra (hasta +20% si llega al 120%).
-*   **Sovereign Default (Gran Crisis)**: Si la `Deuda > 120%` y las `Reservas < 0`:
-    *   **Colapso**: El PIB cae un 10% instantáneamente.
-    *   **Paria Financiero**: La Inversión Extranjera (FDI) se detiene por completo.
-    *   **Costo Político**: Pérdida masiva de popularidad (-30%) y poder financiero.
-
-### Remesas y Diáspora
-La emigración tiene un lado positivo: El dinero que vuelve a casa.
-*   **Diáspora**: Población que vive fuera. Crece cuando la Migración Neta es negativa.
-*   **Remesas**: `Diáspora * $2000` (anual).
-*   **Efecto en Pobreza**: Si las remesas superan el 5% del PIB, la pobreza se reduce considerablemente (-1% anual directo).
-*   **Efecto en Consumo**: Las remesas cuentan como ingreso para el consumo, amortiguando recesiones.
-*   **Bloqueo**: Si hay **Sanciones Internacionales**, las remesas se bloquean (90% de pérdida).
+1. [Demographics](#1-demographics)
+2. [Economy & GDP](#2-economy--gdp)
+3. [Inflation](#3-inflation)
+4. [Central Bank & Monetary Policy](#4-central-bank--monetary-policy)
+5. [Sovereign Debt & Default](#5-sovereign-debt--default)
+6. [Labor Market](#6-labor-market)
+7. [Education & Society](#7-education--society)
+8. [Social Welfare & Mental Health](#8-social-welfare--mental-health)
+9. [Security, Religion & Human Rights](#9-security-religion--human-rights)
+10. [Popularity & Elections](#10-popularity--elections)
+11. [Random Events](#11-random-events)
 
 ---
 
-## 3. Política (Popularidad)
-La popularidad es un valor entre 0.0 (0%) y 1.0 (100%). Determina si ganas las elecciones.
+## 1. Demographics
 
-### Factores Pasivos
-El pueblo reacciona automáticamente a las condiciones económicas:
-*   **Inflación Alta**: Si `inflation > 5%` $\rightarrow$ Popularidad **-2%** (`-0.02`).
-*   **Desempleo Alto**: Si `unemployment > 10%` $\rightarrow$ Popularidad **-3%** (`-0.03`).
+### Population Dynamics
 
-### Factores Activos (Inversiones y Fiscalidad)
-| Acción | Comando | Coste (PIB) | Efecto Popularidad | Otros Efectos |
-| :--- | :--- | :--- | :--- | :--- |
-| **Subir Impuestos** | `tax+` | N/A | **-5%** (`-0.05`) | Recaudación +10%, Inflación +1% |
-| **Bajar Impuestos** | `tax-` | N/A | **+3%** (`+0.03`) | Recaudación -10% |
-| **Salud** | `invest_health` | $10M | **+2%** (`+0.02`) | Cobertura Salud +5% |
-| **Seguridad** | `invest_security`| $10M | **+1%** (`+0.01`) | Homicidios -1.0/100k |
+$$P_{t+1} = P_t + (P_t \times T_{birth}) - (P_t \times T_{death})$$
+
+**Dynamic Death Rate:**
+
+$$T_{death} = 0.005 + (Aging \times 0.015) + (Poverty \times 0.005) + (Obesity \times 0.005) + CO2_{factor} - (HealthCoverage \times 0.005)$$
+
+Where $CO2_{factor} = +0.002$ if CO2 > 5,000.
+
+**Birth Rate (Demographic Transition):**
+
+$$T_{birth} = 0.035 - (Education \times 0.015) - (Urbanization \times 0.010) + (Poverty \times 0.005) - (Unemployment \times 0.002)$$
+
+- Education and urban life reduce birth rates.
+- Poverty increases them (family survival strategy).
+- Long-term consequence: a prosperous nation sees birth rates fall → aging → pension crisis.
+
+**Health System Depreciation:**
+- Natural decay: −2% per year.
+- During recession (GDP shrinks): −2% additional (total −4%).
+
+### Migration & Diaspora
+
+$$T_{migration} = f(GDP\_per\_capita, Freedom, Security, Repression, Poverty)$$
+
+- The diaspora grows when net migration is negative.
+- Annual assimilation: −2% of the existing diaspora.
+
+**Remittances:**
+
+$$Remittances = Diaspora \times \$2{,}000 \text{ per person/year}$$
+
+- If international sanctions are active: 90% blocked.
+- If remittances > 5% of GDP: poverty −1% per year directly.
+
+**Population Density:**
+
+$$Density = \frac{Population}{Fixed\_Area} \quad (Area = 200{,}000 \text{ km}^2)$$
+
+- Density > 100 people/km² → higher innovation.
+- Density > 200 people/km² → higher epidemic risk.
+
+### Urbanization
+
+The urban/rural ratio shifts based on:
+- **Urban pull**: industry + technology + finance = city jobs.
+- **Rural push**: high agricultural productivity (machines) + rural poverty.
+- **Brake**: aging population migrates less.
+
+Political polarization peaks when the urban/rural split is 50/50.
 
 ---
 
-## 4. Probabilidad y Eventos (Caos)
-Cada año, se genera un número aleatorio $R$ entre 0 y 99.
+## 2. Economy & GDP
 
-| Rango ($R$) | Evento | Probabilidad | Efectos Matemáticos |
+### Growth Formula (Cobb-Douglas Type)
+
+$$Growth_{Real} = Base + Global_{Effect} + Labor_{Factor} + Capital_{Bonus} + TFP_{Bonus} - Tax_{Drag} - Interest_{Drag} + Consumption_{Modifier}$$
+
+**1. Labor (Human Capital):**
+
+$$Labor = (1 - Unemployment) \times (Literacy \times 0.4 + SecondaryEd \times 0.3 + Health \times 0.3)$$
+
+If unemployment > 5%, an Okun's Law penalty is applied.
+
+**2. Physical Capital:**
+
+$$Capital = road\_connectivity + port\_capacity + industrial\_power + financial\_power$$
+
+If Capital > 0.7 → +1% growth bonus.
+
+**3. Total Factor Productivity (TFP):**
+
+$$TFP = innovation\_index + tech\_power - corruption$$
+
+Corruption directly subtracts from efficiency.
+
+**Global Economic Cycles:**
+
+$$Global\_Cycle = \sin\left(\frac{2\pi \times t}{12}\right)$$
+
+- Export-oriented economies (high industry + tech) amplify the cycle: +1.5× during booms, −1.5× during recessions.
+- Closed economies: grow slower but steadily.
+
+**Tech Boom:**
+
+$$\text{If } Literacy > 0.90 \text{ and } EducationalQuality > 0.70 \Rightarrow Growth_{Real} += 0.015$$
+
+### Balance of Payments (International Reserves)
+
+$$\Delta Reserves = (Exports - Imports) + (FDI - Capital\_Flight) - Debt\_Service$$
+
+- **Exports**: depend on industry, technology, and the global cycle.
+- **Imports**: depend on domestic consumption (higher purchasing power → more imports).
+- **FDI**: increases if `un_score > 0.7` and CB autonomy is high.
+
+**Currency Crisis** if Reserves < 0:
+- Devaluation: inflation +15% (reduced to +2% if CB is autonomous).
+- GDP −5%.
+- Forced bailout (increases debt).
+
+### Consumption Engine
+
+$$Purchasing\_Power = \frac{MinimumWage + RemittancesPerCapita}{GDP\_per\_Capita \times 0.4}$$
+
+| Value | Effect |
+| :--- | :--- |
+| < 0.8 (low) | Growth slows −1% (insufficient demand) |
+| 0.8 – 1.2 (normal) | No additional effect |
+| > 1.2 (high) | Growth +1%, inflationary risk |
+
+### Laffer Curve (Taxation)
+
+$$Effective\_Tax = \frac{Tax\_Revenue}{GDP}$$
+
+- If `Effective_Tax > 25%`: investors flee → potential growth −0.1% per 1% of excess taxes.
+- Taxes reduce disposable income → less consumption → slower economy.
+
+---
+
+## 3. Inflation
+
+### Accumulated Forces
+
+$$Inflation_{t+1} = Inflation_t + Emission + Demand_{Pull} + Cost_{Shock} - Rate_{Cooling} - CB_{Credibility}$$
+
+| Component | Formula | Condition |
+| :--- | :--- | :--- |
+| **Monetary emission** | +variable | Whenever `print+` is used |
+| **Demand pull** | +pressure | If purchasing power > 1.1 |
+| **Exchange rate shock** | +5% (pass-through) | If exchange rate stability is low |
+| **Reserve shock** | +3% | If reserves < $20M |
+| **Rate cooling** | −(rate × 0.5) | Always active |
+| **CB credibility** | −0.5% | If autonomy > 0.7 |
+
+### Wage-Price Spiral
+
+**Trigger**: inflation > 5% **and** `union_strength > 0.3`
+
+1. Unions demand automatic wage indexation.
+2. Firms raise prices to cover new wage costs (+1% extra inflation).
+3. A vicious cycle forms that is hard to break without an incomes policy.
+
+**Forced indexation:**
+
+$$MinWage_{new} = MinWage_{current} \times (1 + inflation \times 0.8)$$
+
+### Hyperinflation
+
+**Threshold**: inflation > 50%.
+
+Effects:
+- GDP −10% per year.
+- Private investment halts.
+- Polarization surges.
+
+**Only exit**: `reform_currency` → inflation reset to 2%, popularity −25%.
+
+---
+
+## 4. Central Bank & Monetary Policy
+
+### Central Bank Autonomy
+
+| Level | Advantages | Disadvantages |
+| :--- | :--- | :--- |
+| **High (> 0.6)** | FDI multiplies, inflation anchors, risk premium falls | `print+` blocked, interfering with rates costs popularity |
+| **Medium (0.3–0.6)** | Moderate balance | — |
+| **Low (< 0.3)** | Full monetary policy control | Capital flight, high structural inflation |
+
+### Fiscal Dominance
+
+If fiscal deficit **and** autonomy < 0.3:
+
+$$Forced\_Emission = Fiscal\_Deficit$$
+
+The CB automatically prints the deficit even without using `print+`. With high autonomy, the deficit is instead covered by new debt issuance.
+
+### Seigniorage
+
+`print+` emits 1% of GDP:
+- Immediately credited to reserves.
+- Generates proportional inflationary pressure.
+
+### Credit Channel (Interest Rate)
+
+$$Private\_Investment = 5\% \times (1 - 3 \times Rate)$$
+
+| Rate | Additional Effect |
+| :--- | :--- |
+| > 12% | Construction sector freezes (+0.5% unemployment) |
+| > 20% | Banking crisis: debtors default, banks collapse (−4% GDP) |
+
+### Exchange Rate Stability (Dynamic)
+
+$$Stability = CB\_Autonomy \times 0.4 + ReservesBuffer \times 0.1 + TradeSupplus \times 0.1$$
+
+- Low stability → constant imported inflation (pass-through up to +5% annually).
+
+---
+
+## 5. Sovereign Debt & Default
+
+### Credit Rating
+
+The credit rating is a dynamic enum updated annually:
+
+```
+AAA → AA → A → BBB → BB → B → CCC → CC → C → SD → D
+```
+
+**Factors determining the rating:**
+- Debt/GDP ratio (main driver)
+- GDP growth rate
+- Inflation
+- Central bank autonomy
+
+### Risk Premium
+
+$$Premium = \max\left(0, (Debt/GDP - 0.60) \times 20\%\right)$$
+
+At 120% debt/GDP, the premium reaches 12% extra over the base rate.
+
+### Default Probability
+
+Ranges from 1% to 100% based on fiscal health. Sovereign default triggers when:
+
+$$Debt/GDP > 1.20 \text{ and } Reserves < 0$$
+
+**Default consequences:**
+- GDP drops −10% instantly.
+- FDI completely stops.
+- Popularity −30%.
+- Polarization +20%.
+
+### Debt Sustainability
+
+Debt service is deducted from reserves each year. Debt grows when:
+- There is a fiscal deficit (high autonomy → issues new debt).
+- Currency crisis bailout is needed.
+- Pension system bailout is needed.
+
+---
+
+## 6. Labor Market
+
+### Unemployment (Target Drift)
+
+Unemployment does not change abruptly: it drifts gradually toward a target.
+
+**Unemployment target:**
+
+$$Target_{unemployment} = Base - f(GDP\_growth) + f(automation) + f(wage\_rigidity)$$
+
+| Factor | Effect |
+| :--- | :--- |
+| Positive GDP growth | Target unemployment ↓ (Okun's Law) |
+| High `tech_power` | Destroys basic jobs ↑ |
+| Strong unions | Wage rigidity → harder to hire ↑ |
+| Minimum wage > 120% of target | Informality ↑, formal employment ↓ |
+
+### Union Strength
+
+$$union\_strength \nearrow$$ if: unemployment < 6% (full employment) or high inflation (real wage defense).
+
+$$union\_strength \searrow$$ if: unemployment > 12% (impossible to organize) or high informality.
+
+### Wage Policy
+
+**Living Wage Target:**
+
+$$Target_{wage} = GDP\_per\_Capita \times 0.40$$
+
+| Wage vs. Target | Consequences |
+| :--- | :--- |
+| < 80% of target | Poverty ↑, growth slows (low consumption) |
+| 80%–120% of target | Balanced zone |
+| > 120% of target | Inflation ↑, informality ↑, unemployment ↑ |
+
+### Informality & Pensions
+
+- High informality → fewer contributors → pension system deteriorates.
+- Aging (`aging_index` +0.2%/year) → more retirees → greater pressure on the fund.
+
+**Pension system collapse** if sustainability < 10%:
+- Forced bailout: inflation +5%, massive popularity loss.
+
+### General Strike: Multi-Causal
+
+Triggered by the accumulation of three factors:
+
+1. **Economic**: loss of purchasing power (inflation > wages).
+2. **Moral**: high corruption (> 30%): "strike against the establishment."
+3. **Political**: low popularity (< 25%): "strike to bring down the government."
+
+---
+
+## 7. Education & Society
+
+### Literacy & Enrollment
+
+$$Literacy_{max} = primary\_enrollment$$
+
+- If `unemployment > 10%`, primary enrollment drops (child labor).
+- If `literacy > enrollment`: literacy automatically decays (generational degradation).
+
+### The Education Paradox
+
+$$Qualified\_Supply = \frac{SecondaryEd + UniversityEd}{2}$$
+
+$$Labor\_Demand = Tech \times 1.2 + Finance \times 1.0 + Industry \times 0.5$$
+
+If `Supply > Demand`:
+- Structural unemployment (surplus of professionals, shortage of tradespeople).
+- Wage stagnation.
+- `brain_drain` increases: if it exceeds 40%, GDP suffers.
+
+### R&D Budget (Maslow Logic)
+
+| Condition | Effect on research budget |
+| :--- | :--- |
+| Prosperity: unemployment < 8% and inflation < 5% | +0.1% per year (up to 4% of GDP max) |
+| Crisis (either condition fails) | −0.2% per year ("science is a luxury") |
+
+$$tech\_power_{t+1} = tech\_power_t + (research\_spending \times educational\_quality)$$
+
+### Instability Trap
+
+$$\text{If } Literacy > 0.90 \text{ and } Corruption > 0.30 \Rightarrow Polarization\uparrow, Protests\uparrow, Popularity\downarrow$$
+
+An educated population will not tolerate corruption.
+
+### Religion & Clerical Influence
+
+- **Increases** with: rural population, poverty.
+- **Decreases** with: education, urbanization.
+- **Effects**: slows the birth rate decline (+family), erodes `minority_protection` when very high.
+
+### Radicalism
+
+$$radicalism_{target} = f(Poverty, Repression, ClericalInfluence) - f(Education, FreedomOfWorship)$$
+
+**Terrorism threshold**: if radicalism > 15%:
+
+$$P_{attack} = (Radicalism - 0.15) \times (1 - attack\_detection\_prob)$$
+
+---
+
+## 8. Social Welfare & Mental Health
+
+### Mental Health Index
+
+$$Target_{MH} = 1.0 - (Unemployment \times 2) - (Inflation \times 1.5) - (Corruption \times 0.5)$$
+
+The actual index drifts 20% toward the `Target` each year (psychological recovery is gradual):
+
+$$MH_{t+1} = MH_t + 0.20 \times (Target_{MH} - MH_t)$$
+
+### Suicide Rate
+
+$$T_{suicide} = \frac{0.00014}{MH}$$
+
+- Historical baseline: 14 per 100,000 inhabitants.
+- If MH falls to 0.5 (collective despair): the rate **doubles**.
+- Suicide deaths are added to natural mortality.
+
+### The Misery Cycle (Poverty & Crime)
+
+**Causes of poverty:**
+- Unemployment: +0.5% for every 1% of unemployment.
+- Inflation > 10%: erodes savings (+1% poverty).
+- Education reduces poverty long-term (social mobility).
+- Remittances > 5% of GDP: poverty −1% per year.
+
+**Consequences of poverty:**
+
+$$homicide\_rate = Poverty \times 2 + Unemployment \times 1 + Corruption \times 0.5$$
+
+- If poverty > 30%: polarization +2% per year.
+
+### Obesity
+
+$$obesity\_rate \nearrow \text{ if } Inflation < 3\%$$
+
+Prosperity makes people overweight: +0.5% per year during low-inflation periods (affordable processed food).
+
+---
+
+## 9. Security, Religion & Human Rights
+
+### Torture & Intelligence
+
+| Command | Immediate Effect |
+| :--- | :--- |
+| `torture+` | `attack_detection` +0.15, radicalism +0.05, UN −0.15 |
+| `torture-` | `attack_detection` −0.10, UN +, radicalism − |
+
+Core dilemma: torture works short-term but creates more radicals long-term.
+
+### Forced Disappearances
+
+| Command | Effect |
+| :--- | :--- |
+| `disappear+` | Stops mobilizations through fear; UN −−−, radicalism +++ |
+| `disappear-` | Truth Commission; people lose fear → temporary protests |
+
+### Press Freedom
+
+| Command | Innovation | Corruption | Popularity |
 | :--- | :--- | :--- | :--- |
-| **0 - 1** | 🐼 **Pandemia** | ~2% | $Población \times 0.95$ (-5%)<br>$GDP \times 0.98$ (-2%) |
-| **2 - 19** | 🤖 **Tecnología**| ~18% | $GDP \times 1.05$ (+5%) |
-| **20 - 29** | 💰 **Corrupción**| 10% | $Popularidad - 0.10$ (-10%) |
-| **Indep.** | 🥦 **Comida** | 5% | $Inflation + 0.01$ (+1%)<br>$Popularidad - 0.03$ (-3%) |
-| **Indep.** | ☢️ **Nuclear** | 0.5% | $GDP \times 0.8$ (-20%)<br>$Radiación = 1.0$ (Efecto Permanente) |
-| **Indep.** | 🚑 **Emergencia (MCI)** | 1% | Test de Estrés: `Heridos` vs `Hospitales`<br>Si Capacidad < Heridos $\rightarrow$ Popularidad -5% |
-| **30 - 99** | (Ninguno) | 70% | Sin cambios. |
+| `press+` | +0.05 | − (watchdog) | Scandal risk −0.08 |
+| `press-` | −0.08 | + (impunity) | Stable short-term |
 
-### Efectos de Radiación y Ciencia
-*   **Requisito Nuclear**: Solo tienes reactores si `Poder Industrial > 0.6`. Países agrarios están a salvo.
-*   **Mitigación Científica**: Tu `educational_quality` mejora la seguridad.
-    *   Educación Baja: Riesgo 0.5% (Chernobyl).
-    *   Educación Alta: Riesgo 0.25% (Fukushima/Moderno).
-*   **Accidente**: `food_radiation_prob = 1.0`. Efectos permanentes.
+### Minority Rights
 
-### Incidentes de Múltiples Víctimas (MCI)
-Eventos puntuales (incendios, derrumbes) que ponen a prueba tu capacidad instalada.
-*   **Heridos**: 500 - 2000 personas.
-*   **Capacidad**: `Hospitales * 15`.
-*   **Gestión**: Tienes 100 hospitales (Capacidad 1500). Si hay 2000 heridos, mueren 500 personas por falta de atención.
+| Command | Innovation | Radicalism | UN | Popularity | Brain Drain |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `minority+` | +0.002 (if >0.8) | −0.03 | +0.05 | −0.03 | — |
+| `minority-` | — | — | −0.08 | +0.04 | +0.005 (if <0.3) |
 
-### Accidentes Industriales (Hidrocarburos/Químicos)
-El precio del progreso.
-*   **Probabilidad**: Calculada dinámicamente: $(DependenciaCombustibles \times 20) + (PoderIndustrial \times 10)$. Rango típico: 15-30%.
-*   **Tipos**: Explosión de Oleoducto, Incendio en Refinería, Fuga Química.
-*   **Efectos**:
-    *   **Humanos**: Cientos de quemados graves ($10\%$ mortalidad inmediata).
-    *   **Económicos**: -$50M (Infraestructura dañada).
-    *   **Ambientales**: +100 CO2 (Contaminación).
+### Diplomacy & Sanctions
 
-### Colapso de Transporte
-Cuando los puentes caen por falta de pintura.
-*   **Probabilidad**: Inversa a la calidad de tus carreteras. Si `road_connectivity` es baja (50%), el riesgo sube al 5-6%.
-*   **Efectos**:
-    *   **Logística**: `road_connectivity` baja otro 5% (Círculo vicioso).
-    *   **Víctimas**: 50-150 muertos.
-    *   **Costo**: Frena el crecimiento del PIB (menos carreteras = menos comercio).
+$$\text{If } un\_score < 0.3 \Rightarrow P_{sanctions} \text{ grows annually}$$
 
-### Accidente Aéreo
-Tragedia Nacional.
-*   **Probabilidad**: Muy baja (`0.1%` o 1 en 1000). Variable: `aviation_accident_prob`.
-*   **Efectos**:
-    *   **Psicológico**: La popularidad cae 5% (Luto Nacional) aunque mueran pocas personas comparado con otros eventos.
-    *   **Víctimas**: ~200-300.
-    *   **Diferencia**: No afecta la economía tanto como un puente, pero afecta mucho la moral.
+**Effects of active sanctions:**
+- GDP −5% immediately.
+- Inflation +2% (import blockade).
+- Remittances blocked at 90%.
+
+**High reputation reward:**
+
+$$\text{If } un\_score > 0.7 \Rightarrow GDP\_Growth += FDI\_bonus \text{ (up to +1.5\%)}$$
 
 ---
 
-## 4. Educación y Sociedad
-El saber es poder... y peligro.
+## 10. Popularity & Elections
 
-### Bonus Económico (Tech Boom)
-Si `literacy_rate > 0.90` y `educational_quality > 0.7`:
-$$ Crecimiento_{Real} = Crecimiento_{Base} + 0.015 $$
-*   Un bonus del +1.5% al PIB anual.
+### Passive Factors (Automatic)
 
-### La Trampa de la Pobreza (Matrícula)
-La alfabetización tiene un límite físico: `primary_enrollment`.
-*   **Erosión Económica**: Si `unemployment > 10%`, la matrícula primaria cae (Trabajo infantil).
-*   **Impacto**: Si `literacy > enrollment`, la alfabetización decae automáticamente.
-*   **Solución**: `invest_education` ahora también sube la matrícula (Transporte escolar/Becas).
+| Condition | Penalty |
+| :--- | :--- |
+| Inflation > 5% | −2% (`−0.02`) per year |
+| Unemployment > 10% | −3% (`−0.03`) per year |
 
-### La Paradoja de la Educación (Oferta y Demanda)
-No basta con educar; hay que dar empleo.
-*   **Oferta Cualificada**: Promedio de Educación Secundaria y Universitaria.
-*   **Demanda Laboral**: $Tech \times 1.2 + Financiero \times 1.0 + Industria \times 0.5$.
-*   **Saturación**: Si `Oferta > Demanda`:
-    *   **Desempleo Estructural**: Aumenta aunque la economía crezca (sobran abogados, faltan soldadores).
-    *   **Estancamiento Salarial**: El salario mínimo cae.
-    *   **Fuga de Cerebros (`brain_drain`)**: Los mejores se van. Si pasa del 40%, el PIB sufre.
+### Active Factors (Commands)
 
-    *   **Estancamiento Salarial**: El salario mínimo cae.
-    *   **Fuga de Cerebros (`brain_drain`)**: Los mejores se van. Si pasa del 40%, el PIB sufre.
+| Command | Δ Popularity |
+| :--- | :--- |
+| `tax+` | −5% |
+| `tax-` | +3% |
+| `invest_health` | +2% |
+| `invest_security` | +1% |
+| `invest_infra` | +1% |
+| `invest_education` | +1% |
+| `retire-` | +++ (large) |
+| `retire+` | −−− (large) |
+| `minority-` | +4% (populism) |
+| `minority+` | −3% (culture war) |
+| `diplomacy-` | +3% (nationalism) |
+| `reform_currency` | −25% |
 
-### Presupuesto de Investigación (I+D)
-La ciencia es un lujo de países estables.
-*   **Variable**: `research_spending_gdp`. Inicia en 0.5%.
-*   **Dinámica (Maslow)**:
-    *   **Prosperidad** (`Desempleo < 8%` Y `Inflación < 5%`): El gobierno invierte más (+0.1% anual) hasta llegar al 4%.
-    *   **Crisis**: Si hay problemas, se corta el presupuesto (-0.2% anual). "La ciencia no se come".
-*   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
+### Elections
 
-    *   **Crisis**: Si hay problemas, se corta el presupuesto (-0.2% anual). "La ciencia no se come".
-*   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
+Every 4 years (`turnCount % 4 == 0`):
 
-    *   **Efecto**: `Presupuesto * CalidadEducativa` -> Aumenta `tech_power`.
+$$\text{Victory if } Popularity > 0.50$$
 
-### Sindicatos Dinámicos (`union_strength`)
-La fuerza laboral ya no es estática.
-*   **Crece**: Si hay **Pleno Empleo** (Desempleo < 6%) o **Alta Inflación** (Necesidad de defensa).
-*   **Decrece**: Si hay **Desempleo Masivo** (> 12%) o **Alta Informalidad** (Imposible organizar).
-
-### Huelga General: Multicausal
-Un paro nacional ya no es solo por dinero. Se activa por 3 factores acumulativos:
-1.  **Económico**: Pérdida de poder adquisitivo (Inflación > Salarios).
-2.  **Moral**: Corrupción alta (> 30%). "Huelga contra la casta".
-3.  **Político**: Popularidad baja (< 25%). "Huelga para tumbar al gobierno".
-
-### El Colapso de las Pensiones (`pension_sustainability`)
-
-    *   **Efecto**: -3% PIB inmediato y subida forzosa de salarios (+5%).
-
-### El Colapso de las Pensiones (`pension_sustainability`)
-El sistema financiero más grande del país.
-*   **Envejecimiento**: `aging_index` sube cada año (+0.2%), aumentando el gasto. (Japón Scenario).
-*   **Ingresos**: Dependen de los trabajadores formales (`1 - Desempleo - Informalidad`).
-*   **Crisis**:
-    *   Si hay **Recesión**, los ingresos caen de golpe.
-    *   Si el fondo se vacía (Sostenibilidad < 10%):
-        *   **Bailout**: El gobierno imprime dinero para pagar.
-        *   **Efecto**: Inflación +5% inmediata y pérdida masiva de popularidad.
-
-        *   **Bailout**: El gobierno imprime dinero para pagar.
-        *   **Efecto**: Inflación +5% inmediata y pérdida masiva de popularidad.
-
-### Política Salarial (`wage+`, `wage-`)
-El gobierno decide el salario mínimo, pero el mercado juzga.
-*   **Target (Salario Digno)**: Se calcula como `PIB per Cápita * 0.4`.
-*   **Zona Baja (< 80% Target)**:
-    *   **Pobreza**: Aumenta.
-    *   **Crecimiento**: Se frena (bajo consumo).
-*   **Zona Alta (> 120% Target)**:
-    *   **Inflación**: Se dispara (Espiral Precios-Salarios).
-    *   **Informalidad**: Las empresas contratan en negro para no pagar.
-    *   **Desempleo**: Aumenta.
-*   *Comando*: Usa `wage+` con cuidado. Ganarás popularidad hoy, pero inflación mañana.
-
-    *   **Desempleo**: Aumenta.
-*   *Comando*: Usa `wage+` con cuidado. Ganarás popularidad hoy, pero inflación mañana.
-
-### El Ciclo de la Miseria (Pobreza y Crimen)
-`poverty_rate` ya no es estático.
-1.  **Causas**:
-    *   **Desempleo**: Alimenta la pobreza directamente (+0.5% por cada 1% de paro).
-    *   **Inflación**: Erosiona los ahorros (+1% si Inflación > 10%).
-    *   **Mitigación**: La Educación reduce la pobreza a largo plazo (Movilidad Social).
-2.  **Consecuencias**:
-    *   **Crimen**: La desesperación aumenta la `homicide_rate`.
-        *   Fórmula: $Pobreza \times 2 + Desempleo \times 1 + Corrupción \times 0.5$.
-    *   **Radicalización**: Si `pobreza > 30%`, la gente se polariza (+2% anual).
-
-    *   **Radicalización**: Si `pobreza > 30%`, la gente se polariza (+2% anual).
-
-### Transición Demográfica (`birth_rate`)
-La demografía es el destino.
-*   **Fórmula**: $Base (3.5\%) - Educación - Urbanización + Pobreza - Desempleo$.
-*   **Efectos**:
-    *   **Educación**: La mujer educada tiene menos hijos (-1.5%).
-    *   **Urbanización**: La ciudad es cara para criar hijos (-1.0%).
-    *   **Pobreza**: Las familias pobres tienen más hijos por supervivencia (+0.5%).
-    *   **Incertidumbre**: El desempleo retrasa la natalidad (-0.2%).
-*   **Consecuencia**: Si tienes éxito (País Rico/Educado), tu natalidad caerá, acelerando el **Envejecimiento** y la **Crisis de Pensiones**.
-
-*   **Consecuencia**: Si tienes éxito (País Rico/Educado), tu natalidad caerá, acelerando el **Envejecimiento** y la **Crisis de Pensiones**.
-
-### Mortalidad Dinámica (`death_rate`)
-La muerte nos iguala a todos, pero las variables deciden cuándo.
-*   **Base**: 0.5% (Biológica).
-*   **Aceleradores**:
-    *   **Envejecimiento**: +1.5% si el país es viejo.
-    *   **Pobreza**: +0.5% (Falta de recursos).
-    *   **Obesidad**: +0.5% (Enfermedades crónicas).
-    *   **Contaminación**: +0.2% si CO2 > 5000.
-*   **Freno**:
-    *   **Cobertura de Salud**: -0.5% (Hospitales y medicinas).
-
-*   **Freno**:
-    *   **Cobertura de Salud**: -0.5% (Hospitales y medicinas).
-
-### La Gran Migración (`urban_population_ratio`)
-La gente se mueve a donde está el dinero.
-*   **Atracción (Pull)**:
-    *   Industria + Tech + Finanzas = Empleos Urbanos.
-*   **Expulsión (Push)**:
-    *   Alta Productividad Agrícola = Máquinas reemplazan campesinos.
-    *   Pobreza Rural = Huida a la ciudad.
-*   **Resistencia**:
-    *   La gente mayor (`aging_index`) no migra.
-
-*   **Estabilidad**: Los países más estables son los homogéneos (o muy rurales o muy urbanos).
-
-### Densidad de Población y Territorio
-El espacio es finito.
-*   **Variable**: `land_area` (200,000 km² fijos).
-*   **Densidad (`population_density`)**: Se recalcula cada año (`Población / Área`).
-*   **Efectos**:
-    *   **Innovación**: Si `> 100 hab/km²`, las ideas fluyen mejor (+Innovación).
-    *   **Epidemias**: Si `> 200 hab/km²`, los virus se propagan más rápido (+Riesgo Epidemia).
-
-    *   **Epidemias**: Si `> 200 hab/km²`, los virus se propagan más rápido (+Riesgo Epidemia).
-
-### Migración (`net_migration_rate`)
-La gente vota con los pies.
-*   **Atracción (Pull)**:
-    *   **Economía**: PIB per cápita > Promedio Global ($10k).
-    *   **Libertad**: Libertad de Prensa/Culto y Derechos Civiles.
-    *   **Seguridad**: Baja tasa de homicidios.
-*   **Expulsión (Push)**:
-    *   **Represión**: Tortura, Censura.
-    *   **Pobreza**: Falta de oportunidades.
-*   **Efecto (Brain Drain)**:
-    *   Si la gente se va (`rate < -0.5%`) y tienes buena educación universitaria, pierdes Innovación (se van los listos).
-
-*   **Efecto (Brain Drain)**:
-    *   Si la gente se va (`rate < -0.5%`) y tienes buena educación universitaria, pierdes Innovación (se van los listos).
-
-### Religión y Poder (`clerical_political_influence`)
-Fe versus Razón.
-*   **Tradición (Increasers)**:
-    *   Población Rural y Pobreza alimentan la influencia religiosa.
-*   **Secularización (Decreasers)**:
-    *   Educación y Vida Urbana reducen la influencia de la iglesia.
-*   **Efectos**:
-    *   **Natalidad**: La religión frena la caída de la natalidad (+Familia).
-    *   **Derechos**: Alta influencia religiosa erosiona la `minority_protection`.
-    *   **Estabilidad**: (Implícito) Ayuda a mantener el orden en sociedades pobres.
-
-    *   **Derechos**: Alta influencia religiosa erosiona la `minority_protection`.
-    *   **Estabilidad**: (Implícito) Ayuda a mantener el orden en sociedades pobres.
-
-### Tensión Religiosa (`interreligious_tension`)
-El peligro del fanatismo.
-*   **Radicalismo (`radicalism_prob`)**:
-    *   Se alimenta de la Pobreza, la Represión y la Influencia Clerical excesiva.
-    *   Se combate con Educación y Libertad de Culto (Tolerancia).
-*   **Tensión**:
-    *   Surge cuando hay Radicalismo + Diversidad (`freedom_of_worship`).
-    *   **Seguridad**: Una buena inteligencia (`attack_detection`) puede mitigar la violencia.
-*   **Efecto**: Aumenta la **Polarización** y el riesgo de conflicto civil.
-
-*   **Efecto**: Aumenta la **Polarización** y el riesgo de conflicto civil.
-
-### Radicalismo y Terrorismo (`radicalism_prob`)
-El precio del extremismo.
-*   **Umbral de Peligro**: Si `radicalism > 15%`, comienzan los atentados.
-*   **Ataques Terroristas**:
-    *   **Probabilidad**: `(Radicalismo - 0.15) * (1 - Inteligencia)`.
-    *   **Consecuencias**: Muertes, Caída del PIB (-0.5%), Pánico (Polarización +2%).
-*   **Defensa**:
-    *   Invertir en `attack_detection_prob` (Espionaje/Policía) reduce drásticamente el riesgo real, incluso si el radicalismo es alto.
-
-    *   Invertir en `attack_detection_prob` (Espionaje/Policía) reduce drásticamente el riesgo real, incluso si el radicalismo es alto.
-
-### Políticas de Libertad de Culto
-Tú decides el nivel de tolerancia.
-*   `worship+` (Estado Laico/Liberal):
-    *   **Beneficios**: Aumenta Felicidad (`mental_health`) y reduce el poder clerical.
-    *   **Costos**: Aumenta temporalmente la `interreligious_tension` (choque de ideas) y el riesgo de terrorismo si hay radicalismo previo.
-*   `worship-` (Estado Teocrático/Control):
-    *   **Beneficios**: Reduce la `interreligious_tension` (Homogeneidad forzada).
-    *   **Costos**: Aumenta el Radicalismo latente (resistencia) y golpea la Felicidad.
-
-    *   **Costos**: Aumenta el Radicalismo latente (resistencia) y golpea la Felicidad.
-
-### Derechos Humanos y Tortura (`torture_index`)
-El fin justifica los medios?
-*   `torture+` (Mano Dura):
-    *   **Beneficios**: La Inteligencia (`attack_detection`) sube bruscamente (+0.15). Atrapas a los terroristas.
-    *   **Costos**: El Radicalismo aumenta (+0.05). Tu prestigio internacional (`un_score`) se desploma.
-*   `torture-` (Estado de Derecho):
-    *   **Beneficios**: Recuperas prestigio en la ONU y reduces el reclutamiento terrorista.
-    *   **Costos**: Pierdes capacidad de inteligencia inmediata (-0.10).
-
-    *   **Beneficios**: Recuperas prestigio en la ONU y reduces el reclutamiento terrorista.
-    *   **Costos**: Pierdes capacidad de inteligencia inmediata (-0.10).
-
-### Desapariciones Forzadas (`forced_disappearances`)
-Sembrar el terror.
-*   `disappear+` (Noche y Niebla):
-    *   **Objetivo**: Silenciar las calles. Si tienes `mobilizations` masivas, esto las detiene en seco (Miedo absoluto).
-    *   **Costo**: Destruyes tu legitimidad internacional (`un_score`) y generas un odio profundo (`radicalism` ++).
-*   `disappear-` (Comisión de la Verdad):
-    *   **Objetivo**: Sanar las heridas de la sociedad.
-    *   **Riesgo**: La gente pierde el miedo. Al investigar el pasado, las protestas aumentarán temporalmente ("¡Juicio y Castigo!").
-
-    *   **Riesgo**: La gente pierde el miedo. Al investigar el pasado, las protestas aumentan temporalmente ("¡Juicio y Castigo!").
-
-### Derechos de las Minorías (`minority_protection`)
-La diversidad como motor o como chivo expiatorio.
-*   `minority+` (Leyes Antidiscriminación):
-    *   **Beneficios**:
-        *   **Innovación**: Si `protection > 0.8`, la diversidad de ideas aumenta la innovación (+0.002).
-        *   **Paz Social**: Reduce el Radicalismo (-0.03) y mejora el prestigio internacional (+0.05).
-    *   **Costos**:
-        *   **Guerra Cultural**: Sectores conservadores reaccionan. Popularidad baja (-0.03) y Polarización sube (+0.02).
-*   `minority-` (Nacionalismo Excluyente):
-    *   **Beneficios**:
-        *   **Popularidad Populista**: +0.04 inmediato (Culpar al "otro" funciona).
-    *   **Costos**:
-        *   **Fuga de Cerebros**: Si `protection < 0.3`, las minorías (a menudo comerciantes o intelectuales) huyen (+0.005 Brain Drain).
-        *   **Pobreza Estructural**: Si `protection < 0.4`, la exclusión económica aumenta la pobreza (+0.005).
-        *   **Paria Internacional**: El prestigio ONU cae fuerte (-0.08).
-
-### Diplomacia y Sanciones (`un_score`)
-Tu reputación en el mundo tiene un precio.
-
-#### Comandos Diplomáticos
-*   `diplomacy+` (Lobby Internacional):
-    *   **Costo**: $50M (Gasto directo del PIB).
-    *   **Efecto**: `un_score` +0.05. Reduce el riesgo de sanciones (-0.05).
-*   `diplomacy-` (Soberanía Nacionalista):
-    *   **Beneficio**: Popularidad +0.03 (Nacionalismo).
-    *   **Costo**: `un_score` -0.10. Aumenta el riesgo de sanciones (+0.05).
-
-#### Consecuencias Económicas
-1.  **Sanciones Internacionales (Castigo)**:
-    *   **Riesgo**: Aumenta si `un_score < 0.3`.
-    *   **Efecto**: Si se activan, el PIB cae un **5%** inmediato y la inflación sube un **2%** (Bloqueo de importaciones).
-2.  **Inversión Extranjera (Premio)**:
-    *   **Condición**: `un_score > 0.7`.
-    *   **Efecto**: El crecimiento del PIB recibe un bonus (hasta +1.5%) basado en la confianza global.
-
-### Libertad de Expresión (`freedom_of_expression`)
-La verdad os hará libres... pero infelices.
-*   `press+` (Prensa Libre):
-    *   **Beneficios**: La Innovación florece (+0.05) y la Corrupción baja (Efecto Watchdog).
-    *   **Costos**: Los escándalos salen a la luz. Tu popularidad puede caer (-0.08) si descubren trapos sucios.
-*   `press-` (Censura):
-    *   **Beneficio**: Controlas la narrativa. La popularidad se mantiene estable ("Aquí no pasa nada").
-    *   **Costo**: La Corrupción se dispara (Impunidad) y la Innovación muere (-0.08). Creas una olla a presión.
-
-### Trampa de la Inestabilidad
-Una población educada no tolera la corrupción.
-*   Si `literacy > 0.90` Y `corruption > 0.30`:
-    *   Aumenta `polarization_index`.
-    *   Aumentan las protestas (`marches`).
-    *   Baja la popularidad.
+$$\text{Defeat (Game Over) if } Popularity \leq 0.50$$
 
 ---
 
-## 5. Bienestar Social y Salud Mental
-El estado de ánimo de la nación es dinámico y reactivo.
+## 11. Random Events
 
-### Índice de Salud Mental ($MH$)
-$$ Target_{MH} = 1.0 - (Desempleo \times 2) - (Inflación \times 1.5) - (Corrupción \times 0.5) $$
-*   **Drift**: El índice real se mueve 20% hacia el `Target` cada año (la gente tarda en recuperar la esperanza).
+### Probability System
 
-### Tasa de Suicidio
-$$ Tasa_{Suicidio} = \frac{0.00014}{MH} $$
-*   **Base**: 14 por 100,000 habitantes.
-*   **Dinámica**: Si el $MH$ cae a 0.5 (Desesperación), la tasa de suicidios se DUPLICA. Estos muertos se suman a la mortalidad natural.
+Each year, multiple independent rolls are made using the Mersenne Twister generator (`std::mt19937`).
 
----
+### Event Table
 
-## 5. Elecciones Democráticas
-Cada 4 años (`turnCount % 4 == 0`), se evalúa la continuidad del gobierno.
+| Event | Probability | Condition | Effects |
+| :--- | :--- | :--- | :--- |
+| **Pandemic** | 2% | — | Population ×0.95, GDP ×0.98 |
+| **Tech breakthrough** | ~10% | — | GDP ×1.05 |
+| **Corruption scandal** | 10% | — | Popularity −10% |
+| **Food contamination** | 5% | — | Inflation +1%, Popularity −3% |
+| **Nuclear accident** | 0.5% | Industrial power > 0.6 | GDP ×0.8, `food_radiation = 1.0` (permanent) |
+| **MCI (mass casualty)** | 1% | — | 500–2,000 casualties vs. hospital capacity |
+| **Industrial accident** | 15–30% dynamic | — | −$50M, +100 CO2, burns and deaths |
+| **Transport collapse** | Inverse to road quality | — | Roads −5%, 50–150 deaths |
+| **Aviation crash** | 0.1% | — | ~250 deaths, Popularity −5% |
+| **International sanctions** | Cumulative | UN < 0.3 | GDP −5%, Inflation +2% |
+| **Terrorist attack** | (radicalism − 0.15) × (1 − intelligence) | Radicalism > 15% | Deaths, GDP −0.5%, Polarization +2% |
 
-*   **Condición de Victoria**: $Popularidad > 0.50$ ($50\%$)
-*   **Condición de Derrota**: $Popularidad \le 0.50$ ($50\%$)
-    *   Consecuencia: `isRunning = false` (Game Over).
+### Mass Casualty Incident (MCI)
+
+$$Hospital\_Capacity = Hospitals \times 15$$
+
+$$Casualties\_generated \in [500, 2000]$$
+
+$$\text{If } Casualties > Capacity \Rightarrow Deaths = Casualties - Capacity, \text{ Popularity} \downarrow$$
+
+### Nuclear Mitigation
+
+- Country without industry (`industrial_power < 0.6`): no nuclear risk.
+- High educational quality: probability halved to 0.25% (0.5% base → 0.25% with optimal education).
+
+### Industrial Accident Probability (Dynamic)
+
+$$P_{accident} = (fossil\_fuel\_dependency \times 20\%) + (industrial\_power \times 10\%)$$
+
+Typical range: 15%–30% per year in industrialized countries with high fossil fuel dependency.
