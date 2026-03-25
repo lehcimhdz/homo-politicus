@@ -36,10 +36,32 @@ double GetDefaultProbability(CreditRating rating) {
     }
 }
 
+double GetInterestRate(CreditRating rating) {
+    switch (rating) {
+        case CreditRating::AAA: return 0.01;  // 1%
+        case CreditRating::AA:  return 0.02;  // 2%
+        case CreditRating::A:   return 0.035; // 3.5%
+        case CreditRating::BBB: return 0.05;  // 5%
+        case CreditRating::BB:  return 0.075; // 7.5%
+        case CreditRating::B:   return 0.10;  // 10%
+        case CreditRating::CCC: return 0.15;  // 15%
+        case CreditRating::CC:  return 0.20;  // 20%
+        case CreditRating::C:   return 0.25;  // 25%
+        case CreditRating::SD:  return 0.35;  // 35%
+        case CreditRating::D:   return 0.50;  // 50% (Distressed)
+        default:                return 0.05;
+    }
+}
+
 // Constructor Implementation
 // This is where we can set initial values if they aren't set in the struct.
 Country::Country() {
     economy.default_prob = GetDefaultProbability(economy.credit_rating);
+    
+    // Calculate initial debt interest based on total debt and rating
+    double total_debt = economy.gdp * economy.debt_to_gdp_ratio;
+    economy.debt_interest = total_debt * GetInterestRate(economy.credit_rating);
+    
     std::cout << "A new country has been founded!" << std::endl;
 }
 
