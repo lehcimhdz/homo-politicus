@@ -19,9 +19,27 @@ std::string CreditRatingToString(CreditRating rating) {
     }
 }
 
+double GetDefaultProbability(CreditRating rating) {
+    switch (rating) {
+        case CreditRating::AAA: return 0.001; // 0.1%
+        case CreditRating::AA:  return 0.01;  // 1%
+        case CreditRating::A:   return 0.03;  // 3%
+        case CreditRating::BBB: return 0.05;  // 5%
+        case CreditRating::BB:  return 0.10;  // 10%
+        case CreditRating::B:   return 0.20;  // 20%
+        case CreditRating::CCC: return 0.40;  // 40%
+        case CreditRating::CC:  return 0.60;  // 60%
+        case CreditRating::C:   return 0.80;  // 80%
+        case CreditRating::SD:  return 0.95;  // 95%
+        case CreditRating::D:   return 1.0;   // 100%
+        default:                return 0.01;
+    }
+}
+
 // Constructor Implementation
 // This is where we can set initial values if they aren't set in the struct.
 Country::Country() {
+    economy.default_prob = GetDefaultProbability(economy.credit_rating);
     std::cout << "A new country has been founded!" << std::endl;
 }
 

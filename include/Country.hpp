@@ -13,6 +13,7 @@ enum class CreditRating {
 };
 
 std::string CreditRatingToString(CreditRating rating);
+double GetDefaultProbability(CreditRating rating);
 
 // 1. Welfare and Society System
 struct WelfareSocietySystem {
