@@ -24,6 +24,7 @@ void Game::processEvents() {
     std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-"
                  "/swf_save/swf_rate-/swf_cancel/swf_rule/swf_spend/swf_invest/swf_debt"
                  "/swf_conservative/swf_balanced/swf_growth/swf_transparency"
+                 "/tariff+/tariff-/tariff_dumping/fta_sign"
                  "/hedge_prices/geo_survey/mine_rehab/env_bond/env_audit/consult/mediate/suppress_conflict): ";
     std::string command;
     std::cin >> command;
@@ -870,13 +871,163 @@ void Game::processEvents() {
         if (playerCountry.economy.inflation > 0.20) {
             std::cout << "[!!!] CURRENCY REFORM: The Government slashes zeros from the currency." << std::endl;
             std::cout << "      Savings wiped out. Austerity imposed. Inflation reset." << std::endl;
-            
+
             playerCountry.economy.inflation = 0.02; // Reset to 2%
             playerCountry.economy.monetary_emission = 0.0;
             playerCountry.politics.popularity -= 0.25; // Massive anger
             playerCountry.welfare.poverty_rate += 0.05; // Short term pain
         } else {
              std::cout << ">> REJECTED: Inflation is not high enough for such a drastic measure." << std::endl;
+        }
+    }
+    // --- TRADE POLICY COMMANDS ---
+    else if (command == "tariff+") {
+        double old_tariff = playerCountry.economy.average_tariffs;
+        if (old_tariff >= 0.40) {
+            std::cout << ">> MAXIMUM: Tariff wall at 40%. Any further isolation requires autarky laws." << std::endl;
+        } else {
+            playerCountry.economy.average_tariffs += 0.05;
+            double new_tariff = playerCountry.economy.average_tariffs;
+            // Domestic producers sheltered
+            playerCountry.politics.industrial_power   += 0.015;
+            if (playerCountry.politics.industrial_power  > 1.0) playerCountry.politics.industrial_power  = 1.0;
+            playerCountry.politics.agricultural_power += 0.010;
+            if (playerCountry.politics.agricultural_power > 1.0) playerCountry.politics.agricultural_power = 1.0;
+            // Consumer import-price pass-through
+            playerCountry.economy.inflation    += 0.006;
+            playerCountry.politics.popularity  -= 0.020;
+            // FTA retaliation risk (probability rises with existing tariff level)
+            std::uniform_real_distribution<> d(0.0, 1.0);
+            double retaliation_prob = 0.25 + old_tariff * 0.8; // More likely already high
+            if (playerCountry.economy.free_trade_agreements > 0 && d(rng) < retaliation_prob) {
+                playerCountry.economy.free_trade_agreements -= 1;
+                std::cout << "   [!] RETALIATION: A trading partner suspended their FTA over new tariffs." << std::endl;
+            }
+            // Regime-crossing consequences
+            if (old_tariff < 0.15 && new_tariff >= 0.15) {
+                std::cout << "   [!] REGIME SHIFT: Entering protectionist territory. "
+                          << "Smuggling networks will begin forming." << std::endl;
+            } else if (old_tariff < 0.25 && new_tariff >= 0.25) {
+                playerCountry.economy.international_sanctions_prob += 0.05;
+                std::cout << "   [!] REGIME SHIFT: Above 25% — WTO dispute filings expected. "
+                          << "Sanctions risk rising. (+5% sanction prob)" << std::endl;
+            } else if (old_tariff < 0.35 && new_tariff >= 0.35) {
+                playerCountry.economy.international_reserves -= playerCountry.economy.gdp * 0.01;
+                std::cout << "   [!!!] REGIME SHIFT: Near-autarky level. "
+                          << "FDI fleeing. Black markets will dominate trade flows." << std::endl;
+            }
+            std::cout << ">> TARIFF INCREASE: Average tariff raised to " << (int)(new_tariff * 100) << "%." << std::endl;
+            std::cout << "   (Industry +, Agri +, Customs Revenue +, Inflation +, Popularity -, FTA risk)" << std::endl;
+        }
+    }
+    else if (command == "tariff-") {
+        double old_tariff = playerCountry.economy.average_tariffs;
+        if (old_tariff <= 0.0) {
+            std::cout << ">> Tariffs already at zero. Economy is fully open to world trade." << std::endl;
+        } else {
+            playerCountry.economy.average_tariffs -= 0.05;
+            if (playerCountry.economy.average_tariffs < 0.0) playerCountry.economy.average_tariffs = 0.0;
+            double new_tariff = playerCountry.economy.average_tariffs;
+            // Open economy signal
+            playerCountry.economy.international_reserves += 8000000.0;
+            playerCountry.economy.inflation              -= 0.003;
+            if (playerCountry.economy.inflation < 0.0) playerCountry.economy.inflation = 0.0;
+            playerCountry.politics.popularity            += 0.015;
+            playerCountry.welfare.un_score               += 0.020;
+            // Domestic producers face import competition
+            playerCountry.politics.industrial_power      -= 0.012;
+            if (playerCountry.politics.industrial_power  < 0.0) playerCountry.politics.industrial_power  = 0.0;
+            playerCountry.politics.agricultural_power    -= 0.008;
+            if (playerCountry.politics.agricultural_power < 0.0) playerCountry.politics.agricultural_power = 0.0;
+            // Regime-crossing bonuses
+            if (old_tariff >= 0.35 && new_tariff < 0.35) {
+                playerCountry.economy.international_reserves += 20000000.0; // FDI re-entry signal
+                std::cout << "   [+] REGIME SHIFT: Exiting near-autarky. FDI confidence returning." << std::endl;
+            } else if (old_tariff >= 0.25 && new_tariff < 0.25) {
+                playerCountry.economy.international_sanctions_prob -= 0.04;
+                if (playerCountry.economy.international_sanctions_prob < 0.0)
+                    playerCountry.economy.international_sanctions_prob = 0.0;
+                std::cout << "   [+] REGIME SHIFT: Below 25% — WTO disputes defused. Sanctions risk reduced." << std::endl;
+            } else if (old_tariff >= 0.15 && new_tariff < 0.15) {
+                // Smuggling networks begin to dissolve
+                playerCountry.welfare.labor_informality         -= 0.010;
+                if (playerCountry.welfare.labor_informality < 0.0) playerCountry.welfare.labor_informality = 0.0;
+                playerCountry.politics.administrative_corruption -= 0.008;
+                if (playerCountry.politics.administrative_corruption < 0.0)
+                    playerCountry.politics.administrative_corruption = 0.0;
+                std::cout << "   [+] REGIME SHIFT: Below 15% — smuggling networks losing profitability. "
+                          << "Customs corruption declining." << std::endl;
+            } else if (new_tariff < 0.05) {
+                // Near-free trade: consumer surplus materializes
+                playerCountry.welfare.poverty_rate -= 0.005;
+                if (playerCountry.welfare.poverty_rate < 0.0) playerCountry.welfare.poverty_rate = 0.0;
+                std::cout << "   [+] NEAR FREE TRADE: Consumer prices falling. Poverty rate improving." << std::endl;
+            }
+            std::cout << ">> TARIFF REDUCTION: Average tariff lowered to " << (int)(new_tariff * 100) << "%." << std::endl;
+            std::cout << "   (FDI +, Inflation -, Popularity +, UN +, Industry -, Agri -)" << std::endl;
+        }
+    }
+    else if (command == "tariff_dumping") {
+        // Anti-dumping emergency measure: impose targeted duties on below-cost foreign imports
+        // WTO allows this but it's politically costly and invites narrow retaliation
+        double commodity_price = playerCountry.economy.commodity_prices;
+        if (commodity_price > 0.85) {
+            std::cout << ">> ANTI-DUMPING DENIED: No active commodity price crisis to justify emergency duties." << std::endl;
+            std::cout << "   Prices are (" << commodity_price << "x) — within normal range." << std::endl;
+        } else if (playerCountry.economy.average_tariffs >= 0.35) {
+            std::cout << ">> BLOCKED: Existing tariff wall already at "
+                      << (int)(playerCountry.economy.average_tariffs * 100) << "%. "
+                      << "Anti-dumping duties require room to operate." << std::endl;
+        } else {
+            // Emergency 10% sectoral duty on competing imports — not a blanket tariff increase
+            double duty_revenue = playerCountry.economy.gdp
+                                * playerCountry.economy.import_dependency * 0.10 * 0.70;
+            playerCountry.economy.tax_collection     += duty_revenue;
+            playerCountry.politics.industrial_power  += 0.025; // Protected from dumped goods
+            if (playerCountry.politics.industrial_power > 1.0) playerCountry.politics.industrial_power = 1.0;
+            playerCountry.politics.agricultural_power += 0.020;
+            if (playerCountry.politics.agricultural_power > 1.0) playerCountry.politics.agricultural_power = 1.0;
+            playerCountry.welfare.unemployment_rate  -= 0.010; // Jobs saved in affected sectors
+            if (playerCountry.welfare.unemployment_rate < 0.0) playerCountry.welfare.unemployment_rate = 0.0;
+            // WTO-legal but still invites narrow retaliation
+            playerCountry.economy.international_sanctions_prob += 0.015;
+            // Narrow measure — doesn't raise general average_tariffs, but some FTA friction
+            std::uniform_real_distribution<> d(0.0, 1.0);
+            if (playerCountry.economy.free_trade_agreements > 0 && d(rng) < 0.25) {
+                playerCountry.economy.free_trade_agreements -= 1;
+                std::cout << "   [!] NARROW RETALIATION: One partner targeted our exports in response." << std::endl;
+            }
+            std::cout << ">> ANTI-DUMPING DUTIES IMPOSED: Emergency 10% sectoral duties on below-cost imports." << std::endl;
+            std::cout << "   Customs revenue: $" << duty_revenue / 1000000.0 << "M this year." << std::endl;
+            std::cout << "   (Industry +, Agri +, Employment +, Sanctions risk +, FTA risk)" << std::endl;
+        }
+    }
+    else if (command == "fta_sign") {
+        double negotiation_cost = 25000000.0; // $25M
+        if (playerCountry.economy.international_sanctions_prob > 0.5) {
+            std::cout << ">> BLOCKED: No partner willing to sign FTA with a sanctioned state." << std::endl;
+        } else if (playerCountry.economy.average_tariffs > 0.25) {
+            std::cout << ">> STALLED: Partners unwilling to sign FTA while average tariffs exceed 25%." << std::endl;
+            std::cout << "   (Use tariff- to reduce barriers below 25% first)" << std::endl;
+        } else if (playerCountry.economy.gdp < negotiation_cost * 3) {
+            std::cout << ">> INSUFFICIENT RESOURCES: FTA negotiations require $25M." << std::endl;
+        } else {
+            playerCountry.economy.gdp -= negotiation_cost;
+            playerCountry.economy.free_trade_agreements += 1;
+            // Economic effects: new export markets, but import competition rises
+            playerCountry.economy.international_reserves += 15000000.0; // Trade confidence signal
+            playerCountry.economy.growth_rate            += 0.002;      // Long-run channel
+            playerCountry.politics.financial_power       += 0.025;
+            playerCountry.welfare.un_score               += 0.02;
+            // Losers from trade — lobby resistance materializes as political costs
+            playerCountry.politics.industrial_power      -= 0.012;
+            if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
+            playerCountry.politics.agricultural_power    -= 0.010;
+            if (playerCountry.politics.agricultural_power < 0.0) playerCountry.politics.agricultural_power = 0.0;
+            playerCountry.politics.popularity            -= 0.015; // Industry workers and farmers resist
+            std::cout << ">> FTA SIGNED: New free trade agreement. Total agreements: "
+                      << playerCountry.economy.free_trade_agreements << "." << std::endl;
+            std::cout << "   (Growth +, FDI +, UN +, Industry -, Agri -, Popularity -, Cost $25M)" << std::endl;
         }
     }
     else {
@@ -2592,18 +2743,139 @@ void Game::update() {
     // Monetary Emission Decays (The one-time printing shock fades)
     playerCountry.economy.monetary_emission *= 0.5;
     
-    // --- BALANCE OF PAYMENTS (Reserves Logic) ---
-    // 1. Trade Balance (Current Account)
-    // Exports depend on Tech/Industry + Global Growth + Exchange Rate (Cost Push)
-    // Imports depend on Consumption Power + Import Dependency
-    
-    double exports = playerCountry.economy.gdp * 0.20 * export_exposure * (1.0 + (global_growth_trend - 0.02) * 2.0);
-    double imports = playerCountry.economy.gdp * playerCountry.economy.import_dependency * (net_purchasing_power > 0.8 ? net_purchasing_power : 0.8);
-    
-    playerCountry.economy.trade_balance = exports - imports;
+    // --- BALANCE OF PAYMENTS (Current Account) ---
+    // Export components: goods, tourism (invisible exports), agriculture, mining
+    // Each is affected by: tariffs, FTAs, exchange rate, global demand
 
-    // Add mining export component (60% of royalties represent foreign exchange earnings).
-    playerCountry.economy.trade_balance += playerCountry.economy.state_royalties * 0.6;
+    // Tariff retaliation: high tariffs → partners restrict our exports
+    double tariff_export_penalty = playerCountry.economy.average_tariffs * 0.35;
+    // FTA bonus: each agreement opens new markets for our producers
+    double fta_export_bonus = playerCountry.economy.free_trade_agreements * 0.020;
+    // Exchange rate: strong currency (high stability) → expensive exports, less competitive
+    double er_factor = 1.0 - (playerCountry.economy.exchange_rate_stability - 0.50) * 0.25;
+    if (er_factor < 0.50) er_factor = 0.50;
+    if (er_factor > 1.50) er_factor = 1.50;
+
+    // (a) Goods exports — driven by industry + tech capacity
+    double exports_goods = playerCountry.economy.gdp * 0.20
+                         * export_exposure
+                         * (1.0 + (global_growth_trend - 0.02) * 2.0)
+                         * er_factor
+                         * (1.0 - tariff_export_penalty)
+                         * (1.0 + fta_export_bonus);
+
+    // (b) Tourism — invisible exports: foreign visitors spending domestic FX
+    double tourism_exports = (double)playerCountry.economy.annual_visitors
+                           * playerCountry.economy.average_tourist_spending
+                           * playerCountry.economy.tourist_safety;
+
+    // (c) Agricultural exports — boosted by FTAs, dampened by strong currency
+    double agri_exports = playerCountry.economy.gdp * 0.04
+                        * playerCountry.politics.agricultural_power
+                        * er_factor
+                        * (1.0 + fta_export_bonus * 0.5);
+
+    // (d) Mining/commodity exports — FX earnings from extraction (net of domestic consumption)
+    double mining_exports = playerCountry.economy.state_royalties * 0.6;
+
+    double total_exports = exports_goods + tourism_exports + agri_exports + mining_exports;
+
+    // Imports: tariffs reduce volume but FTAs re-open them; purchasing power drives demand
+    double tariff_import_reduction = playerCountry.economy.average_tariffs * 0.25;
+    double fta_import_boost        = playerCountry.economy.free_trade_agreements * 0.008;
+    double imports = playerCountry.economy.gdp
+                   * playerCountry.economy.import_dependency
+                   * (net_purchasing_power > 0.8 ? net_purchasing_power : 0.8)
+                   * (1.0 - tariff_import_reduction)
+                   * (1.0 + fta_import_boost);
+
+    playerCountry.economy.trade_balance = total_exports - imports;
+
+    // --- TARIFF REGIME EFFECTS ---
+    {
+        double tariffs = playerCountry.economy.average_tariffs;
+
+        // 1. Customs revenue: tariffs collect duties on import flow
+        //    Evasion scales with tariff level — high walls incentivize smuggling
+        double base_evasion  = 0.15; // 15% baseline leakage (mis-invoicing, corruption)
+        double extra_evasion = (tariffs > 0.20) ? (tariffs - 0.20) * 1.2 : 0.0;
+        double collection_efficiency = 1.0 - base_evasion - extra_evasion;
+        if (collection_efficiency < 0.20) collection_efficiency = 0.20; // Floor: some always collected
+        double customs_revenue = imports * tariffs * collection_efficiency;
+        playerCountry.economy.tax_collection += customs_revenue;
+
+        // 2. REGIME TIER: FREE TRADE (< 5%)
+        //    Open economy bonus: cheap imports → real purchasing power rises
+        if (tariffs < 0.05) {
+            playerCountry.welfare.poverty_rate -= 0.002; // Affordable imported goods
+            if (playerCountry.welfare.poverty_rate < 0.0) playerCountry.welfare.poverty_rate = 0.0;
+            playerCountry.economy.growth_rate  += 0.0008; // Consumption-led micro-boost
+        }
+
+        // 3. REGIME TIER: MODERATE (5–15%) — standard developing-nation range, no side effects
+
+        // 4. REGIME TIER: PROTECTIONIST (15–25%)
+        //    Industry benefits but smuggling begins, consumer prices creep up
+        if (tariffs > 0.15) {
+            playerCountry.welfare.labor_informality     += 0.003; // Informal traders fill the gap
+            if (playerCountry.welfare.labor_informality > 1.0) playerCountry.welfare.labor_informality = 1.0;
+            playerCountry.politics.administrative_corruption += 0.002; // Customs bribery
+            if (playerCountry.politics.administrative_corruption > 1.0)
+                playerCountry.politics.administrative_corruption = 1.0;
+        }
+
+        // 5. REGIME TIER: HEAVY (> 25%)
+        //    WTO dispute risk, partners may file complaints
+        if (tariffs > 0.25) {
+            playerCountry.economy.international_sanctions_prob += 0.008;
+            if (playerCountry.economy.international_sanctions_prob > 1.0)
+                playerCountry.economy.international_sanctions_prob = 1.0;
+            // Smuggling undermines the very protection tariffs were meant to provide
+            playerCountry.welfare.labor_informality     += 0.004;
+            if (playerCountry.welfare.labor_informality > 1.0) playerCountry.welfare.labor_informality = 1.0;
+            if (tariffs > 0.28) {
+                std::cout << "[!] TARIFF WALL: WTO members filing dispute complaints. "
+                          << "Sanctions risk rising. Smuggling networks expanding." << std::endl;
+            }
+        }
+
+        // 6. REGIME TIER: NEAR-AUTARKY (> 35%)
+        //    Extreme isolation: FDI collapses, black markets dominate
+        if (tariffs > 0.35) {
+            playerCountry.economy.international_reserves -= playerCountry.economy.gdp * 0.005;
+            playerCountry.economy.growth_rate            -= 0.004; // Structural long-run damage
+            playerCountry.welfare.labor_informality      += 0.006;
+            if (playerCountry.welfare.labor_informality   > 1.0) playerCountry.welfare.labor_informality = 1.0;
+            std::cout << "[!!] NEAR-AUTARKY: Trade walls suffocating economic dynamism. "
+                      << "FDI fleeing. Black markets flourishing." << std::endl;
+        }
+    }
+
+    // --- TRADE BALANCE FEEDBACK EFFECTS ---
+    double gdp_now = playerCountry.economy.gdp;
+
+    // Persistent current account deficit → currency depreciation pressure + import-price inflation
+    if (playerCountry.economy.trade_balance < -(gdp_now * 0.03)) {
+        playerCountry.economy.exchange_rate_stability -= 0.012;
+        playerCountry.economy.inflation              += 0.004;
+        std::cout << "[!] TRADE DEFICIT: Persistent current-account gap weakening currency." << std::endl;
+    }
+    // Large surplus → FX reserve accumulation bonus + mild demand-pull inflation
+    if (playerCountry.economy.trade_balance > gdp_now * 0.04) {
+        playerCountry.economy.international_reserves += playerCountry.economy.trade_balance * 0.08;
+        playerCountry.economy.inflation              += 0.002;
+    }
+    // Import substitution: strong industry → domestic production displaces imports over time
+    if (playerCountry.politics.industrial_power > 0.60
+        && playerCountry.economy.import_dependency > 0.15) {
+        playerCountry.economy.import_dependency -= 0.002;
+    }
+    // Deindustrialization trap: low industry + high import dependence → industry further erodes
+    if (playerCountry.politics.industrial_power < 0.25
+        && playerCountry.economy.import_dependency > 0.45) {
+        playerCountry.politics.industrial_power -= 0.003;
+        if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
+    }
 
     // --- CALCULATE DYNAMIC EXCHANGE RATE STABILITY ---
     // Stability depends on: Institutions (Autonomy) + War Chest (Reserves) + Fundamentals (Trade)
@@ -2684,8 +2956,29 @@ void Game::update() {
     
     playerCountry.economy.international_reserves += reserves_change;
     
-    // Display BoP
-    // std::cout << "[ECON] BoP: Trade $" << playerCountry.economy.trade_balance / 1000000 << "M | Capital $" << (fdi+capital_flow_base)/1000000 << "M | DebtServ -$" << external_debt_interest/1000000 << "M" << std::endl;
+    // Display BoP breakdown
+    std::cout << "[TRADE] Exports: $" << (int)(total_exports / 1000000.0) << "M"
+              << " (Goods $" << (int)(exports_goods    / 1000000.0) << "M"
+              << " | Tourism $" << (int)(tourism_exports / 1000000.0) << "M"
+              << " | Agri $"    << (int)(agri_exports    / 1000000.0) << "M"
+              << " | Mining $"  << (int)(mining_exports  / 1000000.0) << "M)" << std::endl;
+    {
+        double t = playerCountry.economy.average_tariffs;
+        double evasion_display = 0.15 + (t > 0.20 ? (t - 0.20) * 1.2 : 0.0);
+        if (evasion_display > 0.80) evasion_display = 0.80;
+        double customs_display = imports * t * (1.0 - evasion_display);
+        std::string tariff_regime = t < 0.05  ? "Free Trade"
+                                  : t < 0.15  ? "Moderate"
+                                  : t < 0.25  ? "Protectionist"
+                                  : t < 0.35  ? "Heavy"
+                                  :             "Near-Autarky";
+        std::cout << "[TRADE] Imports: $" << (int)(imports / 1000000.0) << "M"
+                  << " | Balance: " << (playerCountry.economy.trade_balance >= 0 ? "+" : "")
+                  << (int)(playerCountry.economy.trade_balance / 1000000.0) << "M"
+                  << " | Tariffs: " << (int)(t * 100) << "% [" << tariff_regime << "]"
+                  << " | Customs: $" << (int)(customs_display / 1000000.0) << "M"
+                  << " | FTAs: " << playerCountry.economy.free_trade_agreements << std::endl;
+    }
     std::cout << "[ECON] Reserves Change: " << (reserves_change >= 0 ? "+" : "") << reserves_change / 1000000.0 << "M USD. Total: $" << playerCountry.economy.international_reserves / 1000000.0 << "M" << std::endl;
     
     // --- CURRENCY CRISIS (Reserves < 0) ---
