@@ -21,7 +21,7 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-/swf_save/swf_cancel/swf_spend/consult/mediate/suppress_conflict): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-/swf_save/swf_cancel/swf_spend/hedge_prices/geo_survey/mine_rehab/consult/mediate/suppress_conflict): ";
     std::string command;
     std::cin >> command;
 
@@ -399,6 +399,79 @@ void Game::processEvents() {
             playerCountry.politics.popularity += 0.01; // More money for current spending
             std::cout << ">> POLICY: SWF automatic deposits suspended. All royalties go to general revenue." << std::endl;
             std::cout << "   Fund balance preserved: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+    }
+    // --- COMMODITY PRICE COMMANDS ---
+    else if (command == "hedge_prices") {
+        if (playerCountry.economy.mining_concessions <= 0) {
+            std::cout << ">> No mining operations to hedge." << std::endl;
+        } else if (playerCountry.economy.commodity_hedge_turns > 0) {
+            std::cout << ">> Price hedge already active for "
+                      << playerCountry.economy.commodity_hedge_turns << " more year(s)." << std::endl;
+        } else if (playerCountry.economy.sovereign_wealth_fund < 50000000.0
+                && playerCountry.politics.financial_power < 0.6) {
+            std::cout << ">> DENIED: Insufficient financial capacity to enter derivatives market." << std::endl;
+            std::cout << "   Requirement: SWF ≥ $50M OR Financial Sector power > 60%." << std::endl;
+        } else {
+            // Premium: 8% of last year's royalties — the cost of certainty
+            double premium = playerCountry.economy.state_royalties * 0.08;
+            playerCountry.economy.gdp -= premium;
+            playerCountry.economy.commodity_hedge_turns = 2;
+            std::cout << ">> HEDGE: Commodity prices locked at "
+                      << playerCountry.economy.commodity_prices << "x for 2 years." << std::endl;
+            std::cout << "   Premium paid: $" << premium / 1000000.0 << "M"
+                      << "   (Upside capped, downside protected)" << std::endl;
+        }
+    }
+    // --- RESOURCE MANAGEMENT COMMANDS ---
+    else if (command == "geo_survey") {
+        playerCountry.economy.gdp -= 30000000; // $30M survey cost
+        std::uniform_real_distribution<> dist(0.0, 1.0);
+        double roll = dist(rng);
+        if (playerCountry.economy.resource_depletion > 0.95) {
+            std::cout << ">> GEO SURVEY: Extensive surveys confirm reserves are geologically exhausted." << std::endl;
+            std::cout << "   $30M spent. No viable new deposits identified." << std::endl;
+        } else if (roll < 0.50) {
+            // Major find
+            double recovery = 0.08 + dist(rng) * 0.10; // 8%–18% reserve extension
+            playerCountry.economy.resource_depletion -= recovery;
+            if (playerCountry.economy.resource_depletion < 0.0) playerCountry.economy.resource_depletion = 0.0;
+            playerCountry.politics.industrial_power += 0.04;
+            playerCountry.politics.popularity       += 0.02;
+            std::cout << ">> GEO SURVEY: Major deposit discovered! Reserves extended by "
+                      << (int)(recovery * 100) << "%." << std::endl;
+            std::cout << "   (Depletion -, FDI +, Popularity +)" << std::endl;
+        } else if (roll < 0.80) {
+            // Minor find
+            double recovery = 0.03 + dist(rng) * 0.04; // 3%–7%
+            playerCountry.economy.resource_depletion -= recovery;
+            if (playerCountry.economy.resource_depletion < 0.0) playerCountry.economy.resource_depletion = 0.0;
+            std::cout << ">> GEO SURVEY: Small secondary deposit found. Reserves extended by "
+                      << (int)(recovery * 100) << "%." << std::endl;
+        } else {
+            // Nothing found
+            std::cout << ">> GEO SURVEY: No significant new deposits. Existing reserve estimates confirmed." << std::endl;
+            std::cout << "   $30M spent with no material change." << std::endl;
+        }
+    }
+    else if (command == "mine_rehab") {
+        if (playerCountry.economy.resource_depletion < 0.5 && playerCountry.economy.mining_legacy_damage < 0.1) {
+            std::cout << ">> MINE REHAB: Sites are still active. Rehabilitation applies to depleted or damaged areas." << std::endl;
+        } else {
+            playerCountry.economy.gdp -= 40000000; // $40M remediation cost
+            playerCountry.economy.mining_legacy_damage -= 0.20;
+            if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
+            playerCountry.infra.potable_water_access += 0.03;
+            if (playerCountry.infra.potable_water_access > 1.0) playerCountry.infra.potable_water_access = 1.0;
+            playerCountry.infra.pollution_prob -= 0.05;
+            if (playerCountry.infra.pollution_prob < 0.0) playerCountry.infra.pollution_prob = 0.0;
+            playerCountry.welfare.un_score += 0.05;
+            playerCountry.economy.community_conflicts -= 0.08;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.politics.popularity += 0.02;
+            std::cout << ">> MINE REHAB: Environmental remediation program launched." << std::endl;
+            std::cout << "   Tailings sealed, water treatment installed, land restored." << std::endl;
+            std::cout << "   (Legacy -, Water +, Pollution -, UN +, Conflict -, Cost $40M)" << std::endl;
         }
     }
     // --- COMMUNITY CONFLICT RESOLUTION COMMANDS ---
@@ -923,22 +996,128 @@ void Game::update() {
     playerCountry.economy.tax_collection = playerCountry.economy.gdp * current_effective_rate;
 
     // --- MINING & NATURAL RESOURCES (Resource Curse vs. Fiscal Windfall) ---
-    // Global commodity prices cycle independently from the business cycle.
-    // Period ~21 years (offset from GDP sine). Range: 0.6x to 1.4x.
-    playerCountry.economy.commodity_prices = 1.0 + 0.4 * sin(turnCount * 0.3 + 1.5);
 
-    // Resource Depletion: each active concession exhausts reserves ~0.5%/year.
-    double depletion_rate = playerCountry.economy.mining_concessions * 0.005;
+    // === COMMODITY PRICE MODEL (4 layers) ===
+
+    // Layer 1 — SHORT CYCLE (~21 years, offset from GDP sine to avoid lock-step)
+    double short_cycle = 0.28 * sin(turnCount * 0.3 + 1.5);
+
+    // Layer 2 — SUPER-CYCLE (structural 30-40 year trend)
+    // Driven by industrialization waves, energy transitions, demographic shifts.
+    // Random walk with strong mean reversion — unpredictable but bounded.
+    {
+        std::normal_distribution<> sc_drift(0.0, 0.025);
+        playerCountry.economy.commodity_supercycle += sc_drift(rng);
+        playerCountry.economy.commodity_supercycle *= 0.94; // Reverts to mean
+        if (playerCountry.economy.commodity_supercycle >  0.40) playerCountry.economy.commodity_supercycle =  0.40;
+        if (playerCountry.economy.commodity_supercycle < -0.40) playerCountry.economy.commodity_supercycle = -0.40;
+    }
+
+    // Layer 3 — GLOBAL DEMAND (coupled to the existing GDP cycle)
+    // Commodity demand follows global growth: recessions crush prices, booms inflate them.
+    double global_demand_effect = (global_growth_trend - 0.025) * 3.0; // ±~6% effect
+
+    // Layer 4 — RANDOM SHOCKS (stochastic events, independent each year)
+    double price_shock = 0.0;
+    {
+        std::uniform_real_distribution<> roll(0.0, 1.0);
+        std::uniform_real_distribution<> mag(0.0, 1.0);
+
+        if (roll(rng) < 0.08) {
+            // Geopolitical supply disruption (war, embargo, cartel cut)
+            double spike = 0.15 + mag(rng) * 0.20;
+            price_shock += spike;
+            std::cout << "[COMMODITY] SUPPLY SHOCK: Geopolitical disruption sends prices up +"
+                      << (int)(spike * 100) << "%." << std::endl;
+        }
+        if (roll(rng) < 0.05) {
+            // Major deposit discovered elsewhere → global glut
+            double crash = 0.10 + mag(rng) * 0.15;
+            price_shock -= crash;
+            std::cout << "[COMMODITY] GLUT: Large deposits found elsewhere. Prices fall -"
+                      << (int)(crash * 100) << "%." << std::endl;
+        }
+        if (roll(rng) < 0.04 && playerCountry.infra.innovation_index > 0.55) {
+            // Tech substitution: synthetic materials or green energy displaces traditional ore
+            double disruption = 0.12 + mag(rng) * 0.13;
+            price_shock -= disruption;
+            std::cout << "[COMMODITY] TECH DISRUPTION: New materials substitute traditional mining outputs. -"
+                      << (int)(disruption * 100) << "%." << std::endl;
+        }
+    }
+
+    // Sanctions discount: isolated sellers must accept lower prices from fewer buyers
+    double sanctions_discount = 0.0;
+    if (playerCountry.economy.international_sanctions_prob > 0.5)
+        sanctions_discount = -0.12;
+
+    // Compose raw target price
+    double price_target = 1.0
+                        + short_cycle
+                        + playerCountry.economy.commodity_supercycle
+                        + global_demand_effect
+                        + price_shock
+                        + sanctions_discount;
+
+    if (price_target < 0.30) price_target = 0.30;
+    if (price_target > 2.20) price_target = 2.20;
+
+    // Price momentum: markets adjust gradually, not in a single jump (40/60 smoothing)
+    if (playerCountry.economy.commodity_hedge_turns > 0) {
+        playerCountry.economy.commodity_hedge_turns--;
+        std::cout << "[HEDGE] Prices locked at " << playerCountry.economy.commodity_prices
+                  << "x (" << playerCountry.economy.commodity_hedge_turns << " year(s) remaining)." << std::endl;
+        // price stays unchanged — hedge absorbs the shock
+    } else {
+        playerCountry.economy.commodity_prices = 0.55 * playerCountry.economy.commodity_prices
+                                               + 0.45 * price_target;
+    }
+
+    // --- RESOURCE DEPLETION (Dynamic Rate) ---
+    // Base: 0.4%/concession/year. Multiple factors accelerate or slow consumption.
+    double depletion_rate = playerCountry.economy.mining_concessions * 0.004;
+
+    // Price boom → companies rush to extract while margins are wide
+    if (playerCountry.economy.commodity_prices > 1.2)
+        depletion_rate += playerCountry.economy.mining_concessions * 0.002;
+
+    // Overcrowding (> 8 concessions): competitive over-extraction depletes shared reserves faster
+    if (playerCountry.economy.mining_concessions > 8)
+        depletion_rate += (playerCountry.economy.mining_concessions - 8) * 0.003;
+
+    // Technology improves recovery rates and reduces waste
+    if (playerCountry.welfare.research_spending_gdp > 0.02)
+        depletion_rate *= 0.80;
+
     playerCountry.economy.resource_depletion += depletion_rate;
     if (playerCountry.economy.resource_depletion > 1.0) playerCountry.economy.resource_depletion = 1.0;
 
+    // --- EXTRACTION LIFECYCLE (Phase-Based Yield) ---
+    // Real extraction follows a bell curve: ramp-up → peak → decline.
+    // Yield factor replaces the naive (1 - depletion) formula.
+    double dep = playerCountry.economy.resource_depletion;
+    double yield_factor;
+    if (dep < 0.30) {
+        // Phase 1 — RAMP-UP: infrastructure building, improving ore access
+        yield_factor = 0.85 + (dep / 0.30) * 0.15;   // 0.85 → 1.0
+    } else if (dep < 0.65) {
+        // Phase 2 — PEAK: optimal grade, established operations
+        yield_factor = 1.0;
+    } else {
+        // Phase 3 — DECLINE: ore grade falls, costs soar (deeper mines, lower purity)
+        // Quadratic collapse: small early decline, rapid fall near exhaustion
+        double past_peak = (dep - 0.65) / 0.35;       // 0 → 1 as dep goes 65% → 100%
+        yield_factor = 1.0 - (past_peak * past_peak);  // 1.0 → 0.0 (quadratic)
+    }
+    if (yield_factor < 0.0) yield_factor = 0.0;
+
     // --- ROYALTY SYSTEM ---
-    // Gross extraction value = what the ground is worth before state share.
-    // Base: $3.33M per concession (royalty_rate 15% → $500k to state at default).
+    // Gross extraction value: what the ground is worth before state share.
+    // Base $3.33M/concession (at 15% royalty → $500k to state).
     double extraction_value = playerCountry.economy.mining_concessions
                             * 3333333.0
                             * playerCountry.economy.commodity_prices
-                            * (1.0 - playerCountry.economy.resource_depletion);
+                            * yield_factor;
 
     // Corruption leakage: officials pocket part of what companies owe the state.
     // At 50% corruption, state collects only 70% of its due (30% evaded via bribes).
@@ -1073,9 +1252,46 @@ void Game::update() {
         }
     }
 
-    // Resource exhaustion warning.
-    if (playerCountry.economy.resource_depletion > 0.85 && playerCountry.economy.mining_concessions > 0) {
-        std::cout << "[!] RESOURCE DEPLETION: Reserves nearly exhausted. Mining revenues declining rapidly." << std::endl;
+    // --- EXTRACTION PHASE MESSAGES ---
+    if (playerCountry.economy.mining_concessions > 0) {
+        if (dep >= 0.65 && dep < 0.75) {
+            std::cout << "[!] MINING DECLINE: Reserves past peak. Ore grade dropping, costs rising." << std::endl;
+        } else if (dep >= 0.75 && dep < 0.90) {
+            std::cout << "[!] LATE-STAGE MINING: Only marginal deposits remain. Consider geo_survey or diversification." << std::endl;
+        } else if (dep >= 0.90) {
+            std::cout << "[!!!] RESERVES EXHAUSTED: Extraction economically marginal. Revenues in freefall." << std::endl;
+            // Companies begin spontaneous withdrawal — unprofitable to operate
+            std::uniform_real_distribution<> d(0.0, 1.0);
+            if (d(rng) < 0.20 && playerCountry.economy.mining_concessions > 0) {
+                playerCountry.economy.mining_concessions -= 1;
+                std::cout << "         One company abandoned its concession (uneconomic to continue)." << std::endl;
+            }
+        }
+    }
+
+    // --- ENVIRONMENTAL LEGACY (Tailings & Contamination) ---
+    // Depleted mines leave behind waste ponds and soil contamination.
+    // This persists and worsens even after concessions close.
+    if (dep > 0.5 && playerCountry.economy.mining_concessions > 0) {
+        double tailings = (dep - 0.5) * playerCountry.economy.mining_concessions * 0.003;
+        playerCountry.economy.mining_legacy_damage += tailings;
+        if (playerCountry.economy.mining_legacy_damage > 1.0) playerCountry.economy.mining_legacy_damage = 1.0;
+    }
+
+    if (playerCountry.economy.mining_legacy_damage > 0.1) {
+        // Tailings leach into groundwater regardless of whether mines are still open
+        double legacy = playerCountry.economy.mining_legacy_damage;
+        playerCountry.infra.potable_water_access -= legacy * 0.003;
+        if (playerCountry.infra.potable_water_access < 0.0) playerCountry.infra.potable_water_access = 0.0;
+        playerCountry.infra.pollution_prob += legacy * 0.002;
+        if (playerCountry.infra.pollution_prob > 1.0) playerCountry.infra.pollution_prob = 1.0;
+        // Chronic contamination drives long-term community conflict and radicalism
+        playerCountry.economy.community_conflicts += legacy * 0.004;
+        if (legacy > 0.4) {
+            std::cout << "[!] TAILINGS CRISIS: Mine waste contaminating groundwater. "
+                      << "Health and community impacts accumulating." << std::endl;
+            playerCountry.welfare.health_coverage -= 0.005; // Healthcare overwhelmed
+        }
     }
 
     // Commodity price bust.
@@ -1156,15 +1372,26 @@ void Game::update() {
         }
     }
 
-    if (playerCountry.economy.mining_concessions > 0) {
+    if (playerCountry.economy.mining_concessions > 0 || playerCountry.economy.mining_legacy_damage > 0.05) {
+        std::string phase_label    = dep < 0.30 ? "Ramp-up" : dep < 0.65 ? "Peak" : dep < 0.85 ? "Decline" : "Exhausted";
+        std::string price_label    = playerCountry.economy.commodity_prices > 1.25 ? "BOOM"
+                                   : playerCountry.economy.commodity_prices > 0.85 ? "Normal" : "BUST";
+        std::string supercycle_dir = playerCountry.economy.commodity_supercycle >  0.10 ? "Rising"
+                                   : playerCountry.economy.commodity_supercycle < -0.10 ? "Falling" : "Flat";
         std::cout << "[MINING] Concessions: " << playerCountry.economy.mining_concessions
+                  << " | Phase: " << phase_label
                   << " | Rate: " << playerCountry.economy.royalty_rate * 100 << "%"
-                  << " | Gross Extraction: $" << extraction_value / 1000000.0 << "M"
+                  << " | Extraction: $" << extraction_value / 1000000.0 << "M"
                   << " | Royalties: $" << royalty_yield / 1000000.0 << "M" << std::endl;
-        std::cout << "         Corruption Loss: $" << royalty_evasion / 1000000.0 << "M"
-                  << " | Price: " << playerCountry.economy.commodity_prices << "x"
-                  << " | Depletion: " << playerCountry.economy.resource_depletion * 100 << "%"
-                  << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%" << std::endl;
+        std::cout << "         Price: " << playerCountry.economy.commodity_prices << "x [" << price_label << "]"
+                  << " | Supercycle: " << supercycle_dir
+                  << " | Depletion: " << dep * 100 << "%"
+                  << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%"
+                  << " | Legacy: " << playerCountry.economy.mining_legacy_damage * 100 << "%" << std::endl;
+        std::cout << "         Corruption Loss: $" << royalty_evasion / 1000000.0 << "M";
+        if (playerCountry.economy.commodity_hedge_turns > 0)
+            std::cout << " | HEDGE ACTIVE (" << playerCountry.economy.commodity_hedge_turns << " yr)";
+        std::cout << std::endl;
         if (playerCountry.economy.sovereign_wealth_fund > 0)
             std::cout << "         SWF Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M"
                       << " (saving " << playerCountry.economy.swf_deposit_rate * 100 << "% of royalties)" << std::endl;

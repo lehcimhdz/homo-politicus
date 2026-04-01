@@ -108,11 +108,16 @@ struct EconomicFinancialSystem {
     double state_royalties = 5000000.0; // Actual royalties collected after corruption leakage
     double community_conflicts = 0.1;
     double resource_depletion = 0.05;
-    double commodity_prices = 1.0;      // Global price multiplier
+    double commodity_prices = 1.0;      // Global price multiplier (smoothed)
+    double commodity_supercycle = 0.0; // Long structural trend (-0.4 to +0.4)
+    int    commodity_hedge_turns = 0;  // Turns remaining with locked-in price
 
     // Sovereign Wealth Fund
-    double sovereign_wealth_fund = 0.0; // Accumulated savings balance
-    double swf_deposit_rate = 0.0;      // Fraction of annual royalties auto-saved (0–0.5)
+    double sovereign_wealth_fund = 0.0;   // Accumulated savings balance
+    double swf_deposit_rate = 0.0;        // Fraction of annual royalties auto-saved (0–0.5)
+
+    // Environmental Legacy
+    double mining_legacy_damage = 0.0;    // Accumulated contamination from past extraction (0–1)
 
     // Foreign Trade
     double trade_balance = 0.0; // Exports - Imports
