@@ -1002,16 +1002,74 @@ void Game::update() {
     // Layer 1 — SHORT CYCLE (~21 years, offset from GDP sine to avoid lock-step)
     double short_cycle = 0.28 * sin(turnCount * 0.3 + 1.5);
 
-    // Layer 2 — SUPER-CYCLE (structural 30-40 year trend)
-    // Driven by industrialization waves, energy transitions, demographic shifts.
-    // Random walk with strong mean reversion — unpredictable but bounded.
+    // Layer 2 — SUPER-CYCLE (Markov regime model, 30-40 year structural waves)
+    // Two regimes: Bull (demand-driven expansion) and Bear (oversupply contraction).
+    // Regimes are persistent but not permanent — transition probability increases with age.
+    double prev_supercycle = playerCountry.economy.commodity_supercycle;
+
     {
-        std::normal_distribution<> sc_drift(0.0, 0.025);
-        playerCountry.economy.commodity_supercycle += sc_drift(rng);
-        playerCountry.economy.commodity_supercycle *= 0.94; // Reverts to mean
-        if (playerCountry.economy.commodity_supercycle >  0.40) playerCountry.economy.commodity_supercycle =  0.40;
-        if (playerCountry.economy.commodity_supercycle < -0.40) playerCountry.economy.commodity_supercycle = -0.40;
+        std::uniform_real_distribution<> roll(0.0, 1.0);
+        playerCountry.economy.supercycle_years++;
+
+        if (playerCountry.economy.supercycle_bull) {
+            // Bull → Bear: base 8%, rises after 15 years (nothing lasts forever)
+            double p_turn = 0.08 + (playerCountry.economy.supercycle_years > 15 ? 0.06 : 0.0);
+            if (roll(rng) < p_turn) {
+                playerCountry.economy.supercycle_bull = false;
+                playerCountry.economy.supercycle_years = 0;
+                std::cout << "[SUPERCYCLE] REGIME SHIFT: Global commodity bull cycle ending. "
+                          << "Oversupply and demand contraction begin." << std::endl;
+            }
+        } else {
+            // Bear → Bull: base 12%, rises after 10 years (lows sow the seeds of recovery)
+            double p_turn = 0.12 + (playerCountry.economy.supercycle_years > 10 ? 0.07 : 0.0);
+            if (roll(rng) < p_turn) {
+                playerCountry.economy.supercycle_bull = true;
+                playerCountry.economy.supercycle_years = 0;
+                std::cout << "[SUPERCYCLE] REGIME SHIFT: New commodity bull cycle starting. "
+                          << "Global demand surge expected." << std::endl;
+            }
+        }
+
+        // Regime-directed drift: trend follows current phase with noise
+        std::normal_distribution<> noise(0.0, 0.018);
+        double regime_drift = playerCountry.economy.supercycle_bull ? +0.014 : -0.014;
+        playerCountry.economy.commodity_supercycle += regime_drift + noise(rng);
+
+        // --- CAUSAL DRIVERS ---
+        // Strong global growth reinforces bull demand
+        if (global_growth_trend > 0.035 && playerCountry.economy.supercycle_bull)
+            playerCountry.economy.commodity_supercycle += 0.010;
+
+        // Renewables penetration creates structural bear pressure on fossil/traditional commodities
+        if (playerCountry.infra.renewables_percentage > 0.35)
+            playerCountry.economy.commodity_supercycle -= 0.015;
+
+        // Geopolitical tension → supply fear → bull signal (regardless of demand)
+        if (playerCountry.economy.international_sanctions_prob > 0.30)
+            playerCountry.economy.commodity_supercycle += 0.008;
+
+        // Tech disruption (high innovation → new materials displace traditional ore)
+        if (playerCountry.infra.innovation_index > 0.70 && !playerCountry.economy.supercycle_bull)
+            playerCountry.economy.commodity_supercycle -= 0.010;
+
+        // Gentle mean reversion prevents runaway extremes
+        playerCountry.economy.commodity_supercycle *= 0.97;
+
+        // Hard bounds
+        if (playerCountry.economy.commodity_supercycle >  0.45) playerCountry.economy.commodity_supercycle =  0.45;
+        if (playerCountry.economy.commodity_supercycle < -0.45) playerCountry.economy.commodity_supercycle = -0.45;
     }
+
+    // --- THRESHOLD CROSSING EVENTS ---
+    if (prev_supercycle <  0.15 && playerCountry.economy.commodity_supercycle >=  0.15)
+        std::cout << "[SUPERCYCLE] Industrial demand surge: commodity markets entering sustained bull territory." << std::endl;
+    if (prev_supercycle <  0.30 && playerCountry.economy.commodity_supercycle >=  0.30)
+        std::cout << "[SUPERCYCLE] SUPER-BOOM: Resource nationalism rising worldwide. Exceptional revenues likely." << std::endl;
+    if (prev_supercycle > -0.15 && playerCountry.economy.commodity_supercycle <= -0.15)
+        std::cout << "[SUPERCYCLE] Global industrial slowdown: commodity markets entering bear territory." << std::endl;
+    if (prev_supercycle > -0.30 && playerCountry.economy.commodity_supercycle <= -0.30)
+        std::cout << "[SUPERCYCLE] SUPER-BUST: Resource economies entering structural fiscal crisis." << std::endl;
 
     // Layer 3 — GLOBAL DEMAND (coupled to the existing GDP cycle)
     // Commodity demand follows global growth: recessions crush prices, booms inflate them.
@@ -1118,6 +1176,39 @@ void Game::update() {
                             * 3333333.0
                             * playerCountry.economy.commodity_prices
                             * yield_factor;
+
+    // --- SUPERCYCLE SYSTEMIC EFFECTS ---
+    // The supercycle phase reshapes the broader economy beyond price levels.
+    if (playerCountry.economy.mining_concessions > 0) {
+        double sc = playerCountry.economy.commodity_supercycle;
+
+        if (sc > 0.15) {
+            // Bull: foreign capital floods into the resource sector
+            double fdi_bonus = sc * extraction_value * 0.015;
+            playerCountry.economy.international_reserves += fdi_bonus;
+            if (sc > 0.28) {
+                // Deep bull: mining lobby crowds out manufacturing investment
+                playerCountry.politics.industrial_power -= 0.012; // net Dutch Disease effect
+            }
+        }
+
+        if (sc < -0.15) {
+            // Bear: companies cut corners — environmental standards slip
+            playerCountry.infra.pollution_prob += 0.004;
+            if (playerCountry.infra.pollution_prob > 1.0) playerCountry.infra.pollution_prob = 1.0;
+
+            if (sc < -0.28) {
+                // Deep bear: structural unemployment in mining towns
+                playerCountry.welfare.unemployment_rate  += 0.004;
+                playerCountry.politics.polarization_index += 0.008;
+                // Desperate companies bribe officials more aggressively
+                playerCountry.politics.administrative_corruption += 0.005;
+                if (playerCountry.economy.supercycle_years > 5)
+                    std::cout << "[SUPERCYCLE] Extended bear: mining towns in distress. "
+                              << "Unemployment and corruption rising." << std::endl;
+            }
+        }
+    }
 
     // Corruption leakage: officials pocket part of what companies owe the state.
     // At 50% corruption, state collects only 70% of its due (30% evaded via bribes).
@@ -1376,6 +1467,10 @@ void Game::update() {
         std::string phase_label    = dep < 0.30 ? "Ramp-up" : dep < 0.65 ? "Peak" : dep < 0.85 ? "Decline" : "Exhausted";
         std::string price_label    = playerCountry.economy.commodity_prices > 1.25 ? "BOOM"
                                    : playerCountry.economy.commodity_prices > 0.85 ? "Normal" : "BUST";
+        std::string supercycle_regime = playerCountry.economy.supercycle_bull ? "Bull" : "Bear";
+        std::string supercycle_risk   = (playerCountry.economy.supercycle_bull  && playerCountry.economy.supercycle_years > 15)
+                                     || (!playerCountry.economy.supercycle_bull && playerCountry.economy.supercycle_years > 10)
+                                      ? "TURNING?" : "Stable";
         std::string supercycle_dir = playerCountry.economy.commodity_supercycle >  0.10 ? "Rising"
                                    : playerCountry.economy.commodity_supercycle < -0.10 ? "Falling" : "Flat";
         std::cout << "[MINING] Concessions: " << playerCountry.economy.mining_concessions
@@ -1384,7 +1479,9 @@ void Game::update() {
                   << " | Extraction: $" << extraction_value / 1000000.0 << "M"
                   << " | Royalties: $" << royalty_yield / 1000000.0 << "M" << std::endl;
         std::cout << "         Price: " << playerCountry.economy.commodity_prices << "x [" << price_label << "]"
-                  << " | Supercycle: " << supercycle_dir
+                  << " | Supercycle: " << supercycle_regime
+                  << " yr" << playerCountry.economy.supercycle_years
+                  << " [" << supercycle_dir << "] [" << supercycle_risk << "]"
                   << " | Depletion: " << dep * 100 << "%"
                   << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%"
                   << " | Legacy: " << playerCountry.economy.mining_legacy_damage * 100 << "%" << std::endl;

@@ -109,7 +109,9 @@ struct EconomicFinancialSystem {
     double community_conflicts = 0.1;
     double resource_depletion = 0.05;
     double commodity_prices = 1.0;      // Global price multiplier (smoothed)
-    double commodity_supercycle = 0.0; // Long structural trend (-0.4 to +0.4)
+    double commodity_supercycle = 0.0; // Long structural trend (-0.45 to +0.45)
+    bool   supercycle_bull = true;     // Current regime: bull (demand-driven) or bear (oversupply)
+    int    supercycle_years = 0;       // Years elapsed in current regime
     int    commodity_hedge_turns = 0;  // Turns remaining with locked-in price
 
     // Sovereign Wealth Fund
