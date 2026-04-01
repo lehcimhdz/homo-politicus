@@ -21,7 +21,7 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-/swf_save/swf_cancel/swf_spend): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-/swf_save/swf_cancel/swf_spend/consult/mediate/suppress_conflict): ";
     std::string command;
     std::cin >> command;
 
@@ -399,6 +399,60 @@ void Game::processEvents() {
             playerCountry.politics.popularity += 0.01; // More money for current spending
             std::cout << ">> POLICY: SWF automatic deposits suspended. All royalties go to general revenue." << std::endl;
             std::cout << "   Fund balance preserved: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+    }
+    // --- COMMUNITY CONFLICT RESOLUTION COMMANDS ---
+    else if (command == "consult") {
+        if (playerCountry.economy.mining_concessions <= 0) {
+            std::cout << ">> No active mining operations to consult about." << std::endl;
+        } else {
+            // Prior consultation: legally required under ILO 169 for indigenous communities.
+            // Expensive and slow but builds durable social license.
+            playerCountry.economy.gdp -= 20000000; // $20M process cost
+            playerCountry.economy.community_conflicts -= 0.12;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.welfare.minority_protection += 0.04; // Rights formally recognized
+            if (playerCountry.welfare.minority_protection > 1.0) playerCountry.welfare.minority_protection = 1.0;
+            playerCountry.welfare.un_score    += 0.05;
+            playerCountry.politics.popularity += 0.01; // Looks responsible internationally
+            std::cout << ">> CONSULTATION: Prior consent process launched with affected communities." << std::endl;
+            std::cout << "   (Conflict --, Rights +, UN +, Cost $20M)" << std::endl;
+        }
+    }
+    else if (command == "mediate") {
+        if (playerCountry.economy.community_conflicts < 0.2) {
+            std::cout << ">> Conflict level too low. Communities are not in formal dispute." << std::endl;
+        } else if (playerCountry.politics.judicial_independence < 0.4) {
+            // Weak courts: companies ignore arbitration rulings — mediation collapses
+            playerCountry.economy.community_conflicts += 0.03;
+            std::cout << ">> MEDIATION FAILED: Judiciary too weak to enforce agreements. Communities enraged." << std::endl;
+            std::cout << "   (Conflict +, rebuild judicial independence first)" << std::endl;
+        } else {
+            playerCountry.economy.gdp -= 10000000; // $10M
+            playerCountry.economy.community_conflicts -= 0.08;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.politics.trust_in_justice += 0.03;
+            playerCountry.politics.popularity       += 0.01;
+            std::cout << ">> MEDIATION: State arbitration panel established between companies and communities." << std::endl;
+            std::cout << "   (Conflict -, Justice +, Cost $10M)" << std::endl;
+        }
+    }
+    else if (command == "suppress_conflict") {
+        if (playerCountry.economy.community_conflicts < 0.3) {
+            std::cout << ">> Conflict level too low to justify security deployment." << std::endl;
+        } else {
+            // Short-term suppression — works immediately but poisons the long-term
+            playerCountry.economy.community_conflicts -= 0.15;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.welfare.radicalism_prob        += 0.05; // Martyrs recruit
+            playerCountry.welfare.un_score               -= 0.10;
+            playerCountry.welfare.forced_disappearances  += 0.05;
+            if (playerCountry.welfare.forced_disappearances > 1.0) playerCountry.welfare.forced_disappearances = 1.0;
+            playerCountry.security.homicide_rate         += 2.0;
+            playerCountry.politics.popularity            -= 0.03;
+            playerCountry.politics.polarization_index    += 0.03;
+            std::cout << ">> CRACKDOWN: Security forces deployed to mining zones. Blockades broken." << std::endl;
+            std::cout << "   (Conflict - now, Radicalism +, Disappearances +, UN --, Popularity -, Polarization +)" << std::endl;
         }
     }
     else if (command == "swf_spend") {
@@ -933,28 +987,90 @@ void Game::update() {
         if (playerCountry.infra.pollution_prob > 1.0) playerCountry.infra.pollution_prob = 1.0;
     }
 
-    // Community Conflicts: driven by extraction intensity vs. local rights and poverty.
-    // Higher royalty_rate also signals fairer deal, reducing conflict slightly.
-    double target_conflicts = (playerCountry.economy.mining_concessions * 0.08)
-                            - (playerCountry.welfare.minority_protection * 0.2)
-                            - (playerCountry.economy.royalty_rate * 0.1) // Fair share calms tensions
-                            + (playerCountry.welfare.poverty_rate * 0.3);
+    // --- COMMUNITY CONFLICTS (Escalation Model) ---
+
+    // DRIVERS (what fuels conflict):
+    double conflict_pressure = 0.0;
+    // Raw extraction intensity
+    conflict_pressure += playerCountry.economy.mining_concessions * 0.07;
+    // Environmental damage: pollution and CO2 contaminate land and water
+    conflict_pressure += playerCountry.infra.pollution_prob * 0.25;
+    if (playerCountry.infra.co2_emissions > 2000.0) conflict_pressure += 0.04;
+    // Poverty makes communities desperate — they have nothing to lose
+    conflict_pressure += playerCountry.welfare.poverty_rate * 0.25;
+    // Fast depletion signals companies over-extracting (abuse of resources)
+    conflict_pressure += playerCountry.economy.resource_depletion * 0.12;
+    // Corruption kills trust in any negotiated settlement
+    conflict_pressure += playerCountry.politics.administrative_corruption * 0.20;
+
+    // MITIGATORS (what keeps communities at the table):
+    // Minority/indigenous rights recognition → communities have legal channels
+    conflict_pressure -= playerCountry.welfare.minority_protection * 0.20;
+    // Fair royalty rate → communities see tangible benefit
+    conflict_pressure -= playerCountry.economy.royalty_rate * 0.10;
+    // Strong courts → disputes resolved legally, not on the road
+    conflict_pressure -= playerCountry.politics.judicial_independence * 0.15;
+    // Revenue sharing already active
+    if (playerCountry.economy.swf_deposit_rate > 0) conflict_pressure -= 0.05;
+
+    double target_conflicts = conflict_pressure;
     if (target_conflicts < 0.0) target_conflicts = 0.0;
     if (target_conflicts > 1.0) target_conflicts = 1.0;
     playerCountry.economy.community_conflicts +=
         (target_conflicts - playerCountry.economy.community_conflicts) * 0.2;
 
-    // Consequences of community conflicts.
-    if (playerCountry.economy.community_conflicts > 0.6) {
-        std::cout << "[!] MINING CRISIS: Violent clashes in extraction zones. Operations disrupted." << std::endl;
-        playerCountry.economy.gdp                 *= 0.99;
-        playerCountry.politics.popularity         -= 0.03;
-        playerCountry.politics.polarization_index += 0.02;
-        playerCountry.politics.blockades          += 1;
-    } else if (playerCountry.economy.community_conflicts > 0.3) {
-        std::cout << "[!] MINING TENSIONS: Communities protesting in affected regions." << std::endl;
-        playerCountry.politics.popularity -= 0.01;
-        playerCountry.politics.marches    += 1;
+    // --- ESCALATION STAGES ---
+    {
+        std::uniform_real_distribution<> dist(0.0, 1.0);
+        double cc = playerCountry.economy.community_conflicts;
+
+        if (cc > 0.8) {
+            // STAGE 4: INSURGENCY — armed self-defense groups form
+            std::cout << "[!!!] MINING WAR: Armed self-defense groups forming in extraction zones." << std::endl;
+            playerCountry.economy.gdp                 *= 0.97;
+            playerCountry.politics.popularity         -= 0.05;
+            playerCountry.politics.polarization_index += 0.05;
+            playerCountry.welfare.radicalism_prob     += 0.04;
+            playerCountry.security.homicide_rate      += 3.0;
+            playerCountry.welfare.un_score            -= 0.05;
+            // Armed groups may form or grow
+            if (dist(rng) < 0.35) {
+                playerCountry.security.non_state_groups += 1;
+                std::cout << "         New armed self-defense group registered in extraction region." << std::endl;
+            }
+            // Companies may abandon some operations under threat
+            if (dist(rng) < 0.40 && playerCountry.economy.mining_concessions > 0) {
+                int halted = playerCountry.economy.mining_concessions / 3 + 1;
+                playerCountry.economy.mining_concessions -= halted;
+                if (playerCountry.economy.mining_concessions < 0) playerCountry.economy.mining_concessions = 0;
+                std::cout << "         " << halted << " concession(s) ABANDONED by companies fleeing violence." << std::endl;
+            }
+        } else if (cc > 0.6) {
+            // STAGE 3: OPEN CONFRONTATION — state forces deployed
+            std::cout << "[!] MINING CONFRONTATION: State forces deployed. Operations disrupted." << std::endl;
+            playerCountry.economy.gdp                 *= 0.99;
+            playerCountry.politics.popularity         -= 0.03;
+            playerCountry.politics.polarization_index += 0.03;
+            playerCountry.welfare.radicalism_prob     += 0.02;
+            playerCountry.security.homicide_rate      += 2.0;
+            playerCountry.welfare.un_score            -= 0.03;
+            playerCountry.infra.potable_water_access  -= 0.005; // Contamination during clashes
+            if (playerCountry.infra.potable_water_access < 0.0) playerCountry.infra.potable_water_access = 0.0;
+            playerCountry.politics.blockades          += 2;
+        } else if (cc > 0.4) {
+            // STAGE 2: ACTIVE CONFLICT — blockades, supply route disruptions
+            std::cout << "[!] MINING CONFLICT: Communities blockading access roads and supply routes." << std::endl;
+            playerCountry.politics.popularity     -= 0.02;
+            playerCountry.security.homicide_rate  += 1.0;
+            playerCountry.welfare.un_score        -= 0.01;
+            playerCountry.politics.marches        += 2;
+            playerCountry.politics.blockades      += 1;
+        } else if (cc > 0.2) {
+            // STAGE 1: LATENT TENSION — organizing and legal challenges
+            std::cout << "[!] MINING TENSIONS: Communities organizing against extraction operations." << std::endl;
+            playerCountry.politics.popularity -= 0.01;
+            playerCountry.politics.marches    += 1;
+        }
     }
 
     // Resource exhaustion warning.
