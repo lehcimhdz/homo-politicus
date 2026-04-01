@@ -21,7 +21,7 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_...): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform): ";
     std::string command;
     std::cin >> command;
 
@@ -294,17 +294,55 @@ void Game::processEvents() {
         if (playerCountry.welfare.literacy_rate > 1.0) playerCountry.welfare.literacy_rate = 1.0;
         if (playerCountry.welfare.educational_quality > 1.0) playerCountry.welfare.educational_quality = 1.0;
         
-        std::cout << "   Enrollment: " << playerCountry.welfare.primary_enrollment * 100 << "% | Literacy: " << playerCountry.welfare.literacy_rate * 100 << "%" << std::endl; 
+        std::cout << "   Enrollment: " << playerCountry.welfare.primary_enrollment * 100 << "% | Literacy: " << playerCountry.welfare.literacy_rate * 100 << "%" << std::endl;
     }
-    else if (command == "minority-") {
-        playerCountry.welfare.minority_protection -= 0.1;
-        if (playerCountry.welfare.minority_protection < 0.0) playerCountry.welfare.minority_protection = 0.0;
-        
-        playerCountry.politics.popularity += 0.04;    // Populist boost
-        playerCountry.welfare.radicalism_prob += 0.05; 
-        playerCountry.welfare.un_score -= 0.08; 
-        std::cout << ">> POLICY: Nationalist rhetoric enforced. Popularity up, minorities excluded." << std::endl;
-        std::cout << ">> POLICY: Nationalist rhetoric enforced. Popularity up, minorities excluded." << std::endl;
+    // --- MINING COMMANDS ---
+    else if (command == "mining+") {
+        if (playerCountry.economy.resource_depletion > 0.9) {
+            std::cout << ">> DENIED: Geological surveys show reserves nearly exhausted. No viable new concessions." << std::endl;
+        } else {
+            playerCountry.economy.mining_concessions += 1;
+            playerCountry.economy.community_conflicts += 0.05;
+            if (playerCountry.economy.community_conflicts > 1.0) playerCountry.economy.community_conflicts = 1.0;
+            playerCountry.infra.co2_emissions         += 100.0;
+            playerCountry.welfare.un_score            -= 0.02;
+            playerCountry.politics.popularity         += 0.02; // Job creation
+            playerCountry.politics.industrial_power   += 0.03; // Industry lobby satisfied
+            std::cout << ">> CONCESSION GRANTED: Mining operation #" << playerCountry.economy.mining_concessions << " authorized." << std::endl;
+            std::cout << "   (Royalties +, Jobs +, Pollution +, UN -, Community Conflict +)" << std::endl;
+        }
+    }
+    else if (command == "mining-") {
+        if (playerCountry.economy.mining_concessions <= 0) {
+            std::cout << ">> No active mining concessions to revoke." << std::endl;
+        } else {
+            playerCountry.economy.mining_concessions -= 1;
+            playerCountry.economy.community_conflicts -= 0.08;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.politics.popularity  -= 0.02; // Job losses
+            playerCountry.welfare.un_score     += 0.03; // Environmental praise
+            playerCountry.politics.industrial_power -= 0.03;
+            std::cout << ">> CONCESSION REVOKED: Mining operation shut down." << std::endl;
+            std::cout << "   (Royalties -, Jobs -, Pollution -, UN +, Community Conflict -)" << std::endl;
+        }
+    }
+    else if (command == "mining_reform") {
+        if (playerCountry.economy.mining_concessions <= 0) {
+            std::cout << ">> No active mining operations to reform." << std::endl;
+        } else {
+            // Revenue-sharing fund: 20% of royalties redirected to affected communities.
+            double cost = playerCountry.economy.state_royalties * 0.20;
+            playerCountry.economy.tax_collection      -= cost;
+            playerCountry.economy.community_conflicts -= 0.15;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.welfare.poverty_rate        -= 0.02;
+            if (playerCountry.welfare.poverty_rate < 0.0) playerCountry.welfare.poverty_rate = 0.0;
+            playerCountry.politics.popularity         += 0.03;
+            playerCountry.welfare.un_score            += 0.04;
+            playerCountry.politics.industrial_power   -= 0.05; // Industry lobby is furious
+            std::cout << ">> REFORM: Revenue-sharing fund established for mining communities." << std::endl;
+            std::cout << "   (Conflict --, Poverty -, Popularity +, UN +, Royalties -20%, Industry Lobby -)" << std::endl;
+        }
     }
     // --- CENTRAL BANK & MONETARY COMMANDS ---
     else if (command == "autonomy+") {
@@ -757,6 +795,78 @@ void Game::update() {
     
     // Recalculate Collection based on new GDP
     playerCountry.economy.tax_collection = playerCountry.economy.gdp * current_effective_rate;
+
+    // --- MINING & NATURAL RESOURCES (Resource Curse vs. Fiscal Windfall) ---
+    // Global commodity prices cycle independently from the business cycle.
+    // Period ~21 years (offset from GDP sine). Range: 0.6x to 1.4x.
+    playerCountry.economy.commodity_prices = 1.0 + 0.4 * sin(turnCount * 0.3 + 1.5);
+
+    // Resource Depletion: each active concession exhausts reserves ~0.5%/year.
+    double depletion_rate = playerCountry.economy.mining_concessions * 0.005;
+    playerCountry.economy.resource_depletion += depletion_rate;
+    if (playerCountry.economy.resource_depletion > 1.0) playerCountry.economy.resource_depletion = 1.0;
+
+    // Royalties: $500k/year per concession, scaled by commodity prices and remaining reserves.
+    double royalty_yield = playerCountry.economy.mining_concessions
+                         * 500000.0
+                         * playerCountry.economy.commodity_prices
+                         * (1.0 - playerCountry.economy.resource_depletion);
+    playerCountry.economy.state_royalties = royalty_yield;
+
+    // Royalties flow directly into government revenue (non-tax fiscal income).
+    playerCountry.economy.tax_collection += royalty_yield;
+
+    // Mining adds industrial CO2 and pollution.
+    playerCountry.infra.co2_emissions += playerCountry.economy.mining_concessions * 50.0;
+    if (playerCountry.economy.mining_concessions > 5) {
+        playerCountry.infra.pollution_prob += 0.01 * (playerCountry.economy.mining_concessions - 5);
+        if (playerCountry.infra.pollution_prob > 1.0) playerCountry.infra.pollution_prob = 1.0;
+    }
+
+    // Community Conflicts: driven by extraction intensity vs. local rights and poverty.
+    // More concessions → more conflict. Better minority/community protections reduce it.
+    double target_conflicts = (playerCountry.economy.mining_concessions * 0.08)
+                            - (playerCountry.welfare.minority_protection * 0.2)
+                            + (playerCountry.welfare.poverty_rate * 0.3);
+    if (target_conflicts < 0.0) target_conflicts = 0.0;
+    if (target_conflicts > 1.0) target_conflicts = 1.0;
+    playerCountry.economy.community_conflicts +=
+        (target_conflicts - playerCountry.economy.community_conflicts) * 0.2;
+
+    // Consequences of community conflicts.
+    if (playerCountry.economy.community_conflicts > 0.6) {
+        std::cout << "[!] MINING CRISIS: Violent clashes in extraction zones. Operations disrupted." << std::endl;
+        playerCountry.economy.gdp             *= 0.99;
+        playerCountry.politics.popularity     -= 0.03;
+        playerCountry.politics.polarization_index += 0.02;
+        playerCountry.politics.blockades      += 1;
+    } else if (playerCountry.economy.community_conflicts > 0.3) {
+        std::cout << "[!] MINING TENSIONS: Communities protesting in affected regions." << std::endl;
+        playerCountry.politics.popularity -= 0.01;
+        playerCountry.politics.marches    += 1;
+    }
+
+    // Resource exhaustion warning.
+    if (playerCountry.economy.resource_depletion > 0.85 && playerCountry.economy.mining_concessions > 0) {
+        std::cout << "[!] RESOURCE DEPLETION: Reserves nearly exhausted. Mining revenues declining rapidly." << std::endl;
+    }
+
+    // Commodity price boom/bust affects mood.
+    if (playerCountry.economy.commodity_prices > 1.3 && playerCountry.economy.mining_concessions > 0) {
+        std::cout << "[INFO] COMMODITY BOOM: Global prices surge. Mining royalties at peak." << std::endl;
+        playerCountry.politics.popularity += 0.01;
+    } else if (playerCountry.economy.commodity_prices < 0.7 && playerCountry.economy.mining_concessions > 0) {
+        std::cout << "[!] COMMODITY BUST: Global prices collapsed. Mining revenues plummeted." << std::endl;
+        playerCountry.politics.popularity -= 0.01;
+    }
+
+    if (playerCountry.economy.mining_concessions > 0) {
+        std::cout << "[MINING] Concessions: " << playerCountry.economy.mining_concessions
+                  << " | Royalties: $" << royalty_yield / 1000000.0 << "M"
+                  << " | Price Index: " << playerCountry.economy.commodity_prices << "x"
+                  << " | Depletion: " << playerCountry.economy.resource_depletion * 100 << "%"
+                  << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%" << std::endl;
+    }
 
     // --- ENROLLMENT DYNAMICS (The Poverty Trap) ---
 
@@ -1412,7 +1522,10 @@ void Game::update() {
     double imports = playerCountry.economy.gdp * playerCountry.economy.import_dependency * (net_purchasing_power > 0.8 ? net_purchasing_power : 0.8);
     
     playerCountry.economy.trade_balance = exports - imports;
-    
+
+    // Add mining export component (60% of royalties represent foreign exchange earnings).
+    playerCountry.economy.trade_balance += playerCountry.economy.state_royalties * 0.6;
+
     // --- CALCULATE DYNAMIC EXCHANGE RATE STABILITY ---
     // Stability depends on: Institutions (Autonomy) + War Chest (Reserves) + Fundamentals (Trade)
     double base_stability = 0.4 + (playerCountry.economy.central_bank_autonomy * 0.4);

@@ -78,5 +78,10 @@ void Country::printStatus() {
     std::cout << "Credit Rating: " << CreditRatingToString(economy.credit_rating) << std::endl;
     std::cout << "Unemployment: " << welfare.unemployment_rate * 100 << "%" << std::endl;
     std::cout << "CO2 Emissions: " << infra.co2_emissions << std::endl;
+    std::cout << "Mining: " << economy.mining_concessions << " concessions"
+              << " | Royalties: $" << economy.state_royalties / 1000000.0 << "M"
+              << " | Price: " << economy.commodity_prices << "x"
+              << " | Depletion: " << economy.resource_depletion * 100 << "%"
+              << " | Conflict: " << economy.community_conflicts * 100 << "%" << std::endl;
     std::cout << "----------------------" << std::endl;
 }

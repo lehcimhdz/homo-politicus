@@ -1,0 +1,9 @@
+# Binaries
+HomoPoliticus
+*.o
+*.out
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
