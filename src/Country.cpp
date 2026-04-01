@@ -84,5 +84,7 @@ void Country::printStatus() {
               << " | Price: " << economy.commodity_prices << "x"
               << " | Depletion: " << economy.resource_depletion * 100 << "%"
               << " | Conflict: " << economy.community_conflicts * 100 << "%" << std::endl;
+    std::cout << "SWF: $" << economy.sovereign_wealth_fund / 1000000.0 << "M"
+              << " (saving " << economy.swf_deposit_rate * 100 << "% of royalties)" << std::endl;
     std::cout << "----------------------" << std::endl;
 }

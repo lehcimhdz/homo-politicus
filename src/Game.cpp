@@ -21,7 +21,7 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-/swf_save/swf_cancel/swf_spend): ";
     std::string command;
     std::cin >> command;
 
@@ -373,6 +373,47 @@ void Game::processEvents() {
             std::cout << ">> DECREE: Mining royalty rate cut to "
                       << playerCountry.economy.royalty_rate * 100 << "%" << std::endl;
             std::cout << "   (Revenue -, Industry Lobby +, FDI +, Popularity -, Conflict +)" << std::endl;
+        }
+    }
+    // --- SOVEREIGN WEALTH FUND COMMANDS ---
+    else if (command == "swf_save") {
+        if (playerCountry.economy.mining_concessions <= 0) {
+            std::cout << ">> No mining royalties to save. Activate concessions first." << std::endl;
+        } else if (playerCountry.economy.swf_deposit_rate >= 0.5) {
+            std::cout << ">> Already saving 50% of royalties. Maximum deposit rate reached." << std::endl;
+        } else {
+            playerCountry.economy.swf_deposit_rate += 0.10; // +10% of royalties redirected
+            playerCountry.politics.popularity -= 0.01; // "Less money for public services"
+            playerCountry.welfare.un_score    += 0.02; // Responsible governance signal
+            std::cout << ">> POLICY: Saving " << playerCountry.economy.swf_deposit_rate * 100
+                      << "% of annual royalties in the Sovereign Wealth Fund." << std::endl;
+            std::cout << "   Current balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            std::cout << "   (Future security +, Short-term revenue -, Fiscal resilience +)" << std::endl;
+        }
+    }
+    else if (command == "swf_cancel") {
+        if (playerCountry.economy.swf_deposit_rate <= 0.0) {
+            std::cout << ">> No automatic SWF deposits active." << std::endl;
+        } else {
+            playerCountry.economy.swf_deposit_rate = 0.0;
+            playerCountry.politics.popularity += 0.01; // More money for current spending
+            std::cout << ">> POLICY: SWF automatic deposits suspended. All royalties go to general revenue." << std::endl;
+            std::cout << "   Fund balance preserved: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+    }
+    else if (command == "swf_spend") {
+        double withdrawal = 100000000.0; // $100M withdrawal
+        if (playerCountry.economy.sovereign_wealth_fund < withdrawal) {
+            std::cout << ">> INSUFFICIENT FUNDS: SWF balance is only $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M." << std::endl;
+        } else {
+            playerCountry.economy.sovereign_wealth_fund -= withdrawal;
+            playerCountry.economy.tax_collection        += withdrawal;
+            playerCountry.politics.popularity           += 0.03; // Visible spending
+            playerCountry.welfare.un_score              -= 0.01; // "Raiding the future"
+            std::cout << ">> WITHDRAWAL: $100M drawn from Sovereign Wealth Fund for public spending." << std::endl;
+            std::cout << "   Remaining balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            std::cout << "   (Popularity +, Fiscal space +, Long-term savings -)" << std::endl;
         }
     }
     // --- CENTRAL BANK & MONETARY COMMANDS ---
@@ -927,6 +968,78 @@ void Game::update() {
         playerCountry.politics.popularity -= 0.01;
     }
 
+    // --- DUTCH DISEASE (The Resource Curse: Manufacturing Hollowing-Out) ---
+    // When mining revenues are a large share of GDP, foreign exchange floods in.
+    // The currency appreciates → non-mining exports become uncompetitive.
+    // Manufacturing quietly dies while the treasury looks full.
+    if (playerCountry.economy.mining_concessions > 0 && playerCountry.economy.gdp > 0) {
+        double mining_share_gdp = extraction_value / playerCountry.economy.gdp;
+        if (mining_share_gdp > 0.08) {
+            double dutch_severity = (mining_share_gdp - 0.08) * 0.5; // Scales with over-reliance
+            // Currency gets artificially strong (seems good, actually harmful)
+            playerCountry.economy.exchange_rate_stability += dutch_severity * 0.08;
+            if (playerCountry.economy.exchange_rate_stability > 0.95)
+                playerCountry.economy.exchange_rate_stability = 0.95;
+            // Manufacturing withers — less competitive, investment flees to extraction
+            playerCountry.politics.industrial_power -= dutch_severity * 0.06;
+            if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
+            // Non-mining workers get displaced → unemployment rises slightly
+            playerCountry.welfare.unemployment_rate += dutch_severity * 0.005;
+            if (dutch_severity > 0.08) {
+                std::cout << "[!] DUTCH DISEASE: Mining boom crowding out manufacturing. "
+                          << "Industry weakening, structural unemployment rising." << std::endl;
+            }
+        }
+    }
+
+    // --- SOVEREIGN WEALTH FUND (Intergenerational Savings) ---
+    // The SWF earns a 3% annual real return on its accumulated balance.
+    if (playerCountry.economy.sovereign_wealth_fund > 0) {
+        double swf_return = playerCountry.economy.sovereign_wealth_fund * 0.03;
+        playerCountry.economy.sovereign_wealth_fund += swf_return;
+        // Returns flow into reserves (not general spending — this is long-term capital)
+        playerCountry.economy.international_reserves += swf_return;
+    }
+
+    // Auto-deposit: redirect swf_deposit_rate fraction of royalties to fund.
+    if (playerCountry.economy.swf_deposit_rate > 0.0 && royalty_yield > 0.0) {
+        double deposit = royalty_yield * playerCountry.economy.swf_deposit_rate;
+        playerCountry.economy.sovereign_wealth_fund += deposit;
+        playerCountry.economy.tax_collection        -= deposit; // Less available to spend now
+        std::cout << "[SWF] Deposited $" << deposit / 1000000.0 << "M into Sovereign Wealth Fund."
+                  << " Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+    }
+
+    // --- FISCAL DEPENDENCY RISK ---
+    // If royalties exceed 25% of non-royalty fiscal revenue → fragile budget.
+    // During a commodity bust, this triggers a sudden fiscal crisis.
+    double base_tax_revenue = playerCountry.economy.tax_collection - royalty_yield;
+    if (base_tax_revenue > 0.0 && royalty_yield > 0.0) {
+        double royalty_dependency = royalty_yield / base_tax_revenue;
+        if (royalty_dependency > 0.25) {
+            if (playerCountry.economy.commodity_prices < 0.8) {
+                // Bust + high dependency = fiscal crisis
+                double shortfall = royalty_yield * 0.35; // Revenues collapse 35% in bust
+                playerCountry.economy.tax_collection -= shortfall;
+                playerCountry.politics.popularity    -= 0.04;
+                playerCountry.economy.debt_to_gdp_ratio += shortfall / playerCountry.economy.gdp;
+                std::cout << "[!!!] FISCAL CRISIS: Budget over-reliant on commodities ("
+                          << (int)(royalty_dependency * 100) << "% dependency). "
+                          << "Price bust creates $" << shortfall / 1000000.0 << "M shortfall!" << std::endl;
+                // SWF can absorb some of the shock if funded
+                if (playerCountry.economy.sovereign_wealth_fund > shortfall) {
+                    playerCountry.economy.sovereign_wealth_fund -= shortfall * 0.5;
+                    playerCountry.economy.tax_collection        += shortfall * 0.5;
+                    std::cout << "         [SWF BUFFER] Fund absorbed $"
+                              << shortfall * 0.5 / 1000000.0 << "M of the shock." << std::endl;
+                }
+            } else {
+                std::cout << "[!] FISCAL WARNING: " << (int)(royalty_dependency * 100)
+                          << "% of budget depends on commodity prices. Build the SWF as buffer." << std::endl;
+            }
+        }
+    }
+
     if (playerCountry.economy.mining_concessions > 0) {
         std::cout << "[MINING] Concessions: " << playerCountry.economy.mining_concessions
                   << " | Rate: " << playerCountry.economy.royalty_rate * 100 << "%"
@@ -936,6 +1049,9 @@ void Game::update() {
                   << " | Price: " << playerCountry.economy.commodity_prices << "x"
                   << " | Depletion: " << playerCountry.economy.resource_depletion * 100 << "%"
                   << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%" << std::endl;
+        if (playerCountry.economy.sovereign_wealth_fund > 0)
+            std::cout << "         SWF Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M"
+                      << " (saving " << playerCountry.economy.swf_deposit_rate * 100 << "% of royalties)" << std::endl;
     }
 
     // --- ENROLLMENT DYNAMICS (The Poverty Trap) ---

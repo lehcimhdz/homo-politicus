@@ -104,11 +104,15 @@ struct EconomicFinancialSystem {
 
     // Natural Resources/Extraction
     int mining_concessions = 10;
-    double royalty_rate = 0.15;        // State's share of extraction value (5%–50%)
+    double royalty_rate = 0.15;         // State's share of extraction value (5%–50%)
     double state_royalties = 5000000.0; // Actual royalties collected after corruption leakage
     double community_conflicts = 0.1;
     double resource_depletion = 0.05;
-    double commodity_prices = 1.0; // Multiplier
+    double commodity_prices = 1.0;      // Global price multiplier
+
+    // Sovereign Wealth Fund
+    double sovereign_wealth_fund = 0.0; // Accumulated savings balance
+    double swf_deposit_rate = 0.0;      // Fraction of annual royalties auto-saved (0–0.5)
 
     // Foreign Trade
     double trade_balance = 0.0; // Exports - Imports
