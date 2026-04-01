@@ -95,6 +95,7 @@ void Country::printStatus() {
               << " (saving " << economy.swf_deposit_rate * 100 << "% of royalties)"
               << " | Mandate: " << mandate_label
               << " | Transparent: " << (economy.swf_transparent ? "Yes" : "No")
+              << " | Rule: " << (economy.swf_rule_active ? "CONSTITUTIONAL" : "Discretionary")
               << " | Legacy Damage: " << economy.mining_legacy_damage * 100 << "%" << std::endl;
     std::cout << "----------------------" << std::endl;
 }
