@@ -21,7 +21,7 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-): ";
     std::string command;
     std::cin >> command;
 
@@ -339,9 +339,40 @@ void Game::processEvents() {
             if (playerCountry.welfare.poverty_rate < 0.0) playerCountry.welfare.poverty_rate = 0.0;
             playerCountry.politics.popularity         += 0.03;
             playerCountry.welfare.un_score            += 0.04;
-            playerCountry.politics.industrial_power   -= 0.05; // Industry lobby is furious
+            playerCountry.politics.industrial_power   -= 0.05;
             std::cout << ">> REFORM: Revenue-sharing fund established for mining communities." << std::endl;
             std::cout << "   (Conflict --, Poverty -, Popularity +, UN +, Royalties -20%, Industry Lobby -)" << std::endl;
+        }
+    }
+    else if (command == "royalty+") {
+        if (playerCountry.economy.royalty_rate >= 0.50) {
+            std::cout << ">> Royalty rate is already at maximum (50%)." << std::endl;
+        } else {
+            playerCountry.economy.royalty_rate        += 0.05;
+            playerCountry.politics.industrial_power   -= 0.04; // Companies furious
+            playerCountry.politics.popularity         += 0.02; // "Making them pay their share"
+            playerCountry.welfare.un_score            += 0.01;
+            // High rates also reduce conflict slightly (communities see a fairer deal)
+            playerCountry.economy.community_conflicts -= 0.03;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            std::cout << ">> DECREE: Mining royalty rate raised to "
+                      << playerCountry.economy.royalty_rate * 100 << "%" << std::endl;
+            std::cout << "   (Revenue +, Industry Lobby -, FDI Risk, Popularity +, Conflict -)" << std::endl;
+        }
+    }
+    else if (command == "royalty-") {
+        if (playerCountry.economy.royalty_rate <= 0.05) {
+            std::cout << ">> Royalty rate is already at minimum (5%)." << std::endl;
+        } else {
+            playerCountry.economy.royalty_rate        -= 0.05;
+            playerCountry.politics.industrial_power   += 0.05; // Industry grateful
+            playerCountry.politics.popularity         -= 0.02; // "Giving away our resources"
+            // Lower rate → communities feel cheated
+            playerCountry.economy.community_conflicts += 0.03;
+            if (playerCountry.economy.community_conflicts > 1.0) playerCountry.economy.community_conflicts = 1.0;
+            std::cout << ">> DECREE: Mining royalty rate cut to "
+                      << playerCountry.economy.royalty_rate * 100 << "%" << std::endl;
+            std::cout << "   (Revenue -, Industry Lobby +, FDI +, Popularity -, Conflict +)" << std::endl;
         }
     }
     // --- CENTRAL BANK & MONETARY COMMANDS ---
@@ -806,15 +837,53 @@ void Game::update() {
     playerCountry.economy.resource_depletion += depletion_rate;
     if (playerCountry.economy.resource_depletion > 1.0) playerCountry.economy.resource_depletion = 1.0;
 
-    // Royalties: $500k/year per concession, scaled by commodity prices and remaining reserves.
-    double royalty_yield = playerCountry.economy.mining_concessions
-                         * 500000.0
-                         * playerCountry.economy.commodity_prices
-                         * (1.0 - playerCountry.economy.resource_depletion);
+    // --- ROYALTY SYSTEM ---
+    // Gross extraction value = what the ground is worth before state share.
+    // Base: $3.33M per concession (royalty_rate 15% → $500k to state at default).
+    double extraction_value = playerCountry.economy.mining_concessions
+                            * 3333333.0
+                            * playerCountry.economy.commodity_prices
+                            * (1.0 - playerCountry.economy.resource_depletion);
+
+    // Corruption leakage: officials pocket part of what companies owe the state.
+    // At 50% corruption, state collects only 70% of its due (30% evaded via bribes).
+    double effective_royalty_rate = playerCountry.economy.royalty_rate
+                                  * (1.0 - playerCountry.politics.administrative_corruption * 0.6);
+    if (effective_royalty_rate < 0.0) effective_royalty_rate = 0.0;
+
+    double royalty_yield     = extraction_value * effective_royalty_rate;
+    double royalty_evasion   = extraction_value
+                             * (playerCountry.economy.royalty_rate - effective_royalty_rate);
     playerCountry.economy.state_royalties = royalty_yield;
+
+    // Windfall tax: during commodity booms the state captures extra surplus automatically.
+    // Proportional to how far above 1.3x the price has gone. Angers industry lobby.
+    double windfall_tax = 0.0;
+    if (playerCountry.economy.commodity_prices > 1.3 && playerCountry.economy.mining_concessions > 0) {
+        windfall_tax = extraction_value * 0.10 * (playerCountry.economy.commodity_prices - 1.3);
+        royalty_yield                        += windfall_tax;
+        playerCountry.economy.state_royalties += windfall_tax;
+        playerCountry.politics.industrial_power -= 0.02;
+        std::cout << "[INFO] WINDFALL TAX: Commodity boom surplus captured. +$"
+                  << windfall_tax / 1000000.0 << "M (Industry lobby angered)." << std::endl;
+    }
 
     // Royalties flow directly into government revenue (non-tax fiscal income).
     playerCountry.economy.tax_collection += royalty_yield;
+
+    // Investment attractiveness: high royalty rates deter new mining FDI.
+    // > 35% → companies threaten capital flight. < 10% → companies over-extract.
+    if (playerCountry.economy.royalty_rate > 0.35) {
+        playerCountry.politics.industrial_power -= 0.02;
+        if (playerCountry.economy.mining_concessions > 0) {
+            std::cout << "[!] MINING CAPITAL FLIGHT: High royalty rate deters foreign investment in extraction." << std::endl;
+        }
+    } else if (playerCountry.economy.royalty_rate < 0.10) {
+        playerCountry.economy.resource_depletion += 0.01; // Companies accelerate extraction
+        if (playerCountry.economy.mining_concessions > 0) {
+            std::cout << "[INFO] LOW ROYALTIES: Companies accelerating extraction. Depletion increases faster." << std::endl;
+        }
+    }
 
     // Mining adds industrial CO2 and pollution.
     playerCountry.infra.co2_emissions += playerCountry.economy.mining_concessions * 50.0;
@@ -824,9 +893,10 @@ void Game::update() {
     }
 
     // Community Conflicts: driven by extraction intensity vs. local rights and poverty.
-    // More concessions → more conflict. Better minority/community protections reduce it.
+    // Higher royalty_rate also signals fairer deal, reducing conflict slightly.
     double target_conflicts = (playerCountry.economy.mining_concessions * 0.08)
                             - (playerCountry.welfare.minority_protection * 0.2)
+                            - (playerCountry.economy.royalty_rate * 0.1) // Fair share calms tensions
                             + (playerCountry.welfare.poverty_rate * 0.3);
     if (target_conflicts < 0.0) target_conflicts = 0.0;
     if (target_conflicts > 1.0) target_conflicts = 1.0;
@@ -836,10 +906,10 @@ void Game::update() {
     // Consequences of community conflicts.
     if (playerCountry.economy.community_conflicts > 0.6) {
         std::cout << "[!] MINING CRISIS: Violent clashes in extraction zones. Operations disrupted." << std::endl;
-        playerCountry.economy.gdp             *= 0.99;
-        playerCountry.politics.popularity     -= 0.03;
+        playerCountry.economy.gdp                 *= 0.99;
+        playerCountry.politics.popularity         -= 0.03;
         playerCountry.politics.polarization_index += 0.02;
-        playerCountry.politics.blockades      += 1;
+        playerCountry.politics.blockades          += 1;
     } else if (playerCountry.economy.community_conflicts > 0.3) {
         std::cout << "[!] MINING TENSIONS: Communities protesting in affected regions." << std::endl;
         playerCountry.politics.popularity -= 0.01;
@@ -851,19 +921,19 @@ void Game::update() {
         std::cout << "[!] RESOURCE DEPLETION: Reserves nearly exhausted. Mining revenues declining rapidly." << std::endl;
     }
 
-    // Commodity price boom/bust affects mood.
-    if (playerCountry.economy.commodity_prices > 1.3 && playerCountry.economy.mining_concessions > 0) {
-        std::cout << "[INFO] COMMODITY BOOM: Global prices surge. Mining royalties at peak." << std::endl;
-        playerCountry.politics.popularity += 0.01;
-    } else if (playerCountry.economy.commodity_prices < 0.7 && playerCountry.economy.mining_concessions > 0) {
+    // Commodity price bust.
+    if (playerCountry.economy.commodity_prices < 0.7 && playerCountry.economy.mining_concessions > 0) {
         std::cout << "[!] COMMODITY BUST: Global prices collapsed. Mining revenues plummeted." << std::endl;
         playerCountry.politics.popularity -= 0.01;
     }
 
     if (playerCountry.economy.mining_concessions > 0) {
         std::cout << "[MINING] Concessions: " << playerCountry.economy.mining_concessions
-                  << " | Royalties: $" << royalty_yield / 1000000.0 << "M"
-                  << " | Price Index: " << playerCountry.economy.commodity_prices << "x"
+                  << " | Rate: " << playerCountry.economy.royalty_rate * 100 << "%"
+                  << " | Gross Extraction: $" << extraction_value / 1000000.0 << "M"
+                  << " | Royalties: $" << royalty_yield / 1000000.0 << "M" << std::endl;
+        std::cout << "         Corruption Loss: $" << royalty_evasion / 1000000.0 << "M"
+                  << " | Price: " << playerCountry.economy.commodity_prices << "x"
                   << " | Depletion: " << playerCountry.economy.resource_depletion * 100 << "%"
                   << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%" << std::endl;
     }

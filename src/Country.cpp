@@ -79,6 +79,7 @@ void Country::printStatus() {
     std::cout << "Unemployment: " << welfare.unemployment_rate * 100 << "%" << std::endl;
     std::cout << "CO2 Emissions: " << infra.co2_emissions << std::endl;
     std::cout << "Mining: " << economy.mining_concessions << " concessions"
+              << " | Rate: " << economy.royalty_rate * 100 << "%"
               << " | Royalties: $" << economy.state_royalties / 1000000.0 << "M"
               << " | Price: " << economy.commodity_prices << "x"
               << " | Depletion: " << economy.resource_depletion * 100 << "%"
