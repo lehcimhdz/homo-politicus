@@ -24,7 +24,7 @@ void Game::processEvents() {
     std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-"
                  "/swf_save/swf_rate-/swf_cancel/swf_rule/swf_spend/swf_invest/swf_debt"
                  "/swf_conservative/swf_balanced/swf_growth/swf_transparency"
-                 "/hedge_prices/geo_survey/mine_rehab/consult/mediate/suppress_conflict): ";
+                 "/hedge_prices/geo_survey/mine_rehab/env_bond/env_audit/consult/mediate/suppress_conflict): ";
     std::string command;
     std::cin >> command;
 
@@ -549,24 +549,122 @@ void Game::processEvents() {
         }
     }
     else if (command == "mine_rehab") {
-        if (playerCountry.economy.resource_depletion < 0.5 && playerCountry.economy.mining_legacy_damage < 0.1) {
-            std::cout << ">> MINE REHAB: Sites are still active. Rehabilitation applies to depleted or damaged areas." << std::endl;
+        double legacy = playerCountry.economy.mining_legacy_damage;
+        if (playerCountry.economy.resource_depletion < 0.5 && legacy < 0.1) {
+            std::cout << ">> MINE REHAB: No significant contamination yet. Rehabilitation applies to damaged areas." << std::endl;
         } else {
-            playerCountry.economy.gdp -= 40000000; // $40M remediation cost
-            playerCountry.economy.mining_legacy_damage -= 0.20;
+            // Cost and cleanup scale with severity — deeper contamination is harder to remediate
+            double base_cost, legacy_reduction;
+            std::string tier_label;
+            if (legacy < 0.25) {
+                base_cost = 30000000.0;  legacy_reduction = 0.12; tier_label = "Early-stage";
+            } else if (legacy < 0.50) {
+                base_cost = 60000000.0;  legacy_reduction = 0.15; tier_label = "Moderate";
+            } else if (legacy < 0.75) {
+                base_cost = 100000000.0; legacy_reduction = 0.18; tier_label = "Critical";
+            } else {
+                base_cost = 150000000.0; legacy_reduction = 0.20; tier_label = "Superfund";
+            }
+            // International co-funding if transparent SWF + high UN score
+            double cofinance = 0.0;
+            if (playerCountry.economy.swf_transparent && playerCountry.welfare.un_score > 0.65) {
+                cofinance = base_cost * 0.30; // IADB/World Bank co-funding
+                std::cout << "   [+] International co-financing: $" << cofinance / 1000000.0
+                          << "M from multilateral partners." << std::endl;
+            }
+            double net_cost = base_cost - cofinance;
+            playerCountry.economy.gdp -= net_cost;
+            playerCountry.economy.mining_legacy_damage -= legacy_reduction;
             if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
-            playerCountry.infra.potable_water_access += 0.03;
+            playerCountry.infra.potable_water_access += 0.04;
             if (playerCountry.infra.potable_water_access > 1.0) playerCountry.infra.potable_water_access = 1.0;
-            playerCountry.infra.pollution_prob -= 0.05;
+            playerCountry.infra.pollution_prob -= 0.06;
             if (playerCountry.infra.pollution_prob < 0.0) playerCountry.infra.pollution_prob = 0.0;
-            playerCountry.welfare.un_score += 0.05;
-            playerCountry.economy.community_conflicts -= 0.08;
+            playerCountry.welfare.un_score += 0.04;
+            playerCountry.welfare.mental_health_index += 0.02;
+            if (playerCountry.welfare.mental_health_index > 1.0) playerCountry.welfare.mental_health_index = 1.0;
+            playerCountry.economy.community_conflicts -= 0.10;
             if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
             playerCountry.politics.popularity += 0.02;
-            std::cout << ">> MINE REHAB: Environmental remediation program launched." << std::endl;
+            // Restored land recovers some agricultural value
+            playerCountry.politics.agricultural_power += 0.015;
+            if (playerCountry.politics.agricultural_power > 1.0) playerCountry.politics.agricultural_power = 1.0;
+            std::cout << ">> MINE REHAB [" << tier_label << "]: Environmental remediation program launched." << std::endl;
             std::cout << "   Tailings sealed, water treatment installed, land restored." << std::endl;
-            std::cout << "   (Legacy -, Water +, Pollution -, UN +, Conflict -, Cost $40M)" << std::endl;
+            std::cout << "   Net cost: $" << net_cost / 1000000.0 << "M | Legacy reduced by "
+                      << (int)(legacy_reduction * 100) << "%" << std::endl;
+            std::cout << "   (Legacy -, Water +, Pollution -, Mental Health +, Agri +, Conflict -, UN +)" << std::endl;
         }
+    }
+    else if (command == "env_bond") {
+        // Issue an international green/environmental remediation bond
+        // Brings in external capital for large-scale cleanup at the cost of sovereign debt
+        double legacy = playerCountry.economy.mining_legacy_damage;
+        if (legacy < 0.20) {
+            std::cout << ">> ENV BOND: Contamination level too low for international green bond issuance." << std::endl;
+            std::cout << "   Bond markets require documented environmental emergency (>20% damage)." << std::endl;
+        } else {
+            double bond_size = 120000000.0; // $120M green bond
+            double gdp = playerCountry.economy.gdp;
+            playerCountry.economy.debt_to_gdp_ratio += bond_size / gdp; // New sovereign debt
+            playerCountry.economy.mining_legacy_damage -= 0.28;
+            if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
+            playerCountry.infra.potable_water_access += 0.06;
+            if (playerCountry.infra.potable_water_access > 1.0) playerCountry.infra.potable_water_access = 1.0;
+            playerCountry.infra.pollution_prob -= 0.10;
+            if (playerCountry.infra.pollution_prob < 0.0) playerCountry.infra.pollution_prob = 0.0;
+            playerCountry.economy.community_conflicts -= 0.12;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            playerCountry.welfare.un_score += 0.07;
+            playerCountry.welfare.health_coverage += 0.03;
+            if (playerCountry.welfare.health_coverage > 1.0) playerCountry.welfare.health_coverage = 1.0;
+            playerCountry.economy.tourist_safety += 0.04;
+            if (playerCountry.economy.tourist_safety > 1.0) playerCountry.economy.tourist_safety = 1.0;
+            // Green bond attracts ESG investors → FDI premium
+            playerCountry.economy.international_reserves += bond_size * 0.15;
+            playerCountry.politics.popularity += 0.03;
+            // Sanctions risk drops — visible international commitment
+            playerCountry.economy.international_sanctions_prob -= 0.02;
+            if (playerCountry.economy.international_sanctions_prob < 0.0)
+                playerCountry.economy.international_sanctions_prob = 0.0;
+            std::cout << ">> GREEN BOND ISSUED: $120M environmental remediation bond placed on international markets." << std::endl;
+            std::cout << "   Debt/GDP +$" << bond_size / 1000000.0 << "M | Legacy -28% | Major cleanup underway." << std::endl;
+            std::cout << "   ESG investors signal confidence: reserves +" << bond_size * 0.15 / 1000000.0 << "M inflow." << std::endl;
+            std::cout << "   (Legacy --, Water +, Pollution --, Conflict -, Health +, Sanctions -, Debt +)" << std::endl;
+        }
+    }
+    else if (command == "env_audit") {
+        // Commission independent environmental audit — accountability signal
+        double legacy = playerCountry.economy.mining_legacy_damage;
+        double audit_cost = 15000000.0; // $15M
+        playerCountry.economy.gdp -= audit_cost;
+        // Audit reveals truth → communities trust process → conflict falls
+        playerCountry.economy.community_conflicts -= 0.07;
+        if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+        playerCountry.welfare.un_score += 0.03;
+        playerCountry.security.diplomatic_prestige += 0.02;
+        // Audit applies regulatory pressure on mining companies → slower future accumulation
+        // (Simulated by slightly improved judicial_independence signal)
+        playerCountry.politics.judicial_independence += 0.02;
+        if (playerCountry.politics.judicial_independence > 1.0) playerCountry.politics.judicial_independence = 1.0;
+        playerCountry.politics.popularity += 0.01;
+        // Print detailed contamination assessment
+        std::string severity;
+        if      (legacy < 0.10) severity = "Minimal — no remediation required";
+        else if (legacy < 0.25) severity = "Latent — early-stage groundwater leaching";
+        else if (legacy < 0.50) severity = "Moderate — health and agricultural impacts active";
+        else if (legacy < 0.75) severity = "Critical — international liability exposure";
+        else                    severity = "CATASTROPHIC — urgent superfund intervention required";
+        std::cout << ">> ENVIRONMENTAL AUDIT COMPLETED (cost: $15M)" << std::endl;
+        std::cout << "   Legacy Damage Index: " << (int)(legacy * 100) << "% — " << severity << std::endl;
+        std::cout << "   Recommendations: ";
+        if      (legacy < 0.10) std::cout << "Routine monitoring only.";
+        else if (legacy < 0.25) std::cout << "mine_rehab sufficient.";
+        else if (legacy < 0.50) std::cout << "mine_rehab (x2) or env_bond recommended.";
+        else if (legacy < 0.75) std::cout << "env_bond URGENT. mine_rehab alone insufficient at this scale.";
+        else                    std::cout << "env_bond + mine_rehab + international pressure required IMMEDIATELY.";
+        std::cout << std::endl;
+        std::cout << "   (Conflict -, UN +, Prestige +, Oversight +, Popularity +, Cost $15M)" << std::endl;
     }
     // --- COMMUNITY CONFLICT RESOLUTION COMMANDS ---
     else if (command == "consult") {
@@ -1533,27 +1631,96 @@ void Game::update() {
     }
 
     // --- ENVIRONMENTAL LEGACY (Tailings & Contamination) ---
-    // Depleted mines leave behind waste ponds and soil contamination.
-    // This persists and worsens even after concessions close.
+    // Tailings accumulate from late-stage extraction. Contamination persists for decades
+    // after mines close — affecting water, health, diplomacy, and social stability.
     if (dep > 0.5 && playerCountry.economy.mining_concessions > 0) {
+        // More concessions + deeper depletion = faster contamination
         double tailings = (dep - 0.5) * playerCountry.economy.mining_concessions * 0.003;
+        // Weak environmental regulation (low judicial independence) → faster accumulation
+        double oversight_factor = 1.0 + (1.0 - playerCountry.politics.judicial_independence) * 0.4;
+        tailings *= oversight_factor;
         playerCountry.economy.mining_legacy_damage += tailings;
         if (playerCountry.economy.mining_legacy_damage > 1.0) playerCountry.economy.mining_legacy_damage = 1.0;
     }
 
-    if (playerCountry.economy.mining_legacy_damage > 0.1) {
-        // Tailings leach into groundwater regardless of whether mines are still open
+    {
         double legacy = playerCountry.economy.mining_legacy_damage;
-        playerCountry.infra.potable_water_access -= legacy * 0.003;
-        if (playerCountry.infra.potable_water_access < 0.0) playerCountry.infra.potable_water_access = 0.0;
-        playerCountry.infra.pollution_prob += legacy * 0.002;
-        if (playerCountry.infra.pollution_prob > 1.0) playerCountry.infra.pollution_prob = 1.0;
-        // Chronic contamination drives long-term community conflict and radicalism
-        playerCountry.economy.community_conflicts += legacy * 0.004;
-        if (legacy > 0.4) {
-            std::cout << "[!] TAILINGS CRISIS: Mine waste contaminating groundwater. "
-                      << "Health and community impacts accumulating." << std::endl;
-            playerCountry.welfare.health_coverage -= 0.005; // Healthcare overwhelmed
+
+        // Natural slow decay only when: mines are closed AND damage is low
+        if (legacy > 0.0 && legacy < 0.15 && playerCountry.economy.mining_concessions == 0) {
+            playerCountry.economy.mining_legacy_damage -= 0.002; // Bioremediation / rainfall flushing
+            if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
+        }
+
+        // --- TIER 1: LATENT CONTAMINATION (0.10 – 0.25) ---
+        if (legacy > 0.10) {
+            playerCountry.infra.potable_water_access -= legacy * 0.002;
+            if (playerCountry.infra.potable_water_access < 0.0) playerCountry.infra.potable_water_access = 0.0;
+            playerCountry.infra.pollution_prob       += legacy * 0.001;
+            if (playerCountry.infra.pollution_prob   > 1.0) playerCountry.infra.pollution_prob = 1.0;
+            playerCountry.economy.community_conflicts += legacy * 0.003;
+        }
+
+        // --- TIER 2: MODERATE CONTAMINATION (0.25 – 0.50) ---
+        if (legacy > 0.25) {
+            // Health system under pressure from chronic exposure
+            playerCountry.welfare.health_coverage    -= 0.003;
+            if (playerCountry.welfare.health_coverage < 0.0) playerCountry.welfare.health_coverage = 0.0;
+            playerCountry.welfare.mental_health_index -= 0.002; // Living near poisoned land is psychologically corrosive
+            if (playerCountry.welfare.mental_health_index < 0.0) playerCountry.welfare.mental_health_index = 0.0;
+            // Tourism collapses — visitors avoid contaminated regions
+            playerCountry.economy.annual_visitors -= (int)(playerCountry.economy.annual_visitors * legacy * 0.04);
+            if (playerCountry.economy.annual_visitors < 0) playerCountry.economy.annual_visitors = 0;
+            // Farmland contaminated → food imports rise
+            playerCountry.politics.agricultural_power -= 0.002;
+            if (playerCountry.politics.agricultural_power < 0.0) playerCountry.politics.agricultural_power = 0.0;
+            playerCountry.economy.import_dependency   += 0.002;
+            if (playerCountry.economy.import_dependency > 1.0) playerCountry.economy.import_dependency = 1.0;
+            if (legacy < 0.35) { // Only print once per tier crossing
+                std::cout << "[!] CONTAMINATION SPREADING: Agricultural land affected. "
+                          << "Tourist alerts issued. Health system under strain." << std::endl;
+            }
+        }
+
+        // --- TIER 3: CRITICAL CONTAMINATION (0.50 – 0.75) ---
+        if (legacy > 0.50) {
+            // International scrutiny — UN and press pick up the story
+            playerCountry.welfare.un_score               -= 0.010;
+            if (playerCountry.welfare.un_score < 0.0) playerCountry.welfare.un_score = 0.0;
+            playerCountry.security.diplomatic_prestige   -= 0.005;
+            if (playerCountry.security.diplomatic_prestige < 0.0) playerCountry.security.diplomatic_prestige = 0.0;
+            playerCountry.economy.tourist_safety         -= 0.005;
+            if (playerCountry.economy.tourist_safety < 0.0) playerCountry.economy.tourist_safety = 0.0;
+            // Heavy metal contamination suppresses birth rates (documented: lead, arsenic exposure)
+            playerCountry.welfare.birth_rate             -= 0.0001;
+            if (playerCountry.welfare.birth_rate < 0.0) playerCountry.welfare.birth_rate = 0.0;
+            // Credit markets price in environmental liability
+            playerCountry.economy.debt_to_gdp_ratio     += 0.003;
+            std::cout << "[!!] ENVIRONMENTAL CRISIS: UN Special Rapporteur investigating mining contamination. "
+                      << "Birth rates falling, credit outlook deteriorating." << std::endl;
+        }
+
+        // --- TIER 4: CATASTROPHIC CONTAMINATION (> 0.75) ---
+        if (legacy > 0.75) {
+            // International sanctions risk — investors and governments react
+            playerCountry.economy.international_sanctions_prob += 0.015;
+            if (playerCountry.economy.international_sanctions_prob > 1.0)
+                playerCountry.economy.international_sanctions_prob = 1.0;
+            // Population flees contaminated zones
+            playerCountry.security.mass_migration_prob += 0.010;
+            if (playerCountry.security.mass_migration_prob > 1.0)
+                playerCountry.security.mass_migration_prob = 1.0;
+            // Infant mortality spike — irreversible generational harm
+            std::uniform_real_distribution<> d(0.0, 1.0);
+            if (d(rng) < legacy - 0.70) {
+                playerCountry.welfare.population -= (int)(playerCountry.welfare.population * 0.0008);
+                playerCountry.politics.popularity -= 0.04;
+                std::cout << "[!!!] ENVIRONMENTAL CATASTROPHE: Infant mortality spiking in mining regions. "
+                          << "International media coverage. Population displacement begins." << std::endl;
+            } else {
+                std::cout << "[!!!] TOXIC ZONE: Regions around old mines uninhabitable. "
+                          << "Sanctions risk rising. Displacement accelerating." << std::endl;
+            }
         }
     }
 
