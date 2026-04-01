@@ -119,6 +119,7 @@ struct EconomicFinancialSystem {
     double swf_deposit_rate = 0.0;        // Fraction of annual royalties auto-saved (0–0.5)
     int    swf_mandate = 1;               // 0=Conservative 1=Balanced 2=Growth
     bool   swf_transparent = false;       // Public oversight and independent board
+    bool   swf_rule_active = false;       // Constitutional fiscal rule: minimum 20% deposit during booms
 
     // Environmental Legacy
     double mining_legacy_damage = 0.0;    // Accumulated contamination from past extraction (0–1)

@@ -22,7 +22,7 @@ void Game::run() {
 
 void Game::processEvents() {
     std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-"
-                 "/swf_save/swf_cancel/swf_spend/swf_invest/swf_debt"
+                 "/swf_save/swf_rate-/swf_cancel/swf_rule/swf_spend/swf_invest/swf_debt"
                  "/swf_conservative/swf_balanced/swf_growth/swf_transparency"
                  "/hedge_prices/geo_survey/mine_rehab/consult/mediate/suppress_conflict): ";
     std::string command;
@@ -397,11 +397,67 @@ void Game::processEvents() {
     else if (command == "swf_cancel") {
         if (playerCountry.economy.swf_deposit_rate <= 0.0) {
             std::cout << ">> No automatic SWF deposits active." << std::endl;
+        } else if (playerCountry.economy.swf_rule_active) {
+            // Constitutional rule blocks full cancellation — floor is 20%
+            if (playerCountry.economy.swf_deposit_rate <= 0.20) {
+                std::cout << ">> BLOCKED: Constitutional fiscal rule mandates minimum 20% deposit rate." << std::endl;
+                std::cout << "   The rule cannot be suspended without legislative supermajority." << std::endl;
+            } else {
+                playerCountry.economy.swf_deposit_rate = 0.20; // Floor at constitutional minimum
+                playerCountry.politics.popularity += 0.01;
+                std::cout << ">> SWF: Deposits reduced to constitutional minimum of 20%." << std::endl;
+                std::cout << "   Full cancellation blocked by fiscal rule. Balance: $"
+                          << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            }
         } else {
             playerCountry.economy.swf_deposit_rate = 0.0;
             playerCountry.politics.popularity += 0.01;
             std::cout << ">> SWF: Deposits suspended. Balance preserved: $"
                       << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+    }
+    else if (command == "swf_rate-") {
+        double floor = playerCountry.economy.swf_rule_active ? 0.20 : 0.0;
+        if (playerCountry.economy.swf_deposit_rate <= floor) {
+            if (playerCountry.economy.swf_rule_active)
+                std::cout << ">> BLOCKED: Constitutional rule sets 20% as the minimum deposit rate." << std::endl;
+            else
+                std::cout << ">> SWF deposit rate is already at 0%. Use swf_cancel to confirm." << std::endl;
+        } else {
+            playerCountry.economy.swf_deposit_rate -= 0.05;
+            if (playerCountry.economy.swf_deposit_rate < floor) playerCountry.economy.swf_deposit_rate = floor;
+            playerCountry.politics.popularity += 0.005; // Slight relief from fiscal pressure
+            std::cout << ">> SWF: Deposit rate reduced to " << playerCountry.economy.swf_deposit_rate * 100
+                      << "%. Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+    }
+    else if (command == "swf_rule") {
+        if (playerCountry.economy.swf_rule_active) {
+            std::cout << ">> Constitutional fiscal rule already in force." << std::endl;
+            std::cout << "   Minimum deposit rate: 20% of royalties during commodity booms." << std::endl;
+        } else if (playerCountry.economy.sovereign_wealth_fund < 100000000.0) {
+            std::cout << ">> DENIED: Constitutional fiscal rule requires a seed fund of at least $100M." << std::endl;
+            std::cout << "   Build the SWF first to demonstrate fiscal seriousness." << std::endl;
+        } else if (playerCountry.politics.congressional_support < 0.55) {
+            std::cout << ">> BLOCKED: Insufficient congressional support ("
+                      << (int)(playerCountry.politics.congressional_support * 100) << "%)." << std::endl;
+            std::cout << "   Constitutional amendment requires >55% supermajority in Congress." << std::endl;
+        } else {
+            playerCountry.economy.swf_rule_active = true;
+            // Enforce minimum deposit rate immediately
+            if (playerCountry.economy.swf_deposit_rate < 0.20)
+                playerCountry.economy.swf_deposit_rate = 0.20;
+            // Major credibility signal
+            playerCountry.economy.debt_to_gdp_ratio     -= 0.015; // Market confidence
+            playerCountry.economy.international_reserves += 20000000.0; // Capital inflows
+            playerCountry.politics.administrative_corruption -= 0.04; // Rule-bound institutions
+            playerCountry.welfare.un_score               += 0.06;
+            playerCountry.politics.popularity            -= 0.04; // Short-term pain — future-locking
+            playerCountry.politics.congressional_support -= 0.05; // Ruling party loses flexibility
+            std::cout << ">> CONSTITUTIONAL FISCAL RULE ENACTED." << std::endl;
+            std::cout << "   Minimum 20% of royalties saved automatically during commodity booms." << std::endl;
+            std::cout << "   This cannot be cancelled — only amended by future supermajority." << std::endl;
+            std::cout << "   (Credibility ++, Debt -, FDI +, Corruption -, Popularity -, Flexibility -)" << std::endl;
         }
     }
     // Investment mandate commands
@@ -1604,14 +1660,58 @@ void Game::update() {
         }
     }
 
+    // --- DEPOSIT RATE: CYCLE AWARENESS ---
+    {
+        double sc = playerCountry.economy.commodity_supercycle;
+        double dr = playerCountry.economy.swf_deposit_rate;
+
+        // Boom with no savings: fiscal irresponsibility warning
+        if (sc > 0.20 && dr < 0.15 && royalty_yield > 0.0) {
+            std::cout << "[!] BOOM WINDFALL ALERT: Commodity supercycle is bullish but only "
+                      << (int)(dr * 100) << "% of royalties are being saved. "
+                      << "Consider swf_save or swf_rule to lock in gains." << std::endl;
+        }
+
+        // Constitutional rule: enforce minimum 20% during bull markets
+        if (playerCountry.economy.swf_rule_active && sc > 0.0 && dr < 0.20 && royalty_yield > 0.0) {
+            playerCountry.economy.swf_deposit_rate = 0.20;
+            std::cout << "[SWF RULE] Deposit rate auto-corrected to constitutional minimum (20%)." << std::endl;
+        }
+
+        // Bear supercycle with high dependency: auto-stabilizer draws from SWF even before crisis
+        if (sc < -0.20 && playerCountry.economy.sovereign_wealth_fund > 0.0) {
+            double stabilizer = playerCountry.economy.sovereign_wealth_fund * 0.012; // 1.2% auto-release
+            if (stabilizer > playerCountry.economy.sovereign_wealth_fund)
+                stabilizer = playerCountry.economy.sovereign_wealth_fund;
+            playerCountry.economy.sovereign_wealth_fund -= stabilizer;
+            playerCountry.economy.tax_collection        += stabilizer;
+            playerCountry.politics.popularity           += 0.01; // Visible cushion
+            std::cout << "[SWF] Bear-cycle stabilizer: $" << stabilizer / 1000000.0
+                      << "M auto-released to buffer commodity downturn." << std::endl;
+        }
+
+        // High consistent saving rate (>=30%): long-term debt credibility bonus
+        if (dr >= 0.30 && royalty_yield > 0.0) {
+            playerCountry.economy.debt_to_gdp_ratio -= 0.001; // Markets reward fiscal discipline
+            playerCountry.economy.international_reserves +=
+                playerCountry.economy.sovereign_wealth_fund * 0.002; // Confidence premium
+        }
+    }
+
     // Auto-deposit: redirect swf_deposit_rate fraction of royalties to fund.
     if (playerCountry.economy.swf_deposit_rate > 0.0 && royalty_yield > 0.0) {
         double deposit = royalty_yield * playerCountry.economy.swf_deposit_rate;
         playerCountry.economy.sovereign_wealth_fund += deposit;
         playerCountry.economy.tax_collection        -= deposit;
-        std::cout << "[SWF] Deposited $" << deposit / 1000000.0 << "M ("
-                  << (playerCountry.economy.swf_transparent ? "audited" : "internal") << "). "
-                  << "Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        // Transparent SWF: public report each year
+        if (playerCountry.economy.swf_transparent) {
+            std::cout << "[SWF] Audited deposit: $" << deposit / 1000000.0 << "M. "
+                      << "Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        } else if (playerCountry.economy.swf_deposit_rate >= 0.20) {
+            // Only announce if rate is meaningful — avoid noise for tiny deposits
+            std::cout << "[SWF] Deposited $" << deposit / 1000000.0 << "M (internal). "
+                      << "Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
     }
 
     // --- FISCAL DEPENDENCY RISK ---
@@ -1630,12 +1730,17 @@ void Game::update() {
                 std::cout << "[!!!] FISCAL CRISIS: Budget over-reliant on commodities ("
                           << (int)(royalty_dependency * 100) << "% dependency). "
                           << "Price bust creates $" << shortfall / 1000000.0 << "M shortfall!" << std::endl;
-                // SWF can absorb some of the shock if funded
-                if (playerCountry.economy.sovereign_wealth_fund > shortfall) {
-                    playerCountry.economy.sovereign_wealth_fund -= shortfall * 0.5;
-                    playerCountry.economy.tax_collection        += shortfall * 0.5;
-                    std::cout << "         [SWF BUFFER] Fund absorbed $"
-                              << shortfall * 0.5 / 1000000.0 << "M of the shock." << std::endl;
+                // SWF absorbs the shock — rule-governed funds absorb more (better governance)
+                if (playerCountry.economy.sovereign_wealth_fund > 0.0) {
+                    double absorb_rate = playerCountry.economy.swf_rule_active ? 0.75 : 0.50;
+                    double absorbed = shortfall * absorb_rate;
+                    if (absorbed > playerCountry.economy.sovereign_wealth_fund)
+                        absorbed = playerCountry.economy.sovereign_wealth_fund;
+                    playerCountry.economy.sovereign_wealth_fund -= absorbed;
+                    playerCountry.economy.tax_collection        += absorbed;
+                    std::string rule_note = playerCountry.economy.swf_rule_active ? " (constitutional rule buffer)" : "";
+                    std::cout << "         [SWF BUFFER" << rule_note << "] Fund absorbed $"
+                              << absorbed / 1000000.0 << "M of the shock." << std::endl;
                 }
             } else {
                 std::cout << "[!] FISCAL WARNING: " << (int)(royalty_dependency * 100)
