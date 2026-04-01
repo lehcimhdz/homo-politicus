@@ -117,6 +117,8 @@ struct EconomicFinancialSystem {
     // Sovereign Wealth Fund
     double sovereign_wealth_fund = 0.0;   // Accumulated savings balance
     double swf_deposit_rate = 0.0;        // Fraction of annual royalties auto-saved (0–0.5)
+    int    swf_mandate = 1;               // 0=Conservative 1=Balanced 2=Growth
+    bool   swf_transparent = false;       // Public oversight and independent board
 
     // Environmental Legacy
     double mining_legacy_damage = 0.0;    // Accumulated contamination from past extraction (0–1)

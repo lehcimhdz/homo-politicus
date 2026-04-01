@@ -84,8 +84,17 @@ void Country::printStatus() {
               << " | Price: " << economy.commodity_prices << "x"
               << " | Depletion: " << economy.resource_depletion * 100 << "%"
               << " | Conflict: " << economy.community_conflicts * 100 << "%" << std::endl;
+    // SWF mandate label
+    std::string mandate_label;
+    switch (economy.swf_mandate) {
+        case 0:  mandate_label = "Conservative"; break;
+        case 2:  mandate_label = "Growth";       break;
+        default: mandate_label = "Balanced";     break;
+    }
     std::cout << "SWF: $" << economy.sovereign_wealth_fund / 1000000.0 << "M"
               << " (saving " << economy.swf_deposit_rate * 100 << "% of royalties)"
+              << " | Mandate: " << mandate_label
+              << " | Transparent: " << (economy.swf_transparent ? "Yes" : "No")
               << " | Legacy Damage: " << economy.mining_legacy_damage * 100 << "%" << std::endl;
     std::cout << "----------------------" << std::endl;
 }

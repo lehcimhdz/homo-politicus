@@ -21,7 +21,10 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-/swf_save/swf_cancel/swf_spend/hedge_prices/geo_survey/mine_rehab/consult/mediate/suppress_conflict): ";
+    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-"
+                 "/swf_save/swf_cancel/swf_spend/swf_invest/swf_debt"
+                 "/swf_conservative/swf_balanced/swf_growth/swf_transparency"
+                 "/hedge_prices/geo_survey/mine_rehab/consult/mediate/suppress_conflict): ";
     std::string command;
     std::cin >> command;
 
@@ -382,12 +385,12 @@ void Game::processEvents() {
         } else if (playerCountry.economy.swf_deposit_rate >= 0.5) {
             std::cout << ">> Already saving 50% of royalties. Maximum deposit rate reached." << std::endl;
         } else {
-            playerCountry.economy.swf_deposit_rate += 0.10; // +10% of royalties redirected
-            playerCountry.politics.popularity -= 0.01; // "Less money for public services"
-            playerCountry.welfare.un_score    += 0.02; // Responsible governance signal
-            std::cout << ">> POLICY: Saving " << playerCountry.economy.swf_deposit_rate * 100
-                      << "% of annual royalties in the Sovereign Wealth Fund." << std::endl;
-            std::cout << "   Current balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            playerCountry.economy.swf_deposit_rate += 0.10;
+            playerCountry.politics.popularity -= 0.01;
+            playerCountry.welfare.un_score    += 0.02;
+            std::cout << ">> SWF: Saving " << playerCountry.economy.swf_deposit_rate * 100
+                      << "% of annual royalties. Balance: $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
             std::cout << "   (Future security +, Short-term revenue -, Fiscal resilience +)" << std::endl;
         }
     }
@@ -396,9 +399,44 @@ void Game::processEvents() {
             std::cout << ">> No automatic SWF deposits active." << std::endl;
         } else {
             playerCountry.economy.swf_deposit_rate = 0.0;
-            playerCountry.politics.popularity += 0.01; // More money for current spending
-            std::cout << ">> POLICY: SWF automatic deposits suspended. All royalties go to general revenue." << std::endl;
-            std::cout << "   Fund balance preserved: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            playerCountry.politics.popularity += 0.01;
+            std::cout << ">> SWF: Deposits suspended. Balance preserved: $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+    }
+    // Investment mandate commands
+    else if (command == "swf_conservative") {
+        playerCountry.economy.swf_mandate = 0;
+        std::cout << ">> SWF MANDATE: Conservative (bonds/cash). Return: ~2.5%, low volatility." << std::endl;
+        std::cout << "   Best when: markets volatile, fund small, fiscal crisis risk high." << std::endl;
+    }
+    else if (command == "swf_balanced") {
+        playerCountry.economy.swf_mandate = 1;
+        std::cout << ">> SWF MANDATE: Balanced (mixed assets). Return: ~4.5%, moderate volatility." << std::endl;
+        std::cout << "   Default strategy for medium-sized funds." << std::endl;
+    }
+    else if (command == "swf_growth") {
+        if (playerCountry.economy.sovereign_wealth_fund < 200000000.0) {
+            std::cout << ">> DENIED: Growth mandate requires fund > $200M to absorb market swings." << std::endl;
+        } else {
+            playerCountry.economy.swf_mandate = 2;
+            std::cout << ">> SWF MANDATE: Growth (equities/alternatives). Return: ~6.5%, high volatility." << std::endl;
+            std::cout << "   Best when: fund large, long time horizon, fiscal position stable." << std::endl;
+        }
+    }
+    // Governance / transparency
+    else if (command == "swf_transparency") {
+        playerCountry.economy.swf_transparent = !playerCountry.economy.swf_transparent;
+        if (playerCountry.economy.swf_transparent) {
+            playerCountry.welfare.un_score                  += 0.04;
+            playerCountry.politics.administrative_corruption -= 0.03;
+            playerCountry.politics.financial_power          += 0.04; // Markets trust it
+            std::cout << ">> SWF REFORM: Independent board established. Annual reports published." << std::endl;
+            std::cout << "   (FDI +, Corruption -, UN +, Leakage stops)" << std::endl;
+        } else {
+            playerCountry.politics.administrative_corruption += 0.02;
+            std::cout << ">> SWF: Oversight suspended. Fund returns to executive control." << std::endl;
+            std::cout << "   (Control +, Corruption +, FDI -, Leakage resumes)" << std::endl;
         }
     }
     // --- COMMODITY PRICE COMMANDS ---
@@ -529,18 +567,96 @@ void Game::processEvents() {
         }
     }
     else if (command == "swf_spend") {
-        double withdrawal = 100000000.0; // $100M withdrawal
+        // Countercyclical withdrawal: only justified in economic downturns
+        double withdrawal = 150000000.0; // $150M
         if (playerCountry.economy.sovereign_wealth_fund < withdrawal) {
             std::cout << ">> INSUFFICIENT FUNDS: SWF balance is only $"
                       << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M." << std::endl;
         } else {
+            double corruption_loss = withdrawal * playerCountry.politics.administrative_corruption * 0.15;
             playerCountry.economy.sovereign_wealth_fund -= withdrawal;
-            playerCountry.economy.tax_collection        += withdrawal;
-            playerCountry.politics.popularity           += 0.03; // Visible spending
-            playerCountry.welfare.un_score              -= 0.01; // "Raiding the future"
-            std::cout << ">> WITHDRAWAL: $100M drawn from Sovereign Wealth Fund for public spending." << std::endl;
-            std::cout << "   Remaining balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
-            std::cout << "   (Popularity +, Fiscal space +, Long-term savings -)" << std::endl;
+            playerCountry.economy.tax_collection        += (withdrawal - corruption_loss);
+            playerCountry.politics.popularity           += 0.04;
+            playerCountry.welfare.unemployment_rate     -= 0.008;
+            if (playerCountry.welfare.unemployment_rate < 0.0) playerCountry.welfare.unemployment_rate = 0.0;
+            // Fiscal prudence penalty: raiding fund damages credibility
+            double swf_gdp_ratio = playerCountry.economy.sovereign_wealth_fund / playerCountry.economy.gdp;
+            if (swf_gdp_ratio < 0.05) {
+                playerCountry.economy.debt_to_gdp_ratio += 0.005; // Markets lose confidence
+                std::cout << "   [!] SWF nearly depleted — bond markets growing concerned." << std::endl;
+            }
+            if (corruption_loss > 0) {
+                std::cout << "   [!] Corruption siphoned $" << corruption_loss / 1000000.0 << "M of the withdrawal." << std::endl;
+            }
+            std::cout << ">> COUNTERCYCLICAL SPEND: $150M from SWF deployed as fiscal stimulus." << std::endl;
+            std::cout << "   Net injected: $" << (withdrawal - corruption_loss) / 1000000.0 << "M" << std::endl;
+            std::cout << "   Remaining SWF: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            std::cout << "   (Popularity +, Unemployment -, Savings -)" << std::endl;
+        }
+    }
+    else if (command == "swf_invest") {
+        // Deploy SWF into domestic infrastructure — long-term growth multiplier
+        double investment = 200000000.0; // $200M
+        if (playerCountry.economy.sovereign_wealth_fund < investment) {
+            std::cout << ">> INSUFFICIENT FUNDS: SWF balance is only $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M." << std::endl;
+        } else {
+            playerCountry.economy.sovereign_wealth_fund -= investment;
+            // Infrastructure improvements
+            playerCountry.infra.road_connectivity   += 0.03;
+            playerCountry.infra.port_capacity       += 0.02;
+            playerCountry.infra.internet_coverage   += 0.02;
+            playerCountry.infra.maintenance_level   += 0.04;
+            if (playerCountry.infra.road_connectivity > 1.0) playerCountry.infra.road_connectivity = 1.0;
+            if (playerCountry.infra.port_capacity    > 1.0) playerCountry.infra.port_capacity    = 1.0;
+            if (playerCountry.infra.internet_coverage > 1.0) playerCountry.infra.internet_coverage = 1.0;
+            if (playerCountry.infra.maintenance_level > 1.0) playerCountry.infra.maintenance_level = 1.0;
+            // Long-term GDP growth effect
+            playerCountry.economy.growth_rate       += 0.004;
+            playerCountry.economy.international_reserves += investment * 0.10; // FDI attraction
+            playerCountry.politics.popularity       += 0.02;
+            // Community conflict reduction — visible state investment
+            playerCountry.economy.community_conflicts -= 0.04;
+            if (playerCountry.economy.community_conflicts < 0.0) playerCountry.economy.community_conflicts = 0.0;
+            std::cout << ">> SWF INFRASTRUCTURE DEPLOY: $200M invested in national infrastructure." << std::endl;
+            std::cout << "   Remaining SWF: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            std::cout << "   (Roads +, Ports +, Internet +, Growth +, FDI +, Conflict -)" << std::endl;
+        }
+    }
+    else if (command == "swf_debt") {
+        // Pay down sovereign debt from SWF — fiscal discipline signal
+        double payment = 250000000.0; // $250M
+        if (playerCountry.economy.sovereign_wealth_fund < payment) {
+            std::cout << ">> INSUFFICIENT FUNDS: SWF balance is only $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M." << std::endl;
+        } else {
+            playerCountry.economy.sovereign_wealth_fund -= payment;
+            double gdp = playerCountry.economy.gdp;
+            double debt_reduction = payment / gdp;
+            playerCountry.economy.debt_to_gdp_ratio -= debt_reduction;
+            if (playerCountry.economy.debt_to_gdp_ratio < 0.0) playerCountry.economy.debt_to_gdp_ratio = 0.0;
+            // Recalculate debt interest
+            double new_total_debt = gdp * playerCountry.economy.debt_to_gdp_ratio;
+            playerCountry.economy.debt_interest = new_total_debt * GetInterestRate(playerCountry.economy.credit_rating);
+            // Fiscal discipline signal improves credit rating (one step) if debt < 60%
+            if (playerCountry.economy.debt_to_gdp_ratio < 0.60) {
+                CreditRating cr = playerCountry.economy.credit_rating;
+                if (cr == CreditRating::BB)  playerCountry.economy.credit_rating = CreditRating::BBB;
+                else if (cr == CreditRating::BBB) playerCountry.economy.credit_rating = CreditRating::A;
+                else if (cr == CreditRating::A)   playerCountry.economy.credit_rating = CreditRating::AA;
+                else if (cr == CreditRating::B)   playerCountry.economy.credit_rating = CreditRating::BB;
+                if (playerCountry.economy.credit_rating != cr) {
+                    std::cout << "   [!] RATING UPGRADE: " << CreditRatingToString(cr)
+                              << " → " << CreditRatingToString(playerCountry.economy.credit_rating) << std::endl;
+                }
+            }
+            playerCountry.economy.international_reserves += payment * 0.05; // Confidence inflows
+            playerCountry.politics.popularity -= 0.01; // Invisible sacrifice
+            std::cout << ">> DEBT PAYDOWN: $250M from SWF used to retire sovereign debt." << std::endl;
+            std::cout << "   New Debt/GDP: " << playerCountry.economy.debt_to_gdp_ratio * 100 << "%" << std::endl;
+            std::cout << "   New Interest: $" << playerCountry.economy.debt_interest / 1000000.0 << "M/yr" << std::endl;
+            std::cout << "   Remaining SWF: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+            std::cout << "   (Debt -, Interest -, Rating+, Reserves +, Popularity -)" << std::endl;
         }
     }
     // --- CENTRAL BANK & MONETARY COMMANDS ---
@@ -1415,22 +1531,87 @@ void Game::update() {
         }
     }
 
-    // --- SOVEREIGN WEALTH FUND (Intergenerational Savings) ---
-    // The SWF earns a 3% annual real return on its accumulated balance.
+    // --- SOVEREIGN WEALTH FUND ---
     if (playerCountry.economy.sovereign_wealth_fund > 0) {
-        double swf_return = playerCountry.economy.sovereign_wealth_fund * 0.03;
-        playerCountry.economy.sovereign_wealth_fund += swf_return;
-        // Returns flow into reserves (not general spending — this is long-term capital)
-        playerCountry.economy.international_reserves += swf_return;
+
+        // Investment return depends on mandate (risk/return tradeoff)
+        double base_return, ret_vol;
+        std::string mandate_label;
+        switch (playerCountry.economy.swf_mandate) {
+            case 0: base_return = 0.025; ret_vol = 0.007; mandate_label = "Conservative"; break;
+            case 2: base_return = 0.065; ret_vol = 0.050; mandate_label = "Growth";       break;
+            default: base_return = 0.045; ret_vol = 0.022; mandate_label = "Balanced";   break;
+        }
+        std::normal_distribution<> ret_dist(base_return, ret_vol);
+        double actual_return = ret_dist(rng);
+        if (actual_return < -0.15) actual_return = -0.15; // Floor: catastrophic loss
+        if (actual_return >  0.25) actual_return =  0.25; // Cap: exceptional year
+
+        double swf_income = playerCountry.economy.sovereign_wealth_fund * actual_return;
+        playerCountry.economy.sovereign_wealth_fund += swf_income;
+        // Half of returns flow to reserves (liquidity buffer), half compounds in fund
+        if (swf_income > 0)
+            playerCountry.economy.international_reserves += swf_income * 0.5;
+
+        // Governance: opaque funds suffer corruption leakage — officials skim returns
+        if (!playerCountry.economy.swf_transparent) {
+            double leakage = playerCountry.economy.sovereign_wealth_fund
+                           * playerCountry.politics.administrative_corruption * 0.025;
+            playerCountry.economy.sovereign_wealth_fund -= leakage;
+            // Leakage enriches corrupt networks silently — no visibility to player
+        } else {
+            // Transparent SWF: independent board signals fiscal discipline → FDI premium
+            playerCountry.economy.international_reserves +=
+                playerCountry.economy.sovereign_wealth_fund * 0.004;
+        }
+
+        // Notify on notable returns
+        if (actual_return < 0.0) {
+            std::cout << "[SWF] INVESTMENT LOSS: " << mandate_label << " mandate returned "
+                      << (int)(actual_return * 100) << "%. Balance: $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        } else if (actual_return > base_return + ret_vol) {
+            std::cout << "[SWF] Exceptional return +" << (int)(actual_return * 100)
+                      << "% (" << mandate_label << "). Balance: $"
+                      << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        }
+
+        // --- MACRO EFFECTS BY FUND SIZE ---
+        double swf_gdp_ratio = playerCountry.economy.sovereign_wealth_fund / playerCountry.economy.gdp;
+
+        if (swf_gdp_ratio > 0.05) {
+            // Fund > 5% GDP: bond market recognizes fiscal discipline → lower debt costs
+            // Implemented as a partial offset to the credit interest penalty
+            // (accessed later via debt_service_cost — we signal here for awareness)
+            std::cout << "[SWF] Fund >" << (int)(swf_gdp_ratio * 100) << "% GDP: "
+                      << "fiscal credibility reduces sovereign borrowing costs." << std::endl;
+            // Tangible effect: debt growth slows slightly
+            playerCountry.economy.debt_to_gdp_ratio -= 0.002;
+        }
+
+        if (swf_gdp_ratio > 0.15) {
+            // Fund > 15% GDP: autonomous stabilizer — SWF income partially replaces taxes
+            double stabilizer_boost = playerCountry.economy.sovereign_wealth_fund * 0.008;
+            playerCountry.economy.international_reserves += stabilizer_boost;
+            std::cout << "[SWF] Fund >15% GDP: autonomous macroeconomic stabilizer active." << std::endl;
+        }
+
+        if (swf_gdp_ratio > 0.30) {
+            // Fund > 30% GDP (Norway-tier): generational wealth — rating improvement signal
+            playerCountry.economy.credit_rating = CreditRating::AA; // Floor upgrade signal
+            std::cout << "[SWF] NORWAY TIER: Sovereign fund exceeds 30% GDP. "
+                      << "Country achieves investment-grade floor regardless of deficits." << std::endl;
+        }
     }
 
     // Auto-deposit: redirect swf_deposit_rate fraction of royalties to fund.
     if (playerCountry.economy.swf_deposit_rate > 0.0 && royalty_yield > 0.0) {
         double deposit = royalty_yield * playerCountry.economy.swf_deposit_rate;
         playerCountry.economy.sovereign_wealth_fund += deposit;
-        playerCountry.economy.tax_collection        -= deposit; // Less available to spend now
-        std::cout << "[SWF] Deposited $" << deposit / 1000000.0 << "M into Sovereign Wealth Fund."
-                  << " Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
+        playerCountry.economy.tax_collection        -= deposit;
+        std::cout << "[SWF] Deposited $" << deposit / 1000000.0 << "M ("
+                  << (playerCountry.economy.swf_transparent ? "audited" : "internal") << "). "
+                  << "Balance: $" << playerCountry.economy.sovereign_wealth_fund / 1000000.0 << "M" << std::endl;
     }
 
     // --- FISCAL DEPENDENCY RISK ---
