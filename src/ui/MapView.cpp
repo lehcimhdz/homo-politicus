@@ -109,8 +109,14 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
     if (stability < 0.30) homeFill = kBad;
     else if (stability < 0.50) homeFill = kWarn;
     if (homeSilhouette_.loaded()) {
-        // Base oscura de la silueta (provincias se pintan encima).
-        sf::Color baseFill(38, 42, 56);
+        // Ciclo dia/noche: smooth a partir de t_ con periodo de 24s.
+        float nightAmount = (1.f - std::cos(t_ * 0.262f)) * 0.5f;
+        if (nightAmount < 0.f) nightAmount = 0.f; if (nightAmount > 1.f) nightAmount = 1.f;
+        // Base oscura de la silueta (mas oscura por la noche).
+        sf::Color baseFill(
+            (uint8_t)(38 - 18 * nightAmount),
+            (uint8_t)(42 - 22 * nightAmount),
+            (uint8_t)(56 - 16 * nightAmount));
         sf::Color outline(220, 222, 232, 200);
         homeSilhouette_.draw(win, homePos_.x, homePos_.y, homeRadius_, baseFill, outline);
         // Grid 4x4 de provincias - coloreadas segun satisfaccion regional derivada
@@ -131,11 +137,12 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
                 float regOffset = ((hash & 0xFF) / 255.f - 0.5f) * 0.30f;
                 float sat = (float)c.politics.popularity + regOffset;
                 if (sat < 0.f) sat = 0.f; if (sat > 1.f) sat = 1.f;
+                uint8_t alpha = (uint8_t)(200 - 110 * nightAmount); // mas tenue de noche
                 sf::Color col_ = sat > 0.55f
-                    ? sf::Color((uint8_t)(40 + (1.f - sat) * 80), (uint8_t)(160 + sat * 40), (uint8_t)(80 + sat * 20), 200)
+                    ? sf::Color((uint8_t)(40 + (1.f - sat) * 80), (uint8_t)(160 + sat * 40), (uint8_t)(80 + sat * 20), alpha)
                     : (sat > 0.30f
-                        ? sf::Color(220, (uint8_t)(140 + sat * 40), 60, 200)
-                        : sf::Color(200, 60, 60, 200));
+                        ? sf::Color(220, (uint8_t)(140 + sat * 40), 60, alpha)
+                        : sf::Color(200, 60, 60, alpha));
                 sf::RectangleShape cell({cw - 1.f, ch - 1.f});
                 cell.setPosition({ux + 0.5f, uy + 0.5f});
                 cell.setFillColor(col_);
@@ -147,13 +154,22 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
         // Population dots: cantidad escalada por urbanizacion, micro-movimiento.
         int dotCount = 60 + (int)(c.welfare.urban_population_ratio * 180);
         ensurePopDots(dotCount);
+        // Por la noche, las urbes brillan como luces; de dia se ven mas tenues.
+        sf::Color dayColor(245, 240, 220, 200);
+        sf::Color nightColor(255, 230, 120, 240);
+        sf::Color dotColor(
+            (uint8_t)(dayColor.r + (nightColor.r - dayColor.r) * nightAmount),
+            (uint8_t)(dayColor.g + (nightColor.g - dayColor.g) * nightAmount),
+            (uint8_t)(dayColor.b + (nightColor.b - dayColor.b) * nightAmount),
+            (uint8_t)(dayColor.a + (nightColor.a - dayColor.a) * nightAmount));
+        float dotR = 1.6f + nightAmount * 0.6f;
         for (const auto& d : popDots_) {
             float ox = std::sin(t_ * 1.3f + d.phase) * 1.2f;
             float oy = std::cos(t_ * 1.1f + d.phase * 1.7f) * 1.2f;
-            sf::CircleShape dot(1.6f);
-            dot.setOrigin({1.6f, 1.6f});
+            sf::CircleShape dot(dotR);
+            dot.setOrigin({dotR, dotR});
             dot.setPosition({d.base.x + ox, d.base.y + oy});
-            dot.setFillColor(sf::Color(245, 240, 220, 200));
+            dot.setFillColor(dotColor);
             win.draw(dot);
         }
         // Marcha de protesta: columna animada cuando popular_pressure es alto.
@@ -214,6 +230,17 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
 
     // === Leyenda ===
     win.draw(makeText(font, "MAPA REGIONAL  -  click en un vecino: detalle bilateral", 12, kMuted, 230, 660));
+    // Indicador dia/noche.
+    if (homeSilhouette_.loaded()) {
+        float nightAmount = (1.f - std::cos(t_ * 0.262f)) * 0.5f;
+        const char* phase = nightAmount > 0.66f ? "NOCHE"
+                          : nightAmount > 0.33f ? "CREPUSCULO"
+                          : "DIA";
+        sf::Text dt(font, phase, 12);
+        dt.setFillColor(sf::Color(170, 174, 188));
+        dt.setPosition({230.f, 678.f});
+        win.draw(dt);
+    }
 }
 
 int MapView::neighborAt(sf::Vector2f mouse) const {

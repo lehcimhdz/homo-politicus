@@ -457,6 +457,7 @@ int main(int argc, char** argv) {
         // === MainPanel: tab activa ===
         window.draw(makePanel(200, 60, 830, 640, currentPalette.panel));
         mapView.update(dt);
+        mapView.setTurn(bridge.turn());
         dashboard.update(dt, bridge.country());
         if (fontOk) {
             switch (currentTab) {

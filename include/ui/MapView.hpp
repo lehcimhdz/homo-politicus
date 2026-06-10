@@ -13,6 +13,8 @@ class MapView {
 public:
     MapView();
     void update(float dt);                 // dt en segundos
+    void setTurn(int t) { turn_ = t; }
+    int turn() const { return turn_; }
     void draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const;
     // Devuelve indice del vecino bajo el mouse (-1 si ninguno)
     int neighborAt(sf::Vector2f mouse) const;
@@ -31,6 +33,7 @@ private:
     };
     float homeRadius_ = 80.f;
     float neighRadius_ = 55.f;
+    int turn_ = 0;
     CountrySilhouette homeSilhouette_;
 
     // Population dots: posiciones precomputadas dentro de la silueta
