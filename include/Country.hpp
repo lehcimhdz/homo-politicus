@@ -530,9 +530,21 @@ struct InfrastructureFutureSystem {
 
     // Space Race
     int satellite_capacity = 2;
+    int    satellites_civil = 2;               // Communication/weather/navigation
+    int    satellites_military = 0;            // Reconnaissance/signals intelligence
+
     double space_budget = 0.0;
+    double space_budget_gdp = 0.0;             // Space spending as % GDP
+    bool   own_launch_capability = false;      // Independent orbital launch vehicle
+    int    international_space_partnerships = 0; // Active bilateral space agreements
+
     double launch_failure_prob = 0.1;
+    int    successful_launches = 0;            // Cumulative successful launches
+    bool   human_spaceflight_capable = false;  // Can launch crewed missions
+
     double technological_prestige = 0.3;
+    double space_prestige = 0.2;               // International standing in space (0–1)
+    double tech_export_share = 0.05;           // High-tech goods as fraction of exports
 
     // AI
     double state_ai_development = 0.2;

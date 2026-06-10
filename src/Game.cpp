@@ -3333,6 +3333,34 @@ void Game::update() {
         }
     }
 
+    // --- SPACE PROGRAM DYNAMICS ---
+    // Total satellites
+    playerCountry.infra.satellite_capacity = playerCountry.infra.satellites_civil + playerCountry.infra.satellites_military;
+    // Space budget as GDP share
+    if (playerCountry.economy.gdp > 0)
+        playerCountry.infra.space_budget_gdp = playerCountry.infra.space_budget / playerCountry.economy.gdp;
+    // Launch maturity: more successful launches reduce failure probability
+    if (playerCountry.infra.successful_launches > 10)
+        playerCountry.infra.launch_failure_prob = 0.05;
+    else if (playerCountry.infra.successful_launches > 3)
+        playerCountry.infra.launch_failure_prob = 0.08;
+    // Space prestige
+    playerCountry.infra.space_prestige = playerCountry.infra.satellites_civil * 0.02
+                                       + playerCountry.infra.satellites_military * 0.03
+                                       + (playerCountry.infra.own_launch_capability ? 0.2 : 0.0)
+                                       + (playerCountry.infra.human_spaceflight_capable ? 0.3 : 0.0)
+                                       + playerCountry.infra.international_space_partnerships * 0.02;
+    if (playerCountry.infra.space_prestige > 1.0) playerCountry.infra.space_prestige = 1.0;
+    // Tech export share: innovation + patents + space
+    playerCountry.infra.tech_export_share = playerCountry.infra.innovation_index * 0.1
+                                          + playerCountry.infra.patents_granted_international * 0.001;
+    if (playerCountry.infra.tech_export_share > 0.5) playerCountry.infra.tech_export_share = 0.5;
+    // Technological prestige: composite
+    playerCountry.infra.technological_prestige = playerCountry.infra.innovation_index * 0.4
+                                               + playerCountry.infra.space_prestige * 0.3
+                                               + playerCountry.infra.tech_export_share * 0.3;
+    if (playerCountry.infra.technological_prestige > 1.0) playerCountry.infra.technological_prestige = 1.0;
+
     // --- ENERGY DYNAMICS ---
     // Renewables percentage: sum of solar + wind vs total capacity
     double total_re_gw = playerCountry.infra.solar_capacity_gw + playerCountry.infra.wind_capacity_gw;
