@@ -313,6 +313,7 @@ int main(int argc, char** argv) {
                 else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
                 else if (currentTab == Tab::Dashboard) dashboard.onMouseMove(pos);
                 else if (currentTab == Tab::Court) court.onMouseMove(pos);
+                else if (currentTab == Tab::Map) mapView.onMouseMove(pos);
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {

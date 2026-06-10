@@ -60,6 +60,10 @@ void MapView::update(float dt) {
     weather_.update(dt, area);
 }
 
+void MapView::onMouseMove(sf::Vector2f mouse) {
+    provinces_.onMouseMove(mouse, isoCam_);
+}
+
 static sf::Color relationColor(double rel, bool atWar) {
     if (atWar) return kBad;
     if (rel > 0.5)  return kGood;
@@ -146,14 +150,26 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
             isoBuildings_.configure(isoWorld_, homeSilhouette_, homePos_, homeRadius_, c);
             isoNpcs_.configure(isoBuildings_, c);
             isoVehicles_.configure(isoBuildings_, c);
+            provinces_.configure(isoWorld_, c, 9);
             isoConfigured_ = true;
         }
         isoBuildings_.updateForCountry(c);
+        provinces_.update(t_ * 0.f + 0.016f, c); // refrescar tintes
         isoWorld_.draw(win, isoCam_, c, nightAmount);
+        provinces_.draw(win, font, isoCam_, isoWorld_);
         isoVehicles_.drawRoads(win, isoCam_);
         isoNpcs_.draw(win, isoCam_, nightAmount);
         isoVehicles_.drawVehicles(win, isoCam_, nightAmount);
         isoBuildings_.draw(win, isoCam_, c, nightAmount);
+        // Tooltip de provincia hovered.
+        if (provinces_.hovered() >= 0) {
+            sf::Text tip(font, provinces_.hoveredTooltip(), 12);
+            tip.setFillColor(sf::Color(245, 240, 220));
+            tip.setOutlineColor(sf::Color(0, 0, 0, 220));
+            tip.setOutlineThickness(1.5f);
+            tip.setPosition({230.f, 100.f});
+            win.draw(tip);
+        }
         // === Eventos contextuales animados ===
         auto capPos = isoBuildings_.buildings().empty() ? sf::Vector2f{0.f, 0.f}
                        : sf::Vector2f{isoBuildings_.buildings()[0].gx, isoBuildings_.buildings()[0].gy};
