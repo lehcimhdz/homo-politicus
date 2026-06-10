@@ -12,6 +12,7 @@
 Game::Game() : isRunning(true), nextTurn(false), turnCount(0), rng(std::random_device{}()) {
     std::cout << "Initializing Game..." << std::endl;
     initialGdp = playerCountry.economy.gdp;
+    scriptedEvents = EventLoader::builtin();
     registerCommands();
 }
 
@@ -7955,6 +7956,7 @@ void Game::update() {
     popularitySum += playerCountry.politics.popularity;
     if (playerCountry.politics.apologize_cooldown_turns > 0) playerCountry.politics.apologize_cooldown_turns--;
     if (playerCountry.politics.threaten_streak_count > 0) playerCountry.politics.threaten_streak_count--;
+    EventLoader::tick(scriptedEvents, playerCountry, pendingDecisions, rng, turnCount);
     achievements.evaluate(playerCountry, turnCount, endCondition, initialGdp);
     checkGameOver();
     if (!isRunning) {

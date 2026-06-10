@@ -11,6 +11,7 @@
 #include "EndCondition.hpp"
 #include "DecisionSystem.hpp"
 #include "AchievementTracker.hpp"
+#include "EventLoader.hpp"
 
 // The Game class acts as the "Central Brain".
 // It manages the game loop, updates variables, and handles player input.
@@ -42,6 +43,7 @@ private:
     double popularitySum = 0.0;     // For end-screen average
     double initialGdp = 0.0;        // Para comparativas de logros
     AchievementTracker achievements;
+    std::vector<ScriptedEvent> scriptedEvents;
 
     std::mt19937 rng; // Mersenne Twister Random Number Generator
 };
