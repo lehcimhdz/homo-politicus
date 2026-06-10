@@ -5,6 +5,7 @@
 #include "LeaderLoader.hpp"
 #include "Advisor.hpp"
 #include "Localization.hpp"
+#include "FeedbackBuilder.hpp"
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
@@ -56,12 +57,22 @@ void Game::registerCommands() {
         if (current_tax_level > 0.667) std::cout << "   [!] Estas pasado el optimo Laffer: cada suba rinde menos." << std::endl;
     };
     commandHandlers["tax-"]         = [this]() {
+        double pre_rev = playerCountry.economy.tax_collection;
+        double pre_pop = playerCountry.politics.popularity;
+        double pre_inf = playerCountry.economy.inflation;
         playerCountry.economy.tax_collection *= 0.90;
         playerCountry.politics.popularity += 0.03;
         playerCountry.economy.inflation -= 0.005;
         playerCountry.politics.economic_ideology += 0.02;
         if (playerCountry.politics.economic_ideology > 1.0) playerCountry.politics.economic_ideology = 1.0;
-        std::cout << ">> Taxes CUT! Popularity up, revenue down." << std::endl;
+        FeedbackBuilder("BAJAS IMPUESTOS")
+            .addAbsoluteDelta("Recaudacion", pre_rev, playerCountry.economy.tax_collection)
+            .addDelta("Popularidad", pre_pop, playerCountry.politics.popularity)
+            .addDelta("Inflacion", pre_inf, playerCountry.economy.inflation)
+            .addNote("Ideologia: -2pt hacia la derecha")
+            .addRisk("Deficit fiscal", 0.10)
+            .addPrediction("si el deficit crece, tasa de interes subira por riesgo soberano.")
+            .print();
     };
     commandHandlers["decisions"] = [this]() {
         if (pendingDecisions.empty()) { std::cout << ">> No hay decisiones pendientes." << std::endl; return; }
@@ -247,13 +258,32 @@ void Game::registerCommands() {
         std::cout << "   (Capital flight risk +, inflation risk +)" << std::endl;
     };
     commandHandlers["interest+"] = [this]() {
+        double pre_rate = playerCountry.economy.interest_rate;
+        double pre_growth = playerCountry.economy.growth_rate;
         playerCountry.economy.interest_rate += 0.01;
-        std::cout << ">> MONETARY: Interest Rate raised. Inflation tamed, growth slowed." << std::endl;
+        playerCountry.economy.growth_rate -= 0.002;
+        playerCountry.economy.inflation -= 0.003;
+        if (playerCountry.economy.inflation < 0.0) playerCountry.economy.inflation = 0.0;
+        FeedbackBuilder("SUBES TASA DE INTERES")
+            .addDelta("Tasa", pre_rate, playerCountry.economy.interest_rate)
+            .addDelta("Inflacion", pre_growth, playerCountry.economy.growth_rate)
+            .addNote("Inflacion: -0.3pt esperado")
+            .addRisk("Recesion si abusas", 0.05)
+            .addPrediction("contractivo: el credito se encarece para empresas.")
+            .print();
     };
     commandHandlers["interest-"] = [this]() {
+        double pre_rate = playerCountry.economy.interest_rate;
         playerCountry.economy.interest_rate -= 0.01;
         if (playerCountry.economy.interest_rate < 0.0) playerCountry.economy.interest_rate = 0.0;
-        std::cout << ">> MONETARY: Interest Rate lowered. Borrowing is cheap!" << std::endl;
+        playerCountry.economy.growth_rate += 0.002;
+        playerCountry.economy.inflation += 0.002;
+        FeedbackBuilder("BAJAS TASA DE INTERES")
+            .addDelta("Tasa", pre_rate, playerCountry.economy.interest_rate)
+            .addNote("Credito mas barato, inflacion +0.2pt esperada")
+            .addRisk("Recalentamiento", 0.08)
+            .addPrediction("expansivo: si la economia ya esta caliente, riesgo inflacionario.")
+            .print();
     };
     commandHandlers["minority+"] = [this]() {
         playerCountry.welfare.minority_protection += 0.1;
@@ -271,14 +301,24 @@ void Game::registerCommands() {
         std::cout << ">> RIGHTS: Minority Protection reduced to " << playerCountry.welfare.minority_protection << std::endl;
     };
     commandHandlers["diplomacy+"] = [this]() {
+        double pre = playerCountry.security.diplomatic_prestige;
         playerCountry.security.diplomatic_prestige += 0.05;
         if (playerCountry.security.diplomatic_prestige > 1.0) playerCountry.security.diplomatic_prestige = 1.0;
-        std::cout << ">> DIPLOMACY: Prestige raised to " << playerCountry.security.diplomatic_prestige << std::endl;
+        FeedbackBuilder("INVERSION DIPLOMATICA")
+            .addDelta("Prestigio", pre, playerCountry.security.diplomatic_prestige)
+            .addNote("Costo fiscal moderado (cumbres, embajadas)")
+            .addPrediction("acceso a foros internacionales mejorado.")
+            .print();
     };
     commandHandlers["diplomacy-"] = [this]() {
+        double pre = playerCountry.security.diplomatic_prestige;
         playerCountry.security.diplomatic_prestige -= 0.05;
         if (playerCountry.security.diplomatic_prestige < 0.0) playerCountry.security.diplomatic_prestige = 0.0;
-        std::cout << ">> DIPLOMACY: Prestige reduced to " << playerCountry.security.diplomatic_prestige << std::endl;
+        FeedbackBuilder("RECORTE DIPLOMATICO")
+            .addDelta("Prestigio", pre, playerCountry.security.diplomatic_prestige)
+            .addNote("Ahorro fiscal a costa de soft power")
+            .addRisk("Aislamiento futuro", 0.07)
+            .print();
     };
     commandHandlers["achievements"] = [this]() {
         auto list = achievements.unlockedList();
