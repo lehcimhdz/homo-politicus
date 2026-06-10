@@ -11,6 +11,7 @@
 #include "ui/AudioSystem.hpp"
 #include "ui/MainMenu.hpp"
 #include "ui/GameOverScreen.hpp"
+#include "ui/TutorialOverlay.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -121,6 +122,7 @@ int main(int argc, char** argv) {
     AudioSystem audio;
     MainMenu menu;
     GameOverScreen gameOver;
+    TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     AppState appState = AppState::Menu;
     gameOver.setCallback([&](GameOverScreen::Action a) {
@@ -142,6 +144,7 @@ int main(int argc, char** argv) {
             case MainMenu::Action::NewGame:
                 bridge.resetCountry();
                 dashboard.recordHistory(bridge.country());
+                tutorialUI.start();
                 appState = AppState::Playing;
                 break;
             case MainMenu::Action::Continue:
@@ -197,6 +200,7 @@ int main(int argc, char** argv) {
                     sf::Vector2f pos((float)mb->position.x, (float)mb->position.y);
                     if (gameOver.visible()) gameOver.onClick(pos);
                     else if (appState == AppState::Menu) menu.onClick(pos);
+                    else if (tutorialUI.visible()) tutorialUI.onClick(pos);
                     else if (modal.visible()) modal.onClick(pos);
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
@@ -239,6 +243,14 @@ int main(int argc, char** argv) {
                     gameOver.show(EndCondition::COUP_SUCCESS, bridge.country(),
                                   bridge.turn(), popularitySumDemo);
                     audio.play("game_over");
+                }
+                if (kp->code == sf::Keyboard::Key::T) {
+                    tutorialUI.start();
+                    audio.play("button_click");
+                }
+                if (kp->code == sf::Keyboard::Key::Space && tutorialUI.visible()) {
+                    tutorialUI.advance();
+                    audio.play("button_click");
                 }
             }
         }
@@ -337,7 +349,10 @@ int main(int argc, char** argv) {
         // Modal overlay (siempre al final para estar encima)
         if (fontOk) modal.draw(window, font);
 
-        // Game over screen (encima de TODO incluido el modal)
+        // Tutorial overlay (encima del modal pero debajo del game over)
+        if (fontOk) tutorialUI.draw(window, font);
+
+        // Game over screen (encima de TODO)
         gameOver.update(dt);
         if (fontOk) gameOver.draw(window, font);
 
