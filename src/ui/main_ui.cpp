@@ -362,6 +362,19 @@ int main(int argc, char** argv) {
         if (turnSweep > 0.f) { turnSweep -= dt; if (turnSweep < 0.f) turnSweep = 0.f; }
         if (turnShake > 0.f) { turnShake -= dt; if (turnShake < 0.f) turnShake = 0.f; }
         particles.update(dt);
+        // Seleccionar ambient segun estado del pais.
+        {
+            const Country& cc = bridge.country();
+            AudioSystem::Ambient amb = AudioSystem::Ambient::Calm;
+            if (cc.politics.civil_war_active || cc.security.war_active || cc.welfare.pandemic_active) {
+                amb = AudioSystem::Ambient::Crisis;
+            } else if (cc.politics.popularity < 0.40 || cc.politics.popular_pressure > 0.6 ||
+                       cc.economy.inflation > 0.12) {
+                amb = AudioSystem::Ambient::Tension;
+            }
+            if (audio.currentAmbient() != amb) audio.setAmbient(amb);
+            audio.updateAmbient(dt);
+        }
         float shakeX = 0.f;
         if (turnShake > 0.f) {
             float phase = turnShake * 60.f;
