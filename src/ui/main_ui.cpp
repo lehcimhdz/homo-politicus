@@ -1,74 +1,194 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <optional>
+#include <sstream>
+#include <iomanip>
+#include "ui/UIBridge.hpp"
 
-// Sprint 9: Hello World con SFML 3. Sin engine wire todavia.
-// Sprint 10 conectara via UIBridge.
+// Layout (1280x800):
+//   TopBar:    1280 x 60
+//   SidebarL:  200 x 640 (60..700)
+//   MainPanel: 830 x 640
+//   SidebarR:  250 x 640
+//   BottomBar: 1280 x 100 (700..800)
 
-int main(int argc, char** argv) {
-    bool headless = false;
-    for (int i = 1; i < argc; ++i) {
-        std::string a = argv[i];
-        if (a == "--headless") headless = true;
-    }
+static const sf::Color kBg     = sf::Color(20, 22, 30);
+static const sf::Color kPanel  = sf::Color(32, 36, 48);
+static const sf::Color kBorder = sf::Color(60, 65, 80);
+static const sf::Color kText   = sf::Color(220, 222, 232);
+static const sf::Color kMuted  = sf::Color(150, 154, 168);
+static const sf::Color kAccent = sf::Color(80, 160, 240);
+static const sf::Color kGood   = sf::Color(80, 200, 120);
+static const sf::Color kBad    = sf::Color(220, 80, 80);
+static const sf::Color kWarn   = sf::Color(240, 180, 60);
 
-    sf::RenderWindow window(sf::VideoMode({1280, 800}), "Homo Politicus");
-    window.setFramerateLimit(60);
-
-    sf::Font font;
-    bool fontOk = false;
+static bool loadFontFallback(sf::Font& font) {
     const char* candidates[] = {
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         "/System/Library/Fonts/Helvetica.ttc",
         "/Library/Fonts/Arial.ttf",
     };
     for (const char* p : candidates) {
-        if (font.openFromFile(p)) { fontOk = true; break; }
+        if (font.openFromFile(p)) return true;
+    }
+    return false;
+}
+
+static sf::RectangleShape makePanel(float x, float y, float w, float h, sf::Color fill = kPanel) {
+    sf::RectangleShape r({w, h});
+    r.setPosition({x, y});
+    r.setFillColor(fill);
+    r.setOutlineColor(kBorder);
+    r.setOutlineThickness(1.f);
+    return r;
+}
+
+static sf::Text makeText(const sf::Font& font, const std::string& s, unsigned size, sf::Color color, float x, float y) {
+    sf::Text t(font, s, size);
+    t.setFillColor(color);
+    t.setPosition({x, y});
+    return t;
+}
+
+static std::string fmtMoney(double v) {
+    std::ostringstream oss;
+    if (v >= 1e9) oss << "$" << std::fixed << std::setprecision(1) << v / 1e9 << "B";
+    else if (v >= 1e6) oss << "$" << std::fixed << std::setprecision(0) << v / 1e6 << "M";
+    else oss << "$" << std::fixed << std::setprecision(0) << v;
+    return oss.str();
+}
+
+static std::string fmtPct(double v) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(0) << (v * 100) << "%";
+    return oss.str();
+}
+
+static void drawProgressBar(sf::RenderWindow& win, float x, float y, float w, float h, float ratio, sf::Color fg) {
+    sf::RectangleShape bg({w, h});
+    bg.setPosition({x, y});
+    bg.setFillColor(sf::Color(50, 55, 70));
+    win.draw(bg);
+    if (ratio < 0) ratio = 0; if (ratio > 1) ratio = 1;
+    sf::RectangleShape fill({w * ratio, h});
+    fill.setPosition({x, y});
+    fill.setFillColor(fg);
+    win.draw(fill);
+}
+
+static sf::Color popularityColor(double pop) {
+    if (pop < 0.30) return kBad;
+    if (pop < 0.50) return kWarn;
+    return kGood;
+}
+
+int main(int argc, char** argv) {
+    bool headless = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--headless") headless = true;
     }
 
-    sf::Text title(font, "HOMO POLITICUS", 72);
-    if (fontOk) {
-        auto bounds = title.getLocalBounds();
-        title.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-        title.setPosition({640.f, 350.f});
-        title.setFillColor(sf::Color(230, 230, 240));
-    }
+    sf::RenderWindow window(sf::VideoMode({1280, 800}), "Homo Politicus");
+    window.setFramerateLimit(60);
 
-    sf::Text subtitle(font, "v0.7-beta UI scaffold (Sprint 9)", 24);
-    if (fontOk) {
-        auto bounds = subtitle.getLocalBounds();
-        subtitle.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-        subtitle.setPosition({640.f, 440.f});
-        subtitle.setFillColor(sf::Color(150, 150, 170));
-    }
+    sf::Font font;
+    bool fontOk = loadFontFallback(font);
 
-    sf::Text hint(font, "ESC para salir", 18);
-    if (fontOk) {
-        auto bounds = hint.getLocalBounds();
-        hint.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-        hint.setPosition({640.f, 760.f});
-        hint.setFillColor(sf::Color(100, 100, 120));
-    }
+    UIBridge bridge;
 
     if (headless) {
+        std::cout << "[headless] window=1280x800 font=" << fontOk
+                  << " gdp=" << bridge.country().economy.gdp
+                  << " pop=" << bridge.country().politics.popularity
+                  << std::endl;
         window.close();
-        std::cout << "[headless smoke] window created, font_ok=" << fontOk << std::endl;
         return 0;
     }
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) window.close();
-            if (const auto* keyPress = event->getIf<sf::Event::KeyPressed>()) {
-                if (keyPress->code == sf::Keyboard::Key::Escape) window.close();
+            if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
+                if (kp->code == sf::Keyboard::Key::Escape) window.close();
+                if (kp->code == sf::Keyboard::Key::N) bridge.tick();        // N = next turn
+                if (kp->code == sf::Keyboard::Key::R) bridge.resetCountry();// R = reset
             }
         }
-        window.clear(sf::Color(20, 22, 30));
+
+        window.clear(kBg);
+
+        // === TopBar ===
+        window.draw(makePanel(0, 0, 1280, 60));
         if (fontOk) {
-            window.draw(title);
-            window.draw(subtitle);
-            window.draw(hint);
+            const Country& c = bridge.country();
+            window.draw(makeText(font, "HOMO POLITICUS", 24, kAccent, 16, 16));
+            std::ostringstream turnStr;
+            turnStr << "Turno " << bridge.turn();
+            window.draw(makeText(font, turnStr.str(), 18, kMuted, 240, 22));
+
+            window.draw(makeText(font, "Pop:", 16, kMuted, 380, 25));
+            window.draw(makeText(font, fmtPct(c.politics.popularity), 20, popularityColor(c.politics.popularity), 425, 22));
+            drawProgressBar(window, 380, 47, 130, 6, c.politics.popularity, popularityColor(c.politics.popularity));
+
+            window.draw(makeText(font, "GDP: " + fmtMoney(c.economy.gdp), 18, kText, 560, 22));
+            std::ostringstream infStr;
+            infStr << "Inflacion: " << std::fixed << std::setprecision(1) << (c.economy.inflation * 100) << "%";
+            window.draw(makeText(font, infStr.str(), 18, kText, 760, 22));
+
+            window.draw(makeText(font, "ESC=salir  N=next  R=reset", 14, kMuted, 1020, 22));
         }
+
+        // === SidebarLeft ===
+        window.draw(makePanel(0, 60, 200, 640));
+        if (fontOk) {
+            window.draw(makeText(font, "SISTEMAS", 14, kMuted, 16, 76));
+            const char* systems[] = {"Bienestar", "Economia", "Politica", "Seguridad", "Infraestructura"};
+            for (int i = 0; i < 5; ++i) {
+                window.draw(makeText(font, systems[i], 16, kText, 16, 104.f + i * 32));
+            }
+            window.draw(makeText(font, "ACCIONES", 14, kMuted, 16, 290));
+            const char* actions[] = {"Dashboard", "Mapa", "Accion", "Decisiones", "Logros"};
+            for (int i = 0; i < 5; ++i) {
+                window.draw(makeText(font, actions[i], 16, kText, 16, 318.f + i * 32));
+            }
+        }
+
+        // === MainPanel placeholder ===
+        window.draw(makePanel(200, 60, 830, 640));
+        if (fontOk) {
+            window.draw(makeText(font, "DASHBOARD", 18, kMuted, 220, 76));
+            window.draw(makeText(font, "Sprint 11 montara las 6 cards (Pop, Economia, Presiones, Escandalos, Sistemas, Vecinos)", 14, kMuted, 220, 102));
+
+            // Bloque de info actual mientras esperamos las cards
+            const Country& c = bridge.country();
+            window.draw(makeText(font, "Estado actual:", 16, kAccent, 220, 150));
+            std::ostringstream pop, gdp, infl, growth;
+            pop  << "  Popularidad:    " << fmtPct(c.politics.popularity);
+            gdp  << "  GDP:            " << fmtMoney(c.economy.gdp);
+            infl << "  Inflacion:      " << std::fixed << std::setprecision(2) << (c.economy.inflation * 100) << "%";
+            growth << "  Crecimiento:    " << std::fixed << std::setprecision(2) << (c.economy.growth_rate * 100) << "%";
+            window.draw(makeText(font, pop.str(), 14, kText, 220, 178));
+            window.draw(makeText(font, gdp.str(), 14, kText, 220, 200));
+            window.draw(makeText(font, infl.str(), 14, kText, 220, 222));
+            window.draw(makeText(font, growth.str(), 14, kText, 220, 244));
+        }
+
+        // === SidebarRight ===
+        window.draw(makePanel(1030, 60, 250, 640));
+        if (fontOk) {
+            window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 76));
+            window.draw(makeText(font, "(Sprint 11)", 12, kMuted, 1046, 96));
+            window.draw(makeText(font, "DECISIONES PENDIENTES", 14, kMuted, 1046, 250));
+            window.draw(makeText(font, "(Sprint 14)", 12, kMuted, 1046, 270));
+        }
+
+        // === BottomBar ===
+        window.draw(makePanel(0, 700, 1280, 100));
+        if (fontOk) {
+            window.draw(makeText(font, "LOG DE TURNO", 14, kMuted, 16, 712));
+            window.draw(makeText(font, "(Sprint 11 conectara feedback al area de log)", 14, kMuted, 16, 736));
+        }
+
         window.display();
     }
     return 0;
