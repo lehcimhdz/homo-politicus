@@ -4832,6 +4832,85 @@ void Game::update() {
         }
     }
 
+    // --- REVOLUTION / CIVIL WAR ---
+    if (playerCountry.politics.civil_war_active) {
+        playerCountry.politics.civil_war_duration++;
+
+        // Massive GDP collapse
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.08;
+
+        // Casualties
+        playerCountry.welfare.death_rate += 0.01;
+
+        // Infrastructure destroyed
+        playerCountry.infra.road_connectivity -= 0.03;
+        if (playerCountry.infra.road_connectivity < 0.05) playerCountry.infra.road_connectivity = 0.05;
+
+        // Refugees flee
+        playerCountry.security.emigration_push_index = 0.95;
+        playerCountry.welfare.population -= (int)(playerCountry.welfare.population * 0.005); // Brain drain
+
+        // International intervention check
+        if (playerCountry.politics.civil_war_duration > 4 && playerCountry.security.alliance_protection > 0.5) {
+            if (dist(rng) < 0.25) {
+                playerCountry.politics.civil_war_active = false;
+                std::cout << "[!!!] INTERNATIONAL INTERVENTION: Allied forces restore order after "
+                          << playerCountry.politics.civil_war_duration << " turns of civil war." << std::endl;
+                playerCountry.security.diplomatic_prestige -= 0.3; // Humiliation of intervention
+                playerCountry.politics.popularity = 0.3; // Reset
+            }
+        }
+
+        // Prolonged civil war → GAME OVER
+        if (playerCountry.politics.civil_war_active && playerCountry.politics.civil_war_duration > 10) {
+            std::cout << "[!!!!!] STATE COLLAPSE: After " << playerCountry.politics.civil_war_duration
+                      << " turns of civil war, the state has disintegrated." << std::endl;
+            std::cout << "GAME OVER." << std::endl;
+            exit(0);
+        }
+
+        if (playerCountry.politics.civil_war_active) {
+            std::cout << "[!!!!] CIVIL WAR (Turn " << playerCountry.politics.civil_war_duration
+                      << "): Nation tearing itself apart. GDP: $" << (long long)playerCountry.economy.gdp << std::endl;
+        }
+    } else {
+        // Revolution risk assessment
+        playerCountry.politics.revolution_risk = (playerCountry.politics.protest_intensity > 0.8
+                                                 && playerCountry.politics.popularity < 0.2
+                                                 && playerCountry.politics.polarization_index > 0.8);
+
+        if (playerCountry.politics.revolution_risk) {
+            // Revolution probability compounds each turn conditions persist
+            playerCountry.politics.revolution_prob += 0.05;
+            if (playerCountry.politics.revolution_prob > 0.5)
+                playerCountry.politics.revolution_prob = 0.5;
+
+            std::cout << "[!!!] REVOLUTION RISK: Conditions critical. Revolution probability: "
+                      << (int)(playerCountry.politics.revolution_prob * 100) << "%" << std::endl;
+
+            if (dist(rng) < playerCountry.politics.revolution_prob) {
+                // Revolution triggered — either regime change or civil war
+                if (playerCountry.security.troop_morale > 0.6 && playerCountry.politics.civilian_military_control < 0.4) {
+                    // Military sides with revolutionaries → regime change
+                    std::cout << "[!!!!!] REVOLUTION: The military has sided with the people. Regime overthrown!" << std::endl;
+                    std::cout << "GAME OVER." << std::endl;
+                    exit(0);
+                } else {
+                    // Military loyal → civil war
+                    playerCountry.politics.civil_war_active = true;
+                    playerCountry.politics.civil_war_duration = 0;
+                    std::cout << "[!!!!!] CIVIL WAR ERUPTS: Revolution met with military force. "
+                              << "The country descends into armed conflict!" << std::endl;
+                }
+            }
+        } else {
+            // Decay revolution probability when conditions ease
+            playerCountry.politics.revolution_prob -= 0.02;
+            if (playerCountry.politics.revolution_prob < 0.0)
+                playerCountry.politics.revolution_prob = 0.0;
+        }
+    }
+
     // --- POPULARITY DYNAMICS ---
     // Honeymoon effect: fresh mandate gives a buffer that decays each turn
     if (playerCountry.politics.honeymoon_turns_remaining > 0) {
