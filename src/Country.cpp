@@ -97,5 +97,16 @@ void Country::printStatus() {
               << " | Transparent: " << (economy.swf_transparent ? "Yes" : "No")
               << " | Rule: " << (economy.swf_rule_active ? "CONSTITUTIONAL" : "Discretionary")
               << " | Legacy Damage: " << economy.mining_legacy_damage * 100 << "%" << std::endl;
+    // Ideology compass
+    std::string econ_label = politics.economic_ideology < 0.3 ? "LEFT" :
+                             politics.economic_ideology > 0.7 ? "RIGHT" : "CENTER";
+    std::string auth_label = politics.auth_dem_axis < 0.3 ? "DEMOCRATIC" :
+                             politics.auth_dem_axis > 0.7 ? "AUTHORITARIAN" : "HYBRID";
+    std::cout << "Ideology: " << econ_label << " (" << (int)(politics.economic_ideology * 100) << ")"
+              << " | " << auth_label << " (" << (int)(politics.auth_dem_axis * 100) << ")"
+              << " | Pop wants: " << (int)(politics.population_economic_pref * 100)
+              << " | Opposition: " << (int)(politics.opposition_ideology * 100)
+              << " | Alignment: " << (politics.ideology_alignment_bonus >= 0 ? "+" : "")
+              << (int)(politics.ideology_alignment_bonus * 100) << "%" << std::endl;
     std::cout << "----------------------" << std::endl;
 }
