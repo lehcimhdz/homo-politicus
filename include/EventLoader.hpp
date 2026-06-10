@@ -30,6 +30,12 @@ namespace EventLoader {
     // Aplica todos los eventos posibles este turno
     void tick(std::vector<ScriptedEvent>& events, Country& c,
               std::vector<PendingDecision>& queue, std::mt19937& rng, int currentTurn);
+
+    // Carga un archivo YAML con lista `events:` y devuelve los eventos parseados.
+    std::vector<ScriptedEvent> loadFile(const std::string& path);
+
+    // Carga todos los archivos *.yaml de un directorio.
+    std::vector<ScriptedEvent> loadDir(const std::string& dirPath);
 }
 
 #endif

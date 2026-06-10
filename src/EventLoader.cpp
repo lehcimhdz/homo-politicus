@@ -1,6 +1,9 @@
 #include "EventLoader.hpp"
 #include "ExpressionEvaluator.hpp"
+#include "MiniYaml.hpp"
 #include <iostream>
+#include <filesystem>
+#include <algorithm>
 
 namespace EventLoader {
 
@@ -89,6 +92,59 @@ void tick(std::vector<ScriptedEvent>& events, Country& c,
         if (e.has_branch) queue.push_back(e.branch);
         e.last_fired_turn = currentTurn;
     }
+}
+
+static double parseDouble(const std::string& s, double def) {
+    try { return std::stod(s); } catch (...) { return def; }
+}
+
+std::vector<ScriptedEvent> loadFile(const std::string& path) {
+    std::vector<ScriptedEvent> out;
+    std::vector<MiniYaml::KV> items;
+    if (!MiniYaml::loadList(path, "events", items)) return out;
+    for (const auto& kv : items) {
+        ScriptedEvent e;
+        auto getS = [&](const std::string& k, const std::string& d = "") {
+            auto it = kv.find(k); return it == kv.end() ? d : it->second;
+        };
+        e.id = getS("id");
+        if (e.id.empty()) continue;
+        e.name_es = getS("name_es", e.id);
+        e.trigger_expr = getS("trigger.expression");
+        e.prob_per_turn = parseDouble(getS("probability_per_turn"), 0.05);
+        e.cooldown_turns = (int)parseDouble(getS("cooldown_turns"), 0);
+        e.flavor_text_es = getS("flavor_text_es");
+        // Efectos: las claves "effects.<path>" se mapean a (path, op_value)
+        for (const auto& [k, v] : kv) {
+            const std::string prefix = "effects.";
+            if (k.compare(0, prefix.size(), prefix) == 0) {
+                std::string path = k.substr(prefix.size());
+                std::string val = v;
+                if (val.size() >= 2 && val.front() == '"' && val.back() == '"')
+                    val = val.substr(1, val.size() - 2);
+                e.effects.push_back({path, val});
+            }
+        }
+        out.push_back(e);
+    }
+    return out;
+}
+
+std::vector<ScriptedEvent> loadDir(const std::string& dirPath) {
+    std::vector<ScriptedEvent> out;
+    namespace fs = std::filesystem;
+    if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) return out;
+    std::vector<fs::path> files;
+    for (const auto& entry : fs::directory_iterator(dirPath)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".yaml")
+            files.push_back(entry.path());
+    }
+    std::sort(files.begin(), files.end());
+    for (const auto& p : files) {
+        auto evs = loadFile(p.string());
+        out.insert(out.end(), evs.begin(), evs.end());
+    }
+    return out;
 }
 
 } // namespace EventLoader

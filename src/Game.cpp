@@ -58,6 +58,29 @@ void Game::registerCommands() {
         }
         std::cout << "=================================" << std::endl;
     };
+    commandHandlers["events_load"] = [this]() {
+        std::string dir;
+        std::cin >> dir;
+        if (dir.empty()) {
+            std::cout << ">> Usage: events_load <directory>" << std::endl;
+            return;
+        }
+        auto loaded = EventLoader::loadDir(dir);
+        if (loaded.empty()) {
+            std::cout << ">> EVENTS_LOAD: no se encontraron eventos en " << dir << std::endl;
+            return;
+        }
+        scriptedEvents = loaded;
+        std::cout << ">> EVENTS_LOAD: " << loaded.size() << " eventos cargados desde " << dir << std::endl;
+    };
+    commandHandlers["events_list"] = [this]() {
+        std::cout << "\n=== EVENTOS CARGADOS (" << scriptedEvents.size() << ") ===" << std::endl;
+        for (const auto& e : scriptedEvents) {
+            std::cout << "  " << e.id << " - " << e.name_es
+                      << " (prob " << e.prob_per_turn << ", cd " << e.cooldown_turns << ")" << std::endl;
+        }
+        std::cout << "==============================" << std::endl;
+    };
     commandHandlers["advisors"] = []() {
         std::cout << "\n=== ASESORES DEL GABINETE ===" << std::endl;
         for (const auto& a : Advisors::all())
