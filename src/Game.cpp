@@ -3187,6 +3187,41 @@ void Game::update() {
         }
     }
 
+    // --- CROSS-SYSTEM FEEDBACK: SECURITY → ECONOMIC ---
+    {
+        // War/conflict drains economy
+        if (playerCountry.security.war_active) {
+            playerCountry.economy.gdp *= (1.0 - 0.03 * (1.0 + playerCountry.security.war_duration * 0.1));
+            playerCountry.infra.fdi_inflow_gdp *= 0.5; // FDI flees war zones
+            playerCountry.economy.annual_visitors = (int)(playerCountry.economy.annual_visitors * 0.3);
+            playerCountry.economy.debt_to_gdp_ratio += 0.02;
+        }
+
+        // High crime deters investment and tourism
+        if (playerCountry.security.homicide_rate > 20.0) {
+            double crime_factor = (playerCountry.security.homicide_rate - 20.0) / 100.0;
+            if (crime_factor > 0.3) crime_factor = 0.3;
+            playerCountry.economy.tourist_safety -= crime_factor * 0.1;
+            if (playerCountry.economy.tourist_safety < 0.1) playerCountry.economy.tourist_safety = 0.1;
+            playerCountry.infra.fdi_inflow_gdp -= crime_factor * 0.01;
+            if (playerCountry.infra.fdi_inflow_gdp < 0.0) playerCountry.infra.fdi_inflow_gdp = 0.0;
+            playerCountry.welfare.brain_drain += crime_factor * 0.01;
+        }
+
+        // Sanctions cascade into inflation and reserves
+        if (playerCountry.economy.sanctions_active) {
+            playerCountry.economy.inflation += playerCountry.economy.sanctions_tier * 0.01;
+            playerCountry.economy.international_reserves -= playerCountry.economy.international_reserves * (playerCountry.economy.sanctions_tier * 0.01);
+            playerCountry.economy.trade_balance -= playerCountry.economy.gdp * playerCountry.economy.sanctions_tier * 0.005;
+        }
+
+        // Terrorism/conflict destabilizes markets
+        if (playerCountry.security.conflict_with_groups > 0.5) {
+            playerCountry.infra.investment_climate_index -= 0.02;
+            if (playerCountry.infra.investment_climate_index < 0.1) playerCountry.infra.investment_climate_index = 0.1;
+        }
+    }
+
     // --- CALCULATE DYNAMIC EXCHANGE RATE STABILITY ---
     // Stability depends on: Institutions (Autonomy) + War Chest (Reserves) + Fundamentals (Trade)
     double base_stability = 0.4 + (playerCountry.economy.central_bank_autonomy * 0.4);
