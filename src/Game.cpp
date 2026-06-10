@@ -5629,6 +5629,81 @@ void Game::update() {
                 playerCountry.security.invasion_prob += 0.05;
                 playerCountry.security.territorial_dispute_intensity += 0.1;
             }
+
+            // --- NEIGHBOR WAR SYSTEM ---
+            // Hostile neighbor with territorial claim may declare war
+            if (!neighbor.at_war && neighbor.has_territorial_claim
+                && neighbor.diplomatic_relations < -0.8
+                && neighbor.military_strength > playerCountry.security.military_spending_gdp * 20.0
+                && dist(rng) < 0.02) {
+                neighbor.at_war = true;
+                neighbor.diplomatic_relations = -1.0;
+                neighbor.trade_volume *= 0.1;
+                neighbor.sanctions_against_us = true;
+                playerCountry.security.war_active = true;
+                playerCountry.security.war_duration = 0;
+                playerCountry.security.equipment_readiness -= 0.1;
+                std::cout << "[WAR] " << neighbor.name << " has DECLARED WAR! Territorial invasion underway!" << std::endl;
+                std::cout << "[WAR] Trade collapses. Military mobilization required." << std::endl;
+            }
+
+            // Active war with neighbor
+            if (neighbor.at_war) {
+                playerCountry.security.war_duration++;
+                double war_expense = playerCountry.economy.gdp * 0.02;
+                playerCountry.economy.gdp -= war_expense;
+                playerCountry.security.war_cost += war_expense;
+                playerCountry.security.combat_stress_index += 0.03;
+                if (playerCountry.security.combat_stress_index > 1.0) playerCountry.security.combat_stress_index = 1.0;
+                playerCountry.politics.popularity -= 0.02 * playerCountry.security.combat_stress_index;
+
+                // Military outcome based on strength comparison
+                double our_power = playerCountry.security.military_spending_gdp * 30.0 * playerCountry.security.equipment_readiness;
+                double their_power = neighbor.military_strength * 0.8;
+                double battle_result = dist(rng);
+
+                if (battle_result < our_power / (our_power + their_power + 0.01)) {
+                    neighbor.military_strength -= 0.05;
+                    if (neighbor.military_strength < 0.1) neighbor.military_strength = 0.1;
+                    playerCountry.security.war_casualties += 50.0;
+                    std::cout << "[WAR] Our forces repel " << neighbor.name << " advance." << std::endl;
+
+                    // Peace treaty if they're weakened enough
+                    if (neighbor.military_strength < 0.2 || (playerCountry.security.combat_stress_index > 0.6 && dist(rng) < 0.3)) {
+                        neighbor.at_war = false;
+                        neighbor.diplomatic_relations = -0.3;
+                        neighbor.has_territorial_claim = false;
+                        neighbor.sanctions_against_us = false;
+                        neighbor.trade_volume = neighbor.gdp * 0.05;
+                        playerCountry.security.war_active = false;
+                        playerCountry.security.diplomatic_prestige += 0.1;
+                        std::cout << "[PEACE] " << neighbor.name << " accepts peace treaty. Territorial claim renounced." << std::endl;
+                    }
+                } else {
+                    playerCountry.security.equipment_readiness -= 0.03;
+                    playerCountry.security.territorial_dispute_intensity += 0.05;
+                    playerCountry.security.war_casualties += 150.0;
+                    if (playerCountry.security.equipment_readiness < 0.2) playerCountry.security.equipment_readiness = 0.2;
+                    std::cout << "[WAR] " << neighbor.name << " forces advance. Casualties mounting." << std::endl;
+
+                    // Forced peace if we're too weak
+                    if (playerCountry.security.equipment_readiness < 0.25 && playerCountry.security.combat_stress_index > 0.8) {
+                        neighbor.at_war = false;
+                        neighbor.diplomatic_relations = -0.5;
+                        neighbor.trade_volume = neighbor.gdp * 0.02;
+                        playerCountry.security.war_active = false;
+                        playerCountry.security.diplomatic_prestige -= 0.15;
+                        playerCountry.politics.popularity -= 0.1;
+                        std::cout << "[DEFEAT] Forced to accept unfavorable peace with " << neighbor.name << "." << std::endl;
+                    }
+                }
+
+                // Proxy conflicts: neighbor at war supports our non-state groups
+                if (dist(rng) < 0.15) {
+                    playerCountry.security.nsg_territorial_control += 0.02;
+                    std::cout << "[PROXY] " << neighbor.name << " funneling arms to rebel groups." << std::endl;
+                }
+            }
         }
 
         // --- BILATERAL TRADE EFFECTS ---
