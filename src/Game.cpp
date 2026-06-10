@@ -39,11 +39,15 @@ void Game::processEvents() {
         playerCountry.economy.tax_collection *= 1.10; // +10% revenue
         playerCountry.politics.popularity -= 0.05;    // -5% popularity
         playerCountry.economy.inflation += 0.01;      // +1% inflation
+        playerCountry.politics.economic_ideology -= 0.02; // Left shift
+        if (playerCountry.politics.economic_ideology < 0.0) playerCountry.politics.economic_ideology = 0.0;
         std::cout << ">> Taxes RAISED! Revenue up, Popularity down." << std::endl;
     }
     else if (command == "tax-") {
         playerCountry.economy.tax_collection *= 0.90; // -10% revenue
         playerCountry.politics.popularity += 0.03;    // +3% popularity
+        playerCountry.politics.economic_ideology += 0.02; // Right shift
+        if (playerCountry.politics.economic_ideology > 1.0) playerCountry.politics.economic_ideology = 1.0;
         std::cout << ">> Taxes LOWERED! Revenue down, Popularity up." << std::endl;
     }
     // --- BUDGET COMMANDS ---
@@ -1329,6 +1333,8 @@ void Game::processEvents() {
         playerCountry.politics.democratic_backsliding_index -= 0.01;
         if (playerCountry.politics.democratic_backsliding_index < 0.0) playerCountry.politics.democratic_backsliding_index = 0.0;
         playerCountry.security.diplomatic_prestige += 0.02;
+        playerCountry.politics.auth_dem_axis -= 0.02; // Democratic shift
+        if (playerCountry.politics.auth_dem_axis < 0.0) playerCountry.politics.auth_dem_axis = 0.0;
         // Risk: free press exposes government scandals
         playerCountry.security.document_leak_prob += 0.02;
         std::cout << ">> PRESS FREEDOM PROTECTED: Media independence strengthened." << std::endl;
@@ -1352,6 +1358,8 @@ void Game::processEvents() {
             if (playerCountry.security.press_freedom < 0.1) playerCountry.security.press_freedom = 0.1;
             playerCountry.politics.democratic_backsliding_index += 0.05;
             playerCountry.politics.authoritarianism_prob += 0.05;
+            playerCountry.politics.auth_dem_axis += 0.05; // Authoritarian shift
+            if (playerCountry.politics.auth_dem_axis > 1.0) playerCountry.politics.auth_dem_axis = 1.0;
             std::cout << ">> STATE OF EMERGENCY DECLARED: Protests suppressed. Rights suspended." << std::endl;
             std::cout << "   (Stability +, Freedom -, Democracy -, International Scrutiny +)" << std::endl;
         }
@@ -1571,6 +1579,8 @@ void Game::processEvents() {
         playerCountry.welfare.hospitals += 5;
         playerCountry.welfare.mental_health_index += 0.02;
         playerCountry.politics.popularity += 0.03;
+        playerCountry.politics.economic_ideology -= 0.02; // Left shift (state welfare)
+        if (playerCountry.politics.economic_ideology < 0.0) playerCountry.politics.economic_ideology = 0.0;
         std::cout << ">> HEALTHCARE EXPANDED: Coverage now " << (int)(playerCountry.welfare.health_coverage * 100)
                   << "%. Cost: $" << (int)(cost / 1000000.0) << "M" << std::endl;
     }
@@ -6313,6 +6323,45 @@ void Game::update() {
             playerCountry.politics.revolution_prob -= 0.02;
             if (playerCountry.politics.revolution_prob < 0.0)
                 playerCountry.politics.revolution_prob = 0.0;
+        }
+    }
+
+    // --- IDEOLOGY ALIGNMENT SCORING ---
+    {
+        // Population preferences drift based on economic conditions
+        if (playerCountry.economy.in_recession || playerCountry.welfare.unemployment_rate > 0.1) {
+            // During hardship, population shifts left (wants state help)
+            playerCountry.politics.population_economic_pref -= 0.02;
+            if (playerCountry.politics.population_economic_pref < 0.1) playerCountry.politics.population_economic_pref = 0.1;
+        } else if (playerCountry.economy.growth_rate > 0.04) {
+            // During prosperity, population tolerates free market
+            playerCountry.politics.population_economic_pref += 0.01;
+            if (playerCountry.politics.population_economic_pref > 0.9) playerCountry.politics.population_economic_pref = 0.9;
+        }
+
+        // Ideology alignment → popularity bonus/penalty
+        double econ_gap = std::abs(playerCountry.politics.economic_ideology - playerCountry.politics.population_economic_pref);
+        double social_gap = std::abs(playerCountry.politics.social_ideology - playerCountry.politics.population_social_pref);
+        double total_gap = (econ_gap + social_gap) / 2.0;
+        playerCountry.politics.ideology_alignment_bonus = (0.3 - total_gap) * 0.1; // +0.03 when aligned, -0.02 when misaligned
+        playerCountry.politics.popularity += playerCountry.politics.ideology_alignment_bonus;
+
+        // Opposition adapts: moves opposite to maximize political distance
+        playerCountry.politics.opposition_ideology += (0.5 - playerCountry.politics.economic_ideology) * 0.05;
+        if (playerCountry.politics.opposition_ideology < 0.1) playerCountry.politics.opposition_ideology = 0.1;
+        if (playerCountry.politics.opposition_ideology > 0.9) playerCountry.politics.opposition_ideology = 0.9;
+
+        // Polarization increases when ideological distance is high
+        double opposition_distance = std::abs(playerCountry.politics.economic_ideology - playerCountry.politics.opposition_ideology);
+        if (opposition_distance > 0.5) {
+            playerCountry.politics.polarization_index += 0.005;
+            if (playerCountry.politics.polarization_index > 1.0) playerCountry.politics.polarization_index = 1.0;
+        }
+
+        // Auth/dem axis affects institutional quality
+        if (playerCountry.politics.auth_dem_axis > 0.6) {
+            playerCountry.politics.democratic_backsliding_index += 0.005;
+            if (playerCountry.politics.democratic_backsliding_index > 1.0) playerCountry.politics.democratic_backsliding_index = 1.0;
         }
     }
 
