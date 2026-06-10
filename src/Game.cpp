@@ -2805,9 +2805,18 @@ void Game::update() {
                          * (1.0 + fta_export_bonus);
 
     // (b) Tourism — invisible exports: foreign visitors spending domestic FX
+    // Visa restrictiveness dampens international arrivals; domestic unaffected
+    double visa_dampening = 1.0 - playerCountry.economy.visa_restrictiveness * 0.4;
+    playerCountry.economy.visitors_international = (int)(playerCountry.economy.visitors_international * visa_dampening);
+    if (playerCountry.economy.visitors_international < 0) playerCountry.economy.visitors_international = 0;
+    playerCountry.economy.annual_visitors = playerCountry.economy.visitors_international
+                                          + playerCountry.economy.visitors_domestic;
+    // Seasonality: high seasonality means revenue is volatile — effective spending drops
+    double seasonality_factor = 1.0 - playerCountry.economy.tourism_seasonality * 0.15;
     double tourism_exports = (double)playerCountry.economy.annual_visitors
                            * playerCountry.economy.average_tourist_spending
-                           * playerCountry.economy.tourist_safety;
+                           * playerCountry.economy.tourist_safety
+                           * seasonality_factor;
 
     // (c) Agricultural exports — boosted by FTAs, dampened by strong currency
     double agri_exports = playerCountry.economy.gdp * 0.04

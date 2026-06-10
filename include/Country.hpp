@@ -155,6 +155,10 @@ struct EconomicFinancialSystem {
 
     // Tourism
     int annual_visitors = 500000;
+    int visitors_international = 300000;  // Foreign arrivals (subset of total)
+    int visitors_domestic = 200000;       // Internal tourism
+    double visa_restrictiveness = 0.3;    // 0=visa-free for most, 1=highly restricted entry
+    double tourism_seasonality = 0.4;     // Peak/low season spread (0=flat, 1=extreme)
     double average_tourist_spending = 1000.0;
     double tourist_safety = 0.8;
     double heritage_preservation = 0.7;
