@@ -6360,6 +6360,154 @@ void Game::update() {
         }
     }
 
+    // --- SCANDAL SYSTEM ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // SCANDAL GENERATION: Each turn, roll for new scandals
+        if (playerCountry.politics.scandal_corruption_severity == 0.0
+            && dist(rng) < playerCountry.politics.administrative_corruption * 0.1) {
+            std::uniform_real_distribution<double> sev(0.2, 0.8);
+            playerCountry.politics.scandal_corruption_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] CORRUPTION: Government officials caught in embezzlement scheme! Severity: "
+                      << (int)(playerCountry.politics.scandal_corruption_severity * 100) << "%" << std::endl;
+        }
+        if (playerCountry.politics.scandal_sex_severity == 0.0 && dist(rng) < 0.02) {
+            std::uniform_real_distribution<double> sev(0.1, 0.6);
+            playerCountry.politics.scandal_sex_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] SEX: Leader's personal scandal exposed by media!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_financial_severity == 0.0
+            && dist(rng) < playerCountry.politics.grand_corruption * 0.08) {
+            std::uniform_real_distribution<double> sev(0.3, 0.9);
+            playerCountry.politics.scandal_financial_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] FINANCIAL: Insider trading and tax evasion uncovered! Severity: "
+                      << (int)(playerCountry.politics.scandal_financial_severity * 100) << "%" << std::endl;
+        }
+        if (playerCountry.politics.scandal_violence_severity == 0.0 && dist(rng) < 0.01) {
+            std::uniform_real_distribution<double> sev(0.3, 0.7);
+            playerCountry.politics.scandal_violence_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] VIOLENCE: Assault allegations against high-ranking official!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_substance_severity == 0.0 && dist(rng) < 0.015) {
+            std::uniform_real_distribution<double> sev(0.1, 0.5);
+            playerCountry.politics.scandal_substance_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] SUBSTANCE: Drug use in government circles exposed!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_treason_severity == 0.0
+            && dist(rng) < playerCountry.security.espionage_budget / 10000000.0 * 0.05) {
+            std::uniform_real_distribution<double> sev(0.5, 1.0);
+            playerCountry.politics.scandal_treason_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] TREASON: Espionage links to foreign power discovered! Severity: "
+                      << (int)(playerCountry.politics.scandal_treason_severity * 100) << "%" << std::endl;
+        }
+
+        // SCANDAL EXPOSURE: Cover-up vs press freedom
+        double total_scandal_severity = playerCountry.politics.scandal_corruption_severity
+                                      + playerCountry.politics.scandal_sex_severity
+                                      + playerCountry.politics.scandal_financial_severity
+                                      + playerCountry.politics.scandal_violence_severity
+                                      + playerCountry.politics.scandal_substance_severity
+                                      + playerCountry.politics.scandal_treason_severity;
+
+        if (total_scandal_severity > 0.0) {
+            // Cover-up attempt: success depends on media control vs press freedom
+            double cover_success = playerCountry.politics.cover_up_probability
+                                 * (1.0 - playerCountry.security.press_freedom);
+            if (dist(rng) > cover_success) {
+                // Cover-up fails: media exposure spikes
+                playerCountry.politics.media_exposure_intensity = total_scandal_severity * playerCountry.security.press_freedom;
+                if (playerCountry.politics.media_exposure_intensity > 1.0) playerCountry.politics.media_exposure_intensity = 1.0;
+            } else {
+                playerCountry.politics.media_exposure_intensity *= 0.7; // Suppressed, slowly fading
+            }
+
+            // INVESTIGATION: Prosecutor may investigate
+            double investigation_prob = playerCountry.politics.anticorruption_enforcement
+                                      * (1.0 - playerCountry.politics.impunity) * 0.2;
+            if (dist(rng) < investigation_prob && total_scandal_severity > 0.3) {
+                std::cout << "[INVESTIGATION] Prosecutor opens formal inquiry into government scandal." << std::endl;
+                // Conviction chance
+                double conviction_prob = investigation_prob * 0.5;
+                if (dist(rng) < conviction_prob) {
+                    std::cout << "[CONVICTION] Official found guilty! Scandal partially resolved." << std::endl;
+                    // Reduce largest active scandal
+                    if (playerCountry.politics.scandal_corruption_severity > 0.3)
+                        playerCountry.politics.scandal_corruption_severity *= 0.3;
+                    else if (playerCountry.politics.scandal_financial_severity > 0.3)
+                        playerCountry.politics.scandal_financial_severity *= 0.3;
+                    playerCountry.politics.popularity += 0.02; // Justice works
+                    playerCountry.politics.trust_in_justice += 0.02;
+                }
+            }
+
+            // POPULARITY IMPACT: Scandals erode support
+            double scandal_impact = total_scandal_severity * playerCountry.politics.media_exposure_intensity * 0.05;
+            // Scandal fatigue: diminishing returns
+            if (playerCountry.politics.scandal_fatigue_turns > 3) {
+                scandal_impact *= 0.5;
+            }
+            playerCountry.politics.popularity -= scandal_impact;
+            playerCountry.politics.scandal_fatigue_turns++;
+
+            // CASCADING EFFECTS by scandal type
+            if (playerCountry.politics.scandal_corruption_severity > 0.3) {
+                playerCountry.infra.fdi_inflow_gdp -= 0.002;
+                if (playerCountry.infra.fdi_inflow_gdp < 0.0) playerCountry.infra.fdi_inflow_gdp = 0.0;
+                playerCountry.politics.corruption_perception_index -= 1.0;
+                if (playerCountry.politics.corruption_perception_index < 0.0) playerCountry.politics.corruption_perception_index = 0.0;
+            }
+            if (playerCountry.politics.scandal_financial_severity > 0.3) {
+                playerCountry.infra.capital_flight_risk += 0.01;
+                playerCountry.economy.exchange_rate_stability -= 0.01;
+            }
+            if (playerCountry.politics.scandal_violence_severity > 0.3) {
+                playerCountry.welfare.un_score -= 0.02;
+                playerCountry.economy.international_sanctions_prob += 0.01;
+            }
+            if (playerCountry.politics.scandal_treason_severity > 0.3) {
+                playerCountry.security.diplomatic_prestige -= 0.03;
+                playerCountry.security.diplomatic_crisis_active = true;
+                playerCountry.security.diplomatic_crisis_duration = 3;
+            }
+
+            // SCANDAL RESOLUTION: Scandals fade after 4-6 turns
+            auto decay_scandal = [&](double& severity) {
+                if (severity > 0.0) {
+                    severity -= 0.15;
+                    if (severity <= 0.05) {
+                        severity = 0.0;
+                        playerCountry.politics.active_scandals--;
+                        if (playerCountry.politics.active_scandals < 0) playerCountry.politics.active_scandals = 0;
+                    }
+                }
+            };
+            decay_scandal(playerCountry.politics.scandal_corruption_severity);
+            decay_scandal(playerCountry.politics.scandal_sex_severity);
+            decay_scandal(playerCountry.politics.scandal_financial_severity);
+            decay_scandal(playerCountry.politics.scandal_violence_severity);
+            decay_scandal(playerCountry.politics.scandal_substance_severity);
+            decay_scandal(playerCountry.politics.scandal_treason_severity);
+
+            // Display active scandals summary
+            if (playerCountry.politics.active_scandals > 0) {
+                std::cout << "[SCANDALS] Active: " << playerCountry.politics.active_scandals
+                          << " | Exposure: " << (int)(playerCountry.politics.media_exposure_intensity * 100)
+                          << "% | Impact on popularity: -" << (int)(scandal_impact * 100) << "%" << std::endl;
+            }
+        } else {
+            // No active scandals: reset fatigue
+            playerCountry.politics.scandal_fatigue_turns = 0;
+            playerCountry.politics.media_exposure_intensity *= 0.5; // Fade
+        }
+    }
+
     // --- IDEOLOGY ALIGNMENT SCORING ---
     {
         // Population preferences drift based on economic conditions
