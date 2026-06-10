@@ -54,6 +54,7 @@ void MapView::ensurePopDots(int count) const {
 void MapView::update(float dt) {
     t_ += dt;
     isoNpcs_.update(dt);
+    isoVehicles_.update(dt);
 }
 
 static sf::Color relationColor(double rel, bool atWar) {
@@ -138,11 +139,14 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
             isoWorld_.configure(homeSilhouette_, isoCam_, homePos_, homeRadius_, 22);
             isoBuildings_.configure(isoWorld_, homeSilhouette_, homePos_, homeRadius_, c);
             isoNpcs_.configure(isoBuildings_, c);
+            isoVehicles_.configure(isoBuildings_, c);
             isoConfigured_ = true;
         }
         isoBuildings_.updateForCountry(c);
         isoWorld_.draw(win, isoCam_, c, nightAmount);
+        isoVehicles_.drawRoads(win, isoCam_);
         isoNpcs_.draw(win, isoCam_, nightAmount);
+        isoVehicles_.drawVehicles(win, isoCam_, nightAmount);
         isoBuildings_.draw(win, isoCam_, c, nightAmount);
         auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
         // Population dots: cantidad escalada por urbanizacion, micro-movimiento.
