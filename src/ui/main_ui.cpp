@@ -11,8 +11,16 @@
 #include "ui/AudioSystem.hpp"
 #include "ui/MainMenu.hpp"
 #include "ui/GameOverScreen.hpp"
+#include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
+static const std::string LOCALES_DIR = "/Users/michelcano/Documents/Repositorios/homo-politicus-game/content/locales";
+static std::string tr(const std::string& key, const std::string& fallback) {
+    if (Localization::currentLanguage().empty()) return fallback;
+    std::string v = Localization::tr(key);
+    if (v.find("[missing:") != std::string::npos) return fallback;
+    return v;
+}
 enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 
 // Layout (1280x800):
@@ -104,6 +112,7 @@ int main(int argc, char** argv) {
     sf::Font font;
     bool fontOk = loadFontFallback(font);
 
+    Localization::load(LOCALES_DIR, "es");
     UIBridge bridge;
     Dashboard dashboard;
     MapView mapView;
@@ -210,6 +219,11 @@ int main(int argc, char** argv) {
                     audio.setEnabled(!audio.isEnabled());
                     lastActionFeedback = audio.isEnabled() ? ">> Audio ON" : ">> Audio OFF";
                 }
+                if (kp->code == sf::Keyboard::Key::L) {
+                    std::string next = Localization::currentLanguage() == "en" ? "es" : "en";
+                    Localization::load(LOCALES_DIR, next);
+                    lastActionFeedback = ">> Idioma: " + next;
+                }
                 if (kp->code == sf::Keyboard::Key::Num1) currentTab = Tab::Dashboard;
                 if (kp->code == sf::Keyboard::Key::Num2) currentTab = Tab::Map;
                 if (kp->code == sf::Keyboard::Key::Num3) currentTab = Tab::Action;
@@ -244,10 +258,10 @@ int main(int argc, char** argv) {
             const Country& c = bridge.country();
             window.draw(makeText(font, "HOMO POLITICUS", 24, kAccent, 16, 16));
             std::ostringstream turnStr;
-            turnStr << "Turno " << bridge.turn();
+            turnStr << tr("ui.turn_prefix", "Turno") << " " << bridge.turn();
             window.draw(makeText(font, turnStr.str(), 18, kMuted, 240, 22));
 
-            window.draw(makeText(font, "Pop:", 16, kMuted, 380, 25));
+            window.draw(makeText(font, tr("ui.pop_short", "Pop:"), 16, kMuted, 380, 25));
             window.draw(makeText(font, fmtPct(c.politics.popularity), 20, popularityColor(c.politics.popularity), 425, 22));
             drawProgressBar(window, 380, 47, 130, 6, c.politics.popularity, popularityColor(c.politics.popularity));
 
