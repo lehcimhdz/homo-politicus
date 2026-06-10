@@ -4,6 +4,7 @@
 #include "ScenarioLoader.hpp"
 #include "LeaderLoader.hpp"
 #include "Advisor.hpp"
+#include "Localization.hpp"
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
@@ -57,6 +58,22 @@ void Game::registerCommands() {
                       << " — " << pendingDecisions[i].prompt << std::endl;
         }
         std::cout << "=================================" << std::endl;
+    };
+    commandHandlers["language"] = []() {
+        std::string lang;
+        std::cin >> lang;
+        if (lang.empty()) {
+            std::cout << ">> Usage: language <es|en>" << std::endl;
+            std::cout << "   Actual: " << Localization::currentLanguage() << std::endl;
+            return;
+        }
+        std::string dir = "/Users/michelcano/Documents/Repositorios/homo-politicus-game/content/locales";
+        if (Localization::load(dir, lang)) {
+            std::cout << ">> Idioma cambiado a: " << lang << std::endl;
+            std::cout << "   " << Localization::tr("ui.welcome") << std::endl;
+        } else {
+            std::cout << ">> LANGUAGE: no se pudo cargar " << dir << "/" << lang << ".yaml" << std::endl;
+        }
     };
     commandHandlers["events_load"] = [this]() {
         std::string dir;
@@ -8159,21 +8176,26 @@ void Game::checkGameOver() {
 }
 
 void Game::renderEndScreen() {
-    std::cout << "\n=================== GAME OVER ===================" << std::endl;
+    std::string header = Localization::currentLanguage().empty()
+        ? "GAME OVER" : Localization::tr("ui.game_over_header");
+    std::cout << "\n=================== " << header << " ===================" << std::endl;
     std::string label;
+    auto fallback = [&](const std::string& key, const std::string& def) {
+        return Localization::currentLanguage().empty() ? def : Localization::tr(key);
+    };
     switch (endCondition) {
-        case EndCondition::COUP_SUCCESS:        label = "GOLPE MILITAR EXITOSO"; break;
-        case EndCondition::IMPEACHMENT:         label = "DESTITUCIÓN POR EL CONGRESO"; break;
-        case EndCondition::REVOLUTION:          label = "REVOLUCIÓN POPULAR"; break;
-        case EndCondition::LAWFARE_REMOVAL:     label = "INHABILITACIÓN JUDICIAL (lawfare)"; break;
-        case EndCondition::ELECTION_LOSS:       label = "DERROTA ELECTORAL"; break;
-        case EndCondition::EXILE:               label = "EXILIO BAJO PRESIÓN INTERNACIONAL"; break;
-        case EndCondition::ASSASSINATION:       label = "MAGNICIDIO"; break;
-        case EndCondition::NUCLEAR_ANNIHILATION:label = "ANIQUILACIÓN NUCLEAR"; break;
-        case EndCondition::TERM_COMPLETED:      label = "MANDATO COMPLETADO"; break;
-        default:                                label = "FIN"; break;
+        case EndCondition::COUP_SUCCESS:         label = fallback("end_conditions.COUP_SUCCESS",         "GOLPE MILITAR EXITOSO"); break;
+        case EndCondition::IMPEACHMENT:          label = fallback("end_conditions.IMPEACHMENT",          "DESTITUCION POR EL CONGRESO"); break;
+        case EndCondition::REVOLUTION:           label = fallback("end_conditions.REVOLUTION",           "REVOLUCION POPULAR"); break;
+        case EndCondition::LAWFARE_REMOVAL:      label = fallback("end_conditions.LAWFARE_REMOVAL",      "INHABILITACION JUDICIAL"); break;
+        case EndCondition::ELECTION_LOSS:        label = fallback("end_conditions.ELECTION_LOSS",        "DERROTA ELECTORAL"); break;
+        case EndCondition::EXILE:                label = fallback("end_conditions.EXILE",                "EXILIO"); break;
+        case EndCondition::ASSASSINATION:        label = fallback("end_conditions.ASSASSINATION",        "MAGNICIDIO"); break;
+        case EndCondition::NUCLEAR_ANNIHILATION: label = fallback("end_conditions.NUCLEAR_ANNIHILATION", "ANIQUILACION NUCLEAR"); break;
+        case EndCondition::TERM_COMPLETED:       label = fallback("end_conditions.TERM_COMPLETED",       "MANDATO COMPLETADO"); break;
+        default:                                 label = "FIN"; break;
     }
-    std::cout << "Condición: " << label << std::endl;
+    std::cout << "Condicion: " << label << std::endl;
     std::cout << "Turnos en el poder: " << turnCount << std::endl;
     double avg = turnCount > 0 ? popularitySum / turnCount : playerCountry.politics.popularity;
     std::cout << "Popularidad media: " << (int)(avg * 100) << "%" << std::endl;
