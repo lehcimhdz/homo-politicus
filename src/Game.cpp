@@ -1334,6 +1334,58 @@ void Game::processEvents() {
         std::cout << ">> PRESS FREEDOM PROTECTED: Media independence strengthened." << std::endl;
         std::cout << "   (Pluralism +, Democracy +, Prestige +, Leak Risk +)" << std::endl;
     }
+    // --- EMERGENCY & REPRESSION COMMANDS ---
+    else if (command == "emergency") {
+        if (playerCountry.politics.state_of_emergency_active) {
+            playerCountry.politics.state_of_emergency_active = false;
+            playerCountry.politics.emergency_turns_elapsed = 0;
+            playerCountry.welfare.freedom_of_expression += 0.05;
+            playerCountry.security.press_freedom += 0.03;
+            std::cout << ">> STATE OF EMERGENCY LIFTED: Civil liberties restored." << std::endl;
+        } else {
+            playerCountry.politics.state_of_emergency_active = true;
+            playerCountry.politics.emergency_turns_elapsed = 0;
+            playerCountry.politics.protest_intensity *= 0.5; // Immediate suppression
+            playerCountry.welfare.freedom_of_expression -= 0.1;
+            if (playerCountry.welfare.freedom_of_expression < 0.1) playerCountry.welfare.freedom_of_expression = 0.1;
+            playerCountry.security.press_freedom -= 0.1;
+            if (playerCountry.security.press_freedom < 0.1) playerCountry.security.press_freedom = 0.1;
+            playerCountry.politics.democratic_backsliding_index += 0.05;
+            playerCountry.politics.authoritarianism_prob += 0.05;
+            std::cout << ">> STATE OF EMERGENCY DECLARED: Protests suppressed. Rights suspended." << std::endl;
+            std::cout << "   (Stability +, Freedom -, Democracy -, International Scrutiny +)" << std::endl;
+        }
+    }
+    else if (command == "riot_police") {
+        if (playerCountry.politics.protest_intensity < 0.1) {
+            std::cout << ">> No significant protests to suppress." << std::endl;
+        } else {
+            playerCountry.politics.protest_intensity *= 0.6;
+            playerCountry.welfare.torture_index += 0.1;
+            playerCountry.welfare.forced_disappearances += 5;
+            playerCountry.welfare.freedom_of_expression -= 0.03;
+            playerCountry.welfare.un_score -= 0.03;
+            // Can backfire: if violence too high, protests intensify
+            std::uniform_real_distribution<> dist01(0.0, 1.0);
+            if (dist01(rng) < 0.3) {
+                playerCountry.politics.protest_intensity += 0.2;
+                playerCountry.politics.polarization_index += 0.05;
+                std::cout << ">> RIOT POLICE BACKFIRE: Brutality footage goes viral! Protests intensify." << std::endl;
+            } else {
+                std::cout << ">> RIOT POLICE DEPLOYED: Protests suppressed through force." << std::endl;
+            }
+            std::cout << "   (Protest -, Human Rights -, UN Score -, Backfire Risk)" << std::endl;
+        }
+    }
+    else if (command == "curfew") {
+        playerCountry.politics.protest_intensity *= 0.7;
+        playerCountry.economy.gdp *= 0.995; // Economic cost of restricted movement
+        playerCountry.welfare.freedom_of_expression -= 0.02;
+        playerCountry.welfare.mental_health_index -= 0.02;
+        playerCountry.economy.annual_visitors = (int)(playerCountry.economy.annual_visitors * 0.9);
+        std::cout << ">> CURFEW IMPOSED: Streets cleared. Economic activity reduced." << std::endl;
+        std::cout << "   (Protest -, GDP -, Freedom -, Tourism -, Mental Health -)" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
