@@ -5096,6 +5096,52 @@ void Game::update() {
                                                 + playerCountry.politics.judicial_independence * 0.3;
     if (playerCountry.politics.veto_player_strength > 1.0) playerCountry.politics.veto_player_strength = 1.0;
 
+    // --- LEGISLATIVE CRISIS (Congressional Blockade / Government Shutdown) ---
+    if (playerCountry.politics.legislative_crisis_active) {
+        playerCountry.politics.legislative_crisis_duration--;
+
+        // Government shutdown: public services degrade
+        playerCountry.welfare.health_coverage -= 0.01;
+        if (playerCountry.welfare.health_coverage < 0.1)
+            playerCountry.welfare.health_coverage = 0.1;
+
+        // Budget freeze: infrastructure maintenance drops
+        playerCountry.infra.maintenance_level -= 0.02;
+        if (playerCountry.infra.maintenance_level < 0.2)
+            playerCountry.infra.maintenance_level = 0.2;
+
+        // No new legislation possible
+        playerCountry.politics.pending_bills += 3; // Bills pile up
+
+        // GDP slowdown from governance paralysis
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.005;
+
+        // Popularity hit: government looks dysfunctional
+        playerCountry.politics.popularity -= 0.025;
+
+        // Credit rating agencies worried
+        playerCountry.economy.debt_to_gdp_ratio += 0.003;
+
+        std::cout << "[!!] LEGISLATIVE CRISIS (Turn " << (playerCountry.politics.legislative_crisis_duration + 1)
+                  << " remaining): Government shutdown. " << playerCountry.politics.pending_bills
+                  << " bills stalled." << std::endl;
+
+        if (playerCountry.politics.legislative_crisis_duration <= 0) {
+            playerCountry.politics.legislative_crisis_active = false;
+            std::cout << "[INFO] LEGISLATIVE CRISIS RESOLVED: Compromise reached. Government reopens." << std::endl;
+        }
+    } else {
+        if (playerCountry.politics.congressional_support < 0.3
+            && dist(rng) < playerCountry.politics.law_blockade_prob) {
+            playerCountry.politics.legislative_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 4);
+            playerCountry.politics.legislative_crisis_duration = dur_dist(rng);
+            std::cout << "[!!] LEGISLATIVE CRISIS: Congress blocks all executive agenda! "
+                      << "Government shutdown begins. Support: "
+                      << (int)(playerCountry.politics.congressional_support * 100) << "%" << std::endl;
+        }
+    }
+
     // --- POLARIZATION DYNAMICS ---
     // Derive composite polarization from sub-dimensions
     // Poverty and inequality drive economic polarization

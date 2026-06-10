@@ -253,6 +253,8 @@ struct PoliticalInstitutionalSystem {
     int    opposition_seats = 40;              // Opposition seat count (out of 100)
     double veto_player_strength = 0.3;         // Capacity of minorities to block legislation (0–1)
     double law_blockade_prob = 0.2;
+    bool legislative_crisis_active = false;
+    int legislative_crisis_duration = 0;
     double filibuster_usage = 0.1;             // Rate of procedural obstruction
     double presidential_veto_prob = 0.05;      // Probability executive vetoes own coalition's bill
     double party_fragmentation = 0.4;
