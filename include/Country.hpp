@@ -314,6 +314,10 @@ struct PowerSecuritySystem {
     double geopolitical_rent = 0.0;            // Aid/investment received for alignment (USD)
 
     double mass_migration_prob = 0.1;
+    bool migration_crisis_active = false;
+    int migration_wave_duration = 0;
+    double refugee_inflow = 0.0;               // Current wave inflow per turn
+
     double emigration_push_index = 0.3;        // Domestic conditions driving emigration (0–1)
     double refugee_inflow_prob = 0.05;         // Probability of large refugee inflow
     int    refugee_population = 0;             // Current refugees hosted

@@ -4248,6 +4248,60 @@ void Game::update() {
         std::cout << "        Long-term contamination: radiation will persist for many turns." << std::endl;
     }
 
+    // --- MASS MIGRATION CRISIS ---
+    if (playerCountry.security.migration_crisis_active) {
+        playerCountry.security.migration_wave_duration--;
+
+        // Refugee inflow each turn
+        double inflow = playerCountry.security.refugee_inflow * (1.0 - playerCountry.security.migration_policy_restrictiveness);
+        playerCountry.security.refugee_population += (int)inflow;
+        playerCountry.welfare.population += (int)inflow;
+
+        // Welfare strain: hospitals, housing, services
+        playerCountry.welfare.health_coverage -= 0.01;
+        if (playerCountry.welfare.health_coverage < 0.1) playerCountry.welfare.health_coverage = 0.1;
+        playerCountry.welfare.unemployment_rate += 0.005;
+
+        // Social tension
+        playerCountry.welfare.interreligious_tension += 0.02;
+        if (playerCountry.welfare.interreligious_tension > 1.0)
+            playerCountry.welfare.interreligious_tension = 1.0;
+        playerCountry.politics.polarization_index += 0.02;
+
+        // But also economic potential if economy is strong
+        if (playerCountry.welfare.unemployment_rate < 0.08) {
+            playerCountry.economy.gdp += inflow * 5000.0; // Each refugee contributes some GDP
+        }
+
+        // Popularity depends on public opinion
+        if (playerCountry.politics.polarization_index > 0.6) {
+            playerCountry.politics.popularity -= 0.02; // Xenophobic backlash
+        } else {
+            playerCountry.politics.popularity -= 0.005; // Mild concern
+        }
+
+        std::cout << "[!!] MIGRATION CRISIS (Turn " << (playerCountry.security.migration_wave_duration + 1)
+                  << " remaining): Refugees hosted: " << playerCountry.security.refugee_population
+                  << ". Social tension rising." << std::endl;
+
+        if (playerCountry.security.migration_wave_duration <= 0) {
+            playerCountry.security.migration_crisis_active = false;
+            std::cout << "[INFO] MIGRATION WAVE SUBSIDES: " << playerCountry.security.refugee_population
+                      << " refugees now integrated into society." << std::endl;
+        }
+    } else {
+        if (dist(rng) < playerCountry.security.mass_migration_prob) {
+            playerCountry.security.migration_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 5);
+            playerCountry.security.migration_wave_duration = dur_dist(rng);
+            std::uniform_real_distribution<double> flow_dist(10000.0, 200000.0);
+            playerCountry.security.refugee_inflow = flow_dist(rng);
+            std::cout << "[!!] MASS MIGRATION CRISIS: Refugee wave incoming! ~"
+                      << (int)playerCountry.security.refugee_inflow << " per turn for "
+                      << playerCountry.security.migration_wave_duration << " turns." << std::endl;
+        }
+    }
+
     // Soft power: education + heritage + diplomacy
     playerCountry.security.soft_power_index = playerCountry.welfare.educational_quality * 0.3
                                             + playerCountry.economy.heritage_preservation * 0.2
