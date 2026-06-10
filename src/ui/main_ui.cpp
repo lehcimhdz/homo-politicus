@@ -31,8 +31,6 @@ enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 //   SidebarR:  250 x 640
 //   BottomBar: 1280 x 100 (700..800)
 
-static const sf::Color kBg     = sf::Color(20, 22, 30);
-static const sf::Color kPanel  = sf::Color(32, 36, 48);
 static const sf::Color kBorder = sf::Color(60, 65, 80);
 static const sf::Color kText   = sf::Color(220, 222, 232);
 static const sf::Color kMuted  = sf::Color(150, 154, 168);
@@ -40,6 +38,48 @@ static const sf::Color kAccent = sf::Color(80, 160, 240);
 static const sf::Color kGood   = sf::Color(80, 200, 120);
 static const sf::Color kBad    = sf::Color(220, 80, 80);
 static const sf::Color kWarn   = sf::Color(240, 180, 60);
+
+// Paleta dinamica: fondo y paneles cambian segun el estado del pais.
+struct Palette {
+    sf::Color bg;       // fondo general
+    sf::Color panel;    // paneles principales
+    sf::Color topbar;   // barra superior
+    sf::Color sidebar;  // sidebars
+    sf::Color accent;   // tinte de acento
+};
+
+static const Palette kPaletteCalm    = { {20,22,30},  {32,36,48},  {28,34,52},  {26,30,44},  {80,160,240} };
+static const Palette kPaletteCrisis  = { {38,32,18},  {52,46,28},  {58,48,24},  {44,40,24},  {220,180,60} };
+static const Palette kPaletteWar     = { {40,16,16},  {64,28,28},  {72,30,30},  {52,24,24},  {220,90,80} };
+static const Palette kPaletteEpidemic= { {26,16,38},  {44,28,62},  {52,30,72},  {36,22,52},  {180,120,220} };
+
+static Palette paletteForCountry(const Country& c) {
+    if (c.politics.civil_war_active || c.security.war_active) return kPaletteWar;
+    if (c.welfare.pandemic_active) return kPaletteEpidemic;
+    if (c.economy.inflation > 0.15) return kPaletteCrisis;
+    if (c.politics.popularity > 0.55 && c.politics.popular_pressure < 0.4) return kPaletteCalm;
+    return kPaletteCalm;
+}
+
+static sf::Color lerpColor(sf::Color a, sf::Color b, float t) {
+    if (t < 0.f) t = 0.f; if (t > 1.f) t = 1.f;
+    return sf::Color(
+        (uint8_t)(a.r + (b.r - a.r) * t),
+        (uint8_t)(a.g + (b.g - a.g) * t),
+        (uint8_t)(a.b + (b.b - a.b) * t),
+        (uint8_t)(a.a + (b.a - a.a) * t)
+    );
+}
+
+static Palette lerpPalette(const Palette& a, const Palette& b, float t) {
+    return {
+        lerpColor(a.bg, b.bg, t),
+        lerpColor(a.panel, b.panel, t),
+        lerpColor(a.topbar, b.topbar, t),
+        lerpColor(a.sidebar, b.sidebar, t),
+        lerpColor(a.accent, b.accent, t),
+    };
+}
 
 static bool loadFontFallback(sf::Font& font) {
     const char* candidates[] = {
@@ -66,7 +106,7 @@ static bool loadTitleFont(sf::Font& font) {
     return false;
 }
 
-static sf::RectangleShape makePanel(float x, float y, float w, float h, sf::Color fill = kPanel) {
+static sf::RectangleShape makePanel(float x, float y, float w, float h, sf::Color fill = sf::Color(32, 36, 48)) {
     sf::RectangleShape r({w, h});
     r.setPosition({x, y});
     r.setFillColor(fill);
@@ -177,6 +217,7 @@ int main(int argc, char** argv) {
     });
     Tab currentTab = Tab::Dashboard;
     sf::Clock frameClock;
+    Palette currentPalette = paletteForCountry(bridge.country());
     std::string lastActionFeedback;
     actionPanel.setCallback([&](const std::string& id) {
         lastActionFeedback = ">> " + id;
@@ -280,7 +321,14 @@ int main(int argc, char** argv) {
             }
         }
 
-        window.clear(kBg);
+        float dt = frameClock.restart().asSeconds();
+        // Interpolar paleta hacia el estado actual (~200ms para alcanzar el target).
+        {
+            Palette target = paletteForCountry(bridge.country());
+            float k = dt / 0.2f; if (k > 1.f) k = 1.f;
+            currentPalette = lerpPalette(currentPalette, target, k);
+        }
+        window.clear(currentPalette.bg);
 
         // === Menu state ===
         if (appState == AppState::Menu) {
@@ -290,7 +338,7 @@ int main(int argc, char** argv) {
         }
 
         // === TopBar ===
-        window.draw(makePanel(0, 0, 1280, 60));
+        window.draw(makePanel(0, 0, 1280, 60, currentPalette.topbar));
         if (fontOk) {
             const Country& c = bridge.country();
             {
@@ -326,7 +374,7 @@ int main(int argc, char** argv) {
         }
 
         // === SidebarLeft ===
-        window.draw(makePanel(0, 60, 200, 640));
+        window.draw(makePanel(0, 60, 200, 640, currentPalette.sidebar));
         if (fontOk) {
             window.draw(makeText(font, "SISTEMAS", 14, kMuted, 16, 76));
             const char* systems[] = {"Bienestar", "Economia", "Politica", "Seguridad", "Infraestructura"};
@@ -341,8 +389,7 @@ int main(int argc, char** argv) {
         }
 
         // === MainPanel: tab activa ===
-        window.draw(makePanel(200, 60, 830, 640));
-        float dt = frameClock.restart().asSeconds();
+        window.draw(makePanel(200, 60, 830, 640, currentPalette.panel));
         mapView.update(dt);
         if (fontOk) {
             switch (currentTab) {
@@ -386,7 +433,7 @@ int main(int argc, char** argv) {
         }
 
         // === SidebarRight ===
-        window.draw(makePanel(1030, 60, 250, 640));
+        window.draw(makePanel(1030, 60, 250, 640, currentPalette.sidebar));
         if (fontOk) {
             window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 76));
             window.draw(makeText(font, "(Sprint 11)", 12, kMuted, 1046, 96));
@@ -395,7 +442,7 @@ int main(int argc, char** argv) {
         }
 
         // === BottomBar ===
-        window.draw(makePanel(0, 700, 1280, 100));
+        window.draw(makePanel(0, 700, 1280, 100, currentPalette.topbar));
         if (fontOk) {
             window.draw(makeText(font, "LOG DE TURNO", 14, kMuted, 16, 712));
             window.draw(makeText(font, "(Sprint 11 conectara feedback al area de log)", 14, kMuted, 16, 736));
