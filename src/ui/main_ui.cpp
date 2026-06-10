@@ -503,10 +503,19 @@ int main(int argc, char** argv) {
         // === SidebarRight ===
         window.draw(makePanel(1030, 60, 250, 640, currentPalette.sidebar));
         if (fontOk) {
-            // Retrato del presidente.
+            // Retrato del presidente (detallado, con expresion segun popularidad).
             window.draw(makeText(font, "PRESIDENCIA", 14, kMuted, 1046, 76));
-            LeaderPortrait::draw(window, font, "Presidente", "Mandato actual",
-                                 1155.f, 158.f, 42.f);
+            {
+                const Country& cc = bridge.country();
+                LeaderPortrait::Expression expr = LeaderPortrait::Expression::Neutral;
+                if (cc.politics.popularity > 0.65) expr = LeaderPortrait::Expression::Happy;
+                else if (cc.politics.popularity < 0.30) expr = LeaderPortrait::Expression::Angry;
+                else if (cc.politics.popular_pressure > 0.6 || cc.security.war_active) expr = LeaderPortrait::Expression::Worried;
+                sf::Color regimeAccent(40, 60, 110); // default democracy
+                LeaderPortrait::drawDetailed(window, font, "Presidente", "Mandato actual",
+                                             1155.f, 158.f, 42.f, expr, regimeAccent,
+                                             (float)cc.politics.regime_legitimacy);
+            }
             // Asesores (3 compactos).
             window.draw(makeText(font, "ASESORES", 14, kMuted, 1046, 248));
             const struct { const char* name; const char* role; } advisors[] = {
