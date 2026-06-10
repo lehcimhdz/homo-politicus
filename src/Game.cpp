@@ -3333,6 +3333,31 @@ void Game::update() {
         }
     }
 
+    // --- PROSECUTION & IMPUNITY DYNAMICS ---
+    // Impunity derives from prosecutor capacity, specialized units, and witness protection
+    double prosecutor_capacity = (double)playerCountry.politics.prosecutors / (double)(playerCountry.politics.case_files + 1);
+    playerCountry.politics.impunity = 1.0 - (prosecutor_capacity * 0.4
+                                           + playerCountry.politics.specialized_units * 0.03
+                                           + playerCountry.politics.witness_protection_capacity * 0.15
+                                           + playerCountry.politics.anticorruption_enforcement * 0.1);
+    if (playerCountry.politics.impunity < 0.05) playerCountry.politics.impunity = 0.05;
+    if (playerCountry.politics.impunity > 0.98) playerCountry.politics.impunity = 0.98;
+    // Sector-specific impunity
+    playerCountry.politics.impunity_homicide = playerCountry.politics.impunity * 1.2; // Homicide harder to prosecute
+    if (playerCountry.politics.impunity_homicide > 0.98) playerCountry.politics.impunity_homicide = 0.98;
+    playerCountry.politics.impunity_corruption = playerCountry.politics.impunity * 1.5
+                                               - playerCountry.politics.anticorruption_enforcement * 0.3;
+    if (playerCountry.politics.impunity_corruption > 0.98) playerCountry.politics.impunity_corruption = 0.98;
+    if (playerCountry.politics.impunity_corruption < 0.1) playerCountry.politics.impunity_corruption = 0.1;
+    playerCountry.politics.impunity_organized_crime = playerCountry.politics.impunity * 1.3
+                                                    - playerCountry.politics.witness_protection_capacity * 0.2;
+    if (playerCountry.politics.impunity_organized_crime > 0.98) playerCountry.politics.impunity_organized_crime = 0.98;
+    if (playerCountry.politics.impunity_organized_crime < 0.1) playerCountry.politics.impunity_organized_crime = 0.1;
+    // High impunity erodes trust
+    playerCountry.politics.trust_in_justice -= (playerCountry.politics.impunity - 0.5) * 0.005;
+    if (playerCountry.politics.trust_in_justice < 0.1) playerCountry.politics.trust_in_justice = 0.1;
+    if (playerCountry.politics.trust_in_justice > 1.0) playerCountry.politics.trust_in_justice = 1.0;
+
     // --- JUDICIAL SYSTEM DYNAMICS ---
     // Court packing risk rises with democratic backsliding and low independence
     playerCountry.politics.court_packing_risk = playerCountry.politics.democratic_backsliding_index * 0.3

@@ -274,7 +274,13 @@ struct PoliticalInstitutionalSystem {
     int prosecutors = 500;
     int case_files = 2000;
     int offices = 50;
+    int    specialized_units = 3;              // Anti-corruption, organized crime, financial crime
+    double witness_protection_capacity = 0.4;  // Ability to protect key witnesses (0–1)
+
     double impunity = 0.4;
+    double impunity_homicide = 0.7;            // Impunity specifically for murder
+    double impunity_corruption = 0.85;         // Impunity for political corruption
+    double impunity_organized_crime = 0.75;    // Organized crime conviction rate gap
 
     // Lobbies
     double industrial_power = 0.5;
