@@ -14,6 +14,7 @@
 #include "ui/GameOverScreen.hpp"
 #include "ui/TutorialOverlay.hpp"
 #include "ui/ParticleEmitter.hpp"
+#include "ui/LeaderPortrait.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -488,10 +489,38 @@ int main(int argc, char** argv) {
         // === SidebarRight ===
         window.draw(makePanel(1030, 60, 250, 640, currentPalette.sidebar));
         if (fontOk) {
-            window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 76));
-            window.draw(makeText(font, "(Sprint 11)", 12, kMuted, 1046, 96));
-            window.draw(makeText(font, "DECISIONES PENDIENTES", 14, kMuted, 1046, 250));
-            window.draw(makeText(font, "(Sprint 14)", 12, kMuted, 1046, 270));
+            // Retrato del presidente.
+            window.draw(makeText(font, "PRESIDENCIA", 14, kMuted, 1046, 76));
+            LeaderPortrait::draw(window, font, "Presidente", "Mandato actual",
+                                 1155.f, 158.f, 42.f);
+            // Asesores (3 compactos).
+            window.draw(makeText(font, "ASESORES", 14, kMuted, 1046, 248));
+            const struct { const char* name; const char* role; } advisors[] = {
+                {"Economia",  "Min. Hacienda"},
+                {"Defensa",   "Min. Seguridad"},
+                {"Gabinete",  "Jefe de Gab."},
+            };
+            for (int i = 0; i < 3; ++i) {
+                float ax = 1062.f + (i % 3) * 70.f;
+                float ay = 296.f;
+                LeaderPortrait::drawCompact(window, font, advisors[i].name, ax, ay, 22.f);
+                sf::Text nm(font, advisors[i].name, 10);
+                nm.setFillColor(kText);
+                auto lb = nm.getLocalBounds();
+                nm.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+                nm.setPosition({ax, ay + 28.f});
+                window.draw(nm);
+                sf::Text rl(font, advisors[i].role, 9);
+                rl.setFillColor(kMuted);
+                auto lb2 = rl.getLocalBounds();
+                rl.setOrigin({lb2.position.x + lb2.size.x / 2.f, 0.f});
+                rl.setPosition({ax, ay + 40.f});
+                window.draw(rl);
+            }
+            window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 372));
+            window.draw(makeText(font, "(Sprint 11)", 12, kMuted, 1046, 392));
+            window.draw(makeText(font, "DECISIONES PEND.", 14, kMuted, 1046, 478));
+            window.draw(makeText(font, "(Sprint 14)", 12, kMuted, 1046, 498));
         }
 
         // === BottomBar ===
