@@ -13,6 +13,7 @@
 #include "ui/MainMenu.hpp"
 #include "ui/GameOverScreen.hpp"
 #include "ui/TutorialOverlay.hpp"
+#include "ui/ParticleEmitter.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -180,6 +181,7 @@ int main(int argc, char** argv) {
     MainMenu menu;
     menu.setTitleFont(titleFontOk ? &titleFont : nullptr);
     GameOverScreen gameOver;
+    ParticleEmitter particles;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     AppState appState = AppState::Menu;
@@ -227,6 +229,28 @@ int main(int argc, char** argv) {
         turnShake = 0.15f;
         dashboard.triggerTurnGlow();
     };
+    auto doTick = [&]() {
+        double prevPop = bridge.country().politics.popularity;
+        double prevGDP = bridge.country().economy.gdp;
+        bridge.tick();
+        dashboard.recordHistory(bridge.country());
+        const Country& cc = bridge.country();
+        popularitySumDemo += cc.politics.popularity;
+        audio.play("turn_advance");
+        triggerTurnAnim();
+        double dPop = cc.politics.popularity - prevPop;
+        if (cc.economy.gdp > prevGDP * 1.03) {
+            particles.emit(ParticleEmitter::Preset::BoomGold, 615.f, 220.f, 28);
+        }
+        if (dPop > 0.03) {
+            particles.emit(ParticleEmitter::Preset::Confetti, 615.f, 220.f, 40);
+        } else if (dPop < -0.03) {
+            particles.emit(ParticleEmitter::Preset::GraySmoke, 615.f, 220.f, 20);
+        }
+        if (bridge.turn() % 4 == 0 && cc.politics.popularity > 0.5) {
+            particles.emit(ParticleEmitter::Preset::Confetti, 615.f, 220.f, 50);
+        }
+    };
     std::string lastActionFeedback;
     actionPanel.setCallback([&](const std::string& id) {
         lastActionFeedback = ">> " + id;
@@ -272,11 +296,7 @@ int main(int argc, char** argv) {
                     else if (modal.visible()) modal.onClick(pos);
                     else if (pos.x >= 1015 && pos.x <= 1125 && pos.y >= 12 && pos.y <= 48) {
                         // Click en el boton SIGUIENTE
-                        bridge.tick();
-                        dashboard.recordHistory(bridge.country());
-                        popularitySumDemo += bridge.country().politics.popularity;
-                        audio.play("turn_advance");
-                        triggerTurnAnim();
+                        doTick();
                     }
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
@@ -287,10 +307,7 @@ int main(int argc, char** argv) {
                     else window.close();
                 }
                 if (kp->code == sf::Keyboard::Key::N) {
-                    bridge.tick(); dashboard.recordHistory(bridge.country());
-                    popularitySumDemo += bridge.country().politics.popularity;
-                    audio.play("turn_advance");
-                    triggerTurnAnim();
+                    doTick();
                 }
                 if (kp->code == sf::Keyboard::Key::R) {
                     bridge.resetCountry(); dashboard.recordHistory(bridge.country());
@@ -315,11 +332,13 @@ int main(int argc, char** argv) {
                         "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
                         {"purge_military", "negotiate_military", "cede_power", "resist"}});
                     audio.play("decision_appears");
+                    particles.emit(ParticleEmitter::Preset::RedSpark, 640.f, 400.f, 40);
                 }
                 if (kp->code == sf::Keyboard::Key::G) {
                     gameOver.show(EndCondition::COUP_SUCCESS, bridge.country(),
                                   bridge.turn(), popularitySumDemo);
                     audio.play("game_over");
+                    particles.emit(ParticleEmitter::Preset::GraySmoke, 640.f, 400.f, 30);
                 }
                 if (kp->code == sf::Keyboard::Key::T) {
                     tutorialUI.start();
@@ -342,6 +361,7 @@ int main(int argc, char** argv) {
         // Avanzar timers de animacion de turno.
         if (turnSweep > 0.f) { turnSweep -= dt; if (turnSweep < 0.f) turnSweep = 0.f; }
         if (turnShake > 0.f) { turnShake -= dt; if (turnShake < 0.f) turnShake = 0.f; }
+        particles.update(dt);
         float shakeX = 0.f;
         if (turnShake > 0.f) {
             float phase = turnShake * 60.f;
@@ -467,6 +487,9 @@ int main(int argc, char** argv) {
             window.draw(makeText(font, "LOG DE TURNO", 14, kMuted, 16, 712));
             window.draw(makeText(font, "(Sprint 11 conectara feedback al area de log)", 14, kMuted, 16, 736));
         }
+
+        // Particulas (encima del MainPanel pero debajo de modal/tutorial).
+        particles.draw(window);
 
         // Sweep effect: linea blanca cruza el MainPanel horizontalmente en 300ms.
         if (turnSweep > 0.f) {
