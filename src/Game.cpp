@@ -3333,6 +3333,18 @@ void Game::update() {
         }
     }
 
+    // --- PARTY SYSTEM DYNAMICS ---
+    // Effective parties from fragmentation index: frag 0.2=~2 parties, 0.8=~6+
+    playerCountry.politics.effective_parties = 2 + (int)(playerCountry.politics.party_fragmentation * 5.0);
+    playerCountry.politics.two_party_dominance = (playerCountry.politics.effective_parties <= 2);
+    // Coalition formation cost: more parties = harder to build majority
+    playerCountry.politics.coalition_formation_cost = playerCountry.politics.party_fragmentation * 0.5
+                                                   + (1.0 - playerCountry.politics.coalition_cohesion) * 0.3;
+    if (playerCountry.politics.coalition_formation_cost > 1.0) playerCountry.politics.coalition_formation_cost = 1.0;
+    // High coalition cost drains political capital → popularity penalty
+    if (playerCountry.politics.coalition_formation_cost > 0.6)
+        playerCountry.politics.popularity -= 0.005;
+
     // --- LEGISLATIVE FRICTION ---
     // Law blockade probability derives from veto players, filibuster, and low support
     playerCountry.politics.filibuster_usage = playerCountry.politics.veto_player_strength * 0.3

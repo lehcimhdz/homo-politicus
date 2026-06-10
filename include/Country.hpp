@@ -223,6 +223,9 @@ struct PoliticalInstitutionalSystem {
     double filibuster_usage = 0.1;             // Rate of procedural obstruction
     double presidential_veto_prob = 0.05;      // Probability executive vetoes own coalition's bill
     double party_fragmentation = 0.4;
+    int    effective_parties = 3;              // Effective Number of Parties (Laakso-Taagepera)
+    bool   two_party_dominance = false;        // Two-party duopoly in effect
+    double coalition_formation_cost = 0.3;     // Resources/concessions needed to build majority (0–1)
     double lobbying_cost = 50000.0;
     int pending_bills = 5;
 
