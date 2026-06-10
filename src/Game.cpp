@@ -1229,6 +1229,63 @@ void Game::processEvents() {
                   << (int)(cost / 1000000.0) << "M." << std::endl;
         std::cout << "   (Affordability +, Popularity +, Fossil Lock-in +, Budget -)" << std::endl;
     }
+    // --- SCIENCE & SPACE COMMANDS ---
+    else if (command == "rd_budget+") {
+        double cost = playerCountry.economy.gdp * 0.005;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.infra.st_investment_gdp += 0.005;
+        if (playerCountry.infra.st_investment_gdp > 0.05) playerCountry.infra.st_investment_gdp = 0.05;
+        playerCountry.infra.innovation_index += 0.02;
+        if (playerCountry.infra.innovation_index > 1.0) playerCountry.infra.innovation_index = 1.0;
+        playerCountry.infra.patent_development += 10;
+        playerCountry.infra.researcher_density += 20.0;
+        std::cout << ">> R&D BUDGET INCREASED to " << playerCountry.infra.st_investment_gdp * 100
+                  << "% GDP. Innovation boosted." << std::endl;
+    }
+    else if (command == "rd_budget-") {
+        playerCountry.infra.st_investment_gdp -= 0.005;
+        if (playerCountry.infra.st_investment_gdp < 0.001) playerCountry.infra.st_investment_gdp = 0.001;
+        playerCountry.infra.innovation_index -= 0.01;
+        if (playerCountry.infra.innovation_index < 0.1) playerCountry.infra.innovation_index = 0.1;
+        playerCountry.welfare.brain_drain += 0.01;
+        std::cout << ">> R&D BUDGET CUT to " << playerCountry.infra.st_investment_gdp * 100
+                  << "% GDP. Brain drain accelerating." << std::endl;
+    }
+    else if (command == "space+") {
+        double cost = 50000000.0;
+        if (playerCountry.economy.gdp < cost * 10) {
+            std::cout << ">> INSUFFICIENT RESOURCES for space program expansion." << std::endl;
+        } else {
+            playerCountry.economy.gdp -= cost;
+            playerCountry.infra.space_budget += cost;
+            playerCountry.infra.space_budget_gdp += 0.001;
+            playerCountry.infra.technological_prestige += 0.03;
+            if (playerCountry.infra.technological_prestige > 1.0) playerCountry.infra.technological_prestige = 1.0;
+            playerCountry.infra.space_prestige += 0.02;
+            if (!playerCountry.infra.own_launch_capability && playerCountry.infra.space_budget > 200000000.0) {
+                playerCountry.infra.own_launch_capability = true;
+                std::cout << "   [!!!] MILESTONE: Domestic launch capability achieved!" << std::endl;
+            }
+            std::cout << ">> SPACE PROGRAM: $50M invested. Prestige: "
+                      << (int)(playerCountry.infra.space_prestige * 100) << "%" << std::endl;
+        }
+    }
+    else if (command == "ai_strategy") {
+        if (playerCountry.infra.ai_national_strategy) {
+            std::cout << ">> AI strategy already in effect." << std::endl;
+        } else {
+            double cost = 30000000.0;
+            playerCountry.economy.gdp -= cost;
+            playerCountry.infra.ai_national_strategy = true;
+            playerCountry.infra.state_ai_development += 0.1;
+            playerCountry.infra.ai_talent_pool += 0.05;
+            playerCountry.infra.employment_automation += 0.02;
+            playerCountry.infra.innovation_index += 0.03;
+            playerCountry.infra.technological_prestige += 0.02;
+            std::cout << ">> NATIONAL AI STRATEGY LAUNCHED: $30M initial investment." << std::endl;
+            std::cout << "   (AI Development +, Talent +, Innovation +, Automation Risk +)" << std::endl;
+        }
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
