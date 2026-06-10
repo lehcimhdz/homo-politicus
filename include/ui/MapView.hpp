@@ -11,6 +11,7 @@
 #include "ui/IsoBuilding.hpp"
 #include "ui/IsoNpcs.hpp"
 #include "ui/IsoVehicles.hpp"
+#include "ui/WeatherSystem.hpp"
 
 // MapView: dibuja el pais central + 3 vecinos como poligonos con relaciones diplomaticas
 // y lineas comerciales animadas. Area: x=218..1028, y=100..680 (830 x 580).
@@ -45,6 +46,7 @@ private:
     mutable IsoBuilding isoBuildings_;
     mutable IsoNpcs isoNpcs_;
     mutable IsoVehicles isoVehicles_;
+    mutable WeatherSystem weather_;
     mutable bool isoConfigured_ = false;
 
     // Population dots: posiciones precomputadas dentro de la silueta

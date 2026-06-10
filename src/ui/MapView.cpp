@@ -55,6 +55,9 @@ void MapView::update(float dt) {
     t_ += dt;
     isoNpcs_.update(dt);
     isoVehicles_.update(dt);
+    // Area del main panel donde vive el mapa (sin sidebars).
+    sf::FloatRect area({200.f, 60.f}, {830.f, 640.f});
+    weather_.update(dt, area);
 }
 
 static sf::Color relationColor(double rel, bool atWar) {
@@ -83,6 +86,9 @@ static sf::Text makeText(const sf::Font& font, const std::string& s, unsigned si
 }
 
 void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const {
+    // Refrescar clima al turno actual.
+    weather_.setTurn(turn_);
+
     // === Lineas de relacion ===
     for (size_t i = 0; i < c.neighbors.size() && i < 3; ++i) {
         const auto& n = c.neighbors[i];
@@ -291,9 +297,14 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
         else if (n.sanctions_against_us)  win.draw(makeText(font, "SANC", 11, kWarn, neighbor_[i].x - 18, neighbor_[i].y + 28));
     }
 
+    // === Clima: tinte + particulas sobre el area del mapa ===
+    {
+        sf::FloatRect area({200.f, 60.f}, {830.f, 640.f});
+        weather_.draw(win, area);
+    }
     // === Leyenda ===
     win.draw(makeText(font, "MAPA REGIONAL  -  click en un vecino: detalle bilateral", 12, kMuted, 230, 660));
-    // Indicador dia/noche.
+    // Indicador dia/noche + clima.
     if (homeSilhouette_.loaded()) {
         float nightAmount = (1.f - std::cos(t_ * 0.262f)) * 0.5f;
         const char* phase = nightAmount > 0.66f ? "NOCHE"
@@ -303,6 +314,11 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
         dt.setFillColor(sf::Color(170, 174, 188));
         dt.setPosition({230.f, 678.f});
         win.draw(dt);
+        // Clima al lado.
+        sf::Text wt(font, std::string("CLIMA: ") + weather_.label(), 12);
+        wt.setFillColor(sf::Color(170, 174, 188));
+        wt.setPosition({340.f, 678.f});
+        win.draw(wt);
     }
 }
 
