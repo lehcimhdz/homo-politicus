@@ -1891,6 +1891,63 @@ void Game::processEvents() {
             std::cout << ">> Usage: threaten <0-2>" << std::endl;
         }
     }
+    else if (command == "cover_up") {
+        double cost = playerCountry.politics.lobbying_cost * 10.0;
+        if (playerCountry.economy.tax_collection < cost) {
+            std::cout << ">> COVER-UP: presupuesto insuficiente." << std::endl;
+        } else {
+            playerCountry.economy.tax_collection -= cost;
+            std::uniform_real_distribution<double> roll(0.0, 1.0);
+            if (roll(rng) < playerCountry.politics.cover_up_probability) {
+                playerCountry.politics.scandal_corruption_severity *= 0.4;
+                playerCountry.politics.scandal_sex_severity *= 0.4;
+                playerCountry.politics.scandal_financial_severity *= 0.4;
+                playerCountry.security.media_control += 0.05;
+                std::cout << ">> COVER-UP exitoso: severidades reducidas, control mediático sube." << std::endl;
+            } else {
+                playerCountry.politics.judicial_pressure += 0.15;
+                playerCountry.politics.media_exposure_intensity += 0.2;
+                std::cout << ">> COVER-UP fracasa: la justicia y la prensa intensifican." << std::endl;
+            }
+        }
+    }
+    else if (command == "scapegoat") {
+        auto& pol = playerCountry.politics;
+        double* worst = &pol.scandal_corruption_severity;
+        if (pol.scandal_sex_severity > *worst) worst = &pol.scandal_sex_severity;
+        if (pol.scandal_financial_severity > *worst) worst = &pol.scandal_financial_severity;
+        if (pol.scandal_violence_severity > *worst) worst = &pol.scandal_violence_severity;
+        if (pol.scandal_substance_severity > *worst) worst = &pol.scandal_substance_severity;
+        if (*worst > 0.0) {
+            *worst = 0.0;
+            if (pol.active_scandals > 0) pol.active_scandals--;
+            pol.popularity -= 0.05;
+            pol.polarization_index += 0.1;
+            std::cout << ">> CHIVO EXPIATORIO: un escándalo desactivado, popularidad y polarización pagan el precio." << std::endl;
+        } else {
+            std::cout << ">> No hay escándalos activos." << std::endl;
+        }
+    }
+    else if (command == "counter_narrative") {
+        double effect = playerCountry.security.narrative_reach * 0.5;
+        playerCountry.politics.media_exposure_intensity -= effect;
+        if (playerCountry.politics.media_exposure_intensity < 0.0) playerCountry.politics.media_exposure_intensity = 0.0;
+        playerCountry.security.narrative_reach -= 0.02;
+        std::cout << ">> CONTRA-NARRATIVA: la agenda mediática se desvía." << std::endl;
+    }
+    else if (command == "apologize") {
+        auto& pol = playerCountry.politics;
+        pol.popularity -= 0.05;
+        pol.scandal_corruption_severity *= 0.8;
+        pol.scandal_sex_severity *= 0.8;
+        pol.scandal_financial_severity *= 0.8;
+        pol.scandal_violence_severity *= 0.8;
+        pol.scandal_substance_severity *= 0.8;
+        pol.polarization_index -= 0.1;
+        if (pol.polarization_index < 0.0) pol.polarization_index = 0.0;
+        pol.regime_legitimacy += 0.03;
+        std::cout << ">> DISCULPAS PÚBLICAS: costo de imagen, ganancia de legitimidad." << std::endl;
+    }
     else if (command == "negotiate_peace_neighbor") {
         bool any_war = false;
         for (auto& n : playerCountry.neighbors) {
