@@ -20,6 +20,20 @@ make
 
 ---
 
+## Running Tests
+
+The project ships with a minimal header-only test framework (`include/TestFramework.hpp`) and 24 unit tests covering persistence (save/load round-trip), game-over conditions, default invariants and the decision queue.
+
+```bash
+make test
+```
+
+This compiles `tests_bin` and runs every `TEST_CASE`, printing `[ OK ]` / `[FAIL]` per test and a final summary. Exit code is `0` on success, `1` if any check fails — suitable for CI.
+
+To add a new test, drop a `tests/test_<name>.cpp` file with `TEST_CASE(my_test) { CHECK(condition); }` blocks, then append the path to `TEST_SRC` in the `Makefile`.
+
+---
+
 ## Objective & Loss Condition
 
 - **Objective**: Stay in power for as many years as possible.
