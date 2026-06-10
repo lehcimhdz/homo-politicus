@@ -320,6 +320,9 @@ struct PowerSecuritySystem {
     double migration_policy_restrictiveness = 0.5; // Border control (0–1)
 
     double nuclear_attack_prob = 0.001;
+    bool   nuclear_strike = false;
+    double nuclear_casualties = 0.0;
+    double nuclear_contamination = 0.0;        // Long-term radiation (0–1)
     bool   nuclear_umbrella = false;           // Protected by allied nuclear deterrence
     bool   own_nuclear_capability = false;     // Possesses nuclear weapons
 

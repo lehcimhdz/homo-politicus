@@ -4195,6 +4195,59 @@ void Game::update() {
         }
     }
 
+    // --- NUCLEAR STRIKE EVENT ---
+    if (playerCountry.security.nuclear_strike) {
+        // Long-term contamination effects (persists after strike)
+        playerCountry.security.nuclear_contamination -= 0.01; // Very slow decay
+        if (playerCountry.security.nuclear_contamination > 0.0) {
+            playerCountry.welfare.food_radiation_prob = playerCountry.security.nuclear_contamination;
+            playerCountry.welfare.death_rate += playerCountry.security.nuclear_contamination * 0.005;
+            playerCountry.welfare.health_coverage -= 0.02;
+            if (playerCountry.welfare.health_coverage < 0.05)
+                playerCountry.welfare.health_coverage = 0.05;
+            std::cout << "[!!!!] NUCLEAR FALLOUT: Contamination level "
+                      << (int)(playerCountry.security.nuclear_contamination * 100)
+                      << "%. Ongoing health crisis." << std::endl;
+        } else {
+            playerCountry.security.nuclear_strike = false;
+            playerCountry.security.nuclear_contamination = 0.0;
+            std::cout << "[INFO] NUCLEAR CONTAMINATION CLEARED: Long recovery ahead." << std::endl;
+        }
+    } else if (dist(rng) < playerCountry.security.nuclear_attack_prob) {
+        playerCountry.security.nuclear_strike = true;
+
+        // Catastrophic immediate damage
+        playerCountry.security.nuclear_casualties = playerCountry.welfare.population * 0.05; // 5% immediate dead
+        playerCountry.welfare.population -= (int)playerCountry.security.nuclear_casualties;
+        playerCountry.welfare.death_rate += 0.05;
+
+        // Infrastructure devastated
+        playerCountry.infra.road_connectivity *= 0.3;
+        playerCountry.infra.port_capacity *= 0.3;
+        playerCountry.infra.grid_resilience *= 0.2;
+        playerCountry.welfare.hospitals = (int)(playerCountry.welfare.hospitals * 0.3);
+
+        // Long-term contamination
+        playerCountry.security.nuclear_contamination = 0.8;
+        playerCountry.welfare.food_radiation_prob = 0.9;
+
+        // Economy destroyed
+        playerCountry.economy.gdp *= 0.4; // 60% GDP wiped
+        playerCountry.economy.international_reserves *= 0.2;
+
+        // International response
+        playerCountry.security.diplomatic_prestige += 0.2; // Sympathy
+        playerCountry.economy.international_sanctions_prob -= 0.3; // Sanctions lifted out of solidarity
+
+        // Near game over
+        playerCountry.politics.popularity = 0.5; // Rally effect, but everything is destroyed
+
+        std::cout << "[!!!!!] NUCLEAR STRIKE: A nuclear weapon has detonated on national territory!" << std::endl;
+        std::cout << "        Immediate casualties: " << (int)playerCountry.security.nuclear_casualties
+                  << ". Infrastructure devastated. GDP collapsed to 40%." << std::endl;
+        std::cout << "        Long-term contamination: radiation will persist for many turns." << std::endl;
+    }
+
     // Soft power: education + heritage + diplomacy
     playerCountry.security.soft_power_index = playerCountry.welfare.educational_quality * 0.3
                                             + playerCountry.economy.heritage_preservation * 0.2
