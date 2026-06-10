@@ -1,6 +1,7 @@
 #include "Game.hpp"
 #include "Persistence.hpp"
 #include "GameOverChecker.hpp"
+#include "ScenarioLoader.hpp"
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
@@ -2138,8 +2139,28 @@ void Game::processEvents() {
         }
         if (!any_war) std::cout << ">> No active wars with neighbors." << std::endl;
     }
+    else if (command == "scenario") {
+        std::string path;
+        std::cin >> path;
+        if (path.empty()) {
+            std::cout << ">> Usage: scenario <path-to-yaml>" << std::endl;
+            std::cout << "   Ej: scenario ../homo-politicus-game/content/scenarios/argentina_1976.yaml" << std::endl;
+            return;
+        }
+        ScenarioLoader::Metadata meta;
+        if (ScenarioLoader::load(path, playerCountry, meta)) {
+            std::cout << ">> ESCENARIO CARGADO: " << meta.name_es
+                      << " (año " << meta.start_year << ", dificultad " << meta.difficulty << ")" << std::endl;
+            std::cout << "   Estado inicial aplicado. Comenzá tu mandato con 'next'." << std::endl;
+            turnCount = 0;
+            popularitySum = 0.0;
+            endCondition = EndCondition::NONE;
+        } else {
+            std::cout << ">> SCENARIO: no se pudo cargar " << path << std::endl;
+        }
+    }
     else {
-        std::cout << ">> Unknown command." << std::endl;
+        std::cout << ">> Unknown command. Tipea 'help' para ver familias." << std::endl;
     }
 }
 

@@ -1,9 +1,9 @@
 CXX = clang++
 CXXFLAGS = -std=c++17 -Wall -Iinclude
-SRC = src/main.cpp src/Game.cpp src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp src/FeedbackBuilder.cpp
+SRC = src/main.cpp src/Game.cpp src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp src/FeedbackBuilder.cpp src/MiniYaml.cpp src/ScenarioLoader.cpp
 TARGET = HomoPoliticus
 
-TEST_SRC = src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp src/FeedbackBuilder.cpp tests/test_main.cpp tests/test_persistence.cpp tests/test_gameover.cpp tests/test_invariants.cpp tests/test_decisions.cpp tests/test_feedback.cpp
+TEST_SRC = src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp src/FeedbackBuilder.cpp src/MiniYaml.cpp src/ScenarioLoader.cpp tests/test_main.cpp tests/test_persistence.cpp tests/test_gameover.cpp tests/test_invariants.cpp tests/test_decisions.cpp tests/test_feedback.cpp tests/test_scenario_loader.cpp
 TEST_BIN = tests_bin
 
 all: $(TARGET)
