@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iomanip>
 #include "ui/UIBridge.hpp"
+#include "ui/Dashboard.hpp"
 
 // Layout (1280x800):
 //   TopBar:    1280 x 60
@@ -95,6 +96,8 @@ int main(int argc, char** argv) {
     bool fontOk = loadFontFallback(font);
 
     UIBridge bridge;
+    Dashboard dashboard;
+    dashboard.recordHistory(bridge.country());
 
     if (headless) {
         std::cout << "[headless] window=1280x800 font=" << fontOk
@@ -110,8 +113,8 @@ int main(int argc, char** argv) {
             if (event->is<sf::Event::Closed>()) window.close();
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
                 if (kp->code == sf::Keyboard::Key::Escape) window.close();
-                if (kp->code == sf::Keyboard::Key::N) bridge.tick();        // N = next turn
-                if (kp->code == sf::Keyboard::Key::R) bridge.resetCountry();// R = reset
+                if (kp->code == sf::Keyboard::Key::N) { bridge.tick(); dashboard.recordHistory(bridge.country()); }
+                if (kp->code == sf::Keyboard::Key::R) { bridge.resetCountry(); dashboard.recordHistory(bridge.country()); }
             }
         }
 
@@ -153,24 +156,11 @@ int main(int argc, char** argv) {
             }
         }
 
-        // === MainPanel placeholder ===
+        // === MainPanel: Dashboard 6 cards ===
         window.draw(makePanel(200, 60, 830, 640));
         if (fontOk) {
             window.draw(makeText(font, "DASHBOARD", 18, kMuted, 220, 76));
-            window.draw(makeText(font, "Sprint 11 montara las 6 cards (Pop, Economia, Presiones, Escandalos, Sistemas, Vecinos)", 14, kMuted, 220, 102));
-
-            // Bloque de info actual mientras esperamos las cards
-            const Country& c = bridge.country();
-            window.draw(makeText(font, "Estado actual:", 16, kAccent, 220, 150));
-            std::ostringstream pop, gdp, infl, growth;
-            pop  << "  Popularidad:    " << fmtPct(c.politics.popularity);
-            gdp  << "  GDP:            " << fmtMoney(c.economy.gdp);
-            infl << "  Inflacion:      " << std::fixed << std::setprecision(2) << (c.economy.inflation * 100) << "%";
-            growth << "  Crecimiento:    " << std::fixed << std::setprecision(2) << (c.economy.growth_rate * 100) << "%";
-            window.draw(makeText(font, pop.str(), 14, kText, 220, 178));
-            window.draw(makeText(font, gdp.str(), 14, kText, 220, 200));
-            window.draw(makeText(font, infl.str(), 14, kText, 220, 222));
-            window.draw(makeText(font, growth.str(), 14, kText, 220, 244));
+            dashboard.draw(window, font, bridge.country());
         }
 
         // === SidebarRight ===
