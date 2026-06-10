@@ -1,14 +1,29 @@
-# Homo Politicus — v0.5 Closed Alpha
+# Homo Politicus — v0.7 Open Beta
 
 **Homo Politicus** is a deep, realistic turn-based political and economic strategy simulator written in C++17. You take the role of a nation's President and must manage complex, interconnected systems while maintaining enough popularity to win democratic elections every 4 years.
 
-**v0.5 Closed Alpha** ships the full simulation engine in terminal form. A graphical UI is planned for v0.7 (open beta) and v1.0-EA. See `inicial_prompt.md` for the full product vision and `homo-politicus-game/specs/MASTER_DEVELOPMENT_SPEC.md` for the 52-week roadmap.
+**v0.7 Open Beta** ships **both** a CLI engine (`HomoPoliticus`) **and** a graphical UI (`HomoPoliticusUI`) built on SFML 3. v1.0 Early Access targets full feature parity. See `inicial_prompt.md` for the full product vision and `homo-politicus-game/specs/MASTER_DEVELOPMENT_SPEC.md` for the 52-week roadmap.
 
-## Quick start (alpha testers)
+## Quick start (beta testers)
+
+### Graphical UI (recommended)
 
 ```bash
+brew install sfml                   # macOS, requires SFML 3.x
 git clone https://github.com/lehcimhdz/homo-politicus.git
 cd homo-politicus
+make ui
+./HomoPoliticusUI
+```
+
+In game:
+- Click **Nueva partida** in the main menu.
+- The tutorial overlay walks you through 5 missions.
+- Keys: `N` next turn · `1-5` tabs · `D` demo decision · `G` demo game over · `T` restart tutorial · `M` mute · `L` toggle language · `SPACE` advance tutorial · `ESC` back to menu.
+
+### Terminal (CLI)
+
+```bash
 make
 ./HomoPoliticus
 ```
