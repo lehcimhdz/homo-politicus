@@ -31,6 +31,9 @@ struct WelfareSocietySystem {
     int hospitals = 100;
     // products? (maybe medical supplies inventory)
     double mass_casualty_prob = 0.01;
+    bool mass_casualty_event = false;
+    double casualty_count = 0.0;
+    double disaster_response_score = 0.0;
     double severe_burn_prob = 0.01;
     double major_accident_prob = 0.05; // Transport Infra (Trains/Bridges)
     double aviation_accident_prob = 0.001; // Airplanes (0.1% - Rare but Tragic)

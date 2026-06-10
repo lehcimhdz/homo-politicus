@@ -3553,6 +3553,41 @@ void Game::update() {
         }
     }
 
+    // --- MASS CASUALTY EVENT (Industrial/Transport Disaster) ---
+    // Single-turn shock: reset flag each turn
+    playerCountry.welfare.mass_casualty_event = false;
+    if (dist(rng) < playerCountry.welfare.mass_casualty_prob) {
+        playerCountry.welfare.mass_casualty_event = true;
+
+        // Casualties inversely proportional to maintenance level
+        double vulnerability = 1.0 - playerCountry.infra.maintenance_level;
+        std::uniform_real_distribution<double> sev_dist(0.2, 1.0);
+        double severity = sev_dist(rng);
+        playerCountry.welfare.casualty_count = severity * vulnerability * 300.0; // Up to 300 deaths
+        playerCountry.welfare.death_rate += playerCountry.welfare.casualty_count / (double)playerCountry.welfare.population;
+
+        // Response quality
+        playerCountry.welfare.disaster_response_score = playerCountry.welfare.health_coverage * 0.5
+                                                       + playerCountry.infra.maintenance_level * 0.3
+                                                       + (playerCountry.welfare.hospitals > 80 ? 0.2 : 0.1);
+        if (playerCountry.welfare.disaster_response_score > 1.0)
+            playerCountry.welfare.disaster_response_score = 1.0;
+
+        // Emergency cost
+        playerCountry.economy.international_reserves -= 5000000.0 * severity;
+
+        // Popularity impact depends on response quality
+        if (playerCountry.welfare.disaster_response_score > 0.7) {
+            playerCountry.politics.popularity += 0.005; // Competent response
+            std::cout << "[!!] MASS CASUALTY EVENT: " << (int)playerCountry.welfare.casualty_count
+                      << " dead. Emergency response: EFFECTIVE." << std::endl;
+        } else {
+            playerCountry.politics.popularity -= 0.03 * severity;
+            std::cout << "[!!] MASS CASUALTY EVENT: " << (int)playerCountry.welfare.casualty_count
+                      << " dead. Emergency response: POOR. Public outrage." << std::endl;
+        }
+    }
+
     // --- COUP RISK DYNAMICS ---
     // Coup probability driven by: low civilian control, low popularity, military insubordination, history
     playerCountry.politics.coup_d_etat_prob = (1.0 - playerCountry.politics.civilian_military_control) * 0.03
