@@ -547,6 +547,9 @@ struct InfrastructureFutureSystem {
     double exploration_success_rate = 0.2;     // Probability exploration finds reserves
 
     double blackout_prob = 0.05;
+    bool blackout_active = false;
+    int blackout_duration = 0;
+    double blackout_economic_loss = 0.0;
     double saidi_hours = 10.0;                 // System Average Interruption Duration (hrs/yr)
     double critical_infrastructure_backup = 0.6; // Hospitals/govt on backup power (0–1)
     double cyber_grid_vulnerability = 0.2;     // Grid cyberattack exposure (0–1)

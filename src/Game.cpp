@@ -3577,6 +3577,60 @@ void Game::update() {
     else
         playerCountry.infra.grid_curtailment_rate = 0.01;
 
+    // --- MASS BLACKOUT EVENT ---
+    if (playerCountry.infra.blackout_active) {
+        playerCountry.infra.blackout_duration--;
+
+        // GDP hit: industry halts
+        double gdp_loss = playerCountry.economy.gdp * 0.03 * playerCountry.infra.fossil_fuel_dependency;
+        playerCountry.economy.gdp -= gdp_loss;
+        playerCountry.infra.blackout_economic_loss += gdp_loss;
+
+        // Unemployment spike from industrial shutdown
+        playerCountry.welfare.unemployment_rate += 0.01;
+        if (playerCountry.welfare.unemployment_rate > 0.35)
+            playerCountry.welfare.unemployment_rate = 0.35;
+
+        // Hospital deaths if backup is poor
+        if (playerCountry.infra.critical_infrastructure_backup < 0.5) {
+            double hospital_deaths = (1.0 - playerCountry.infra.critical_infrastructure_backup) * 50.0;
+            playerCountry.welfare.death_rate += hospital_deaths / (double)playerCountry.welfare.population;
+            std::cout << "[!!!] BLACKOUT: Hospitals losing power. Estimated deaths: "
+                      << (int)hospital_deaths << std::endl;
+        }
+
+        // Protests and popularity
+        playerCountry.politics.protest_intensity += 0.04;
+        playerCountry.politics.popularity -= 0.03;
+
+        std::cout << "[!!!] MASS BLACKOUT (Turn " << (playerCountry.infra.blackout_duration + 1)
+                  << " remaining): Economic loss: $" << (long long)playerCountry.infra.blackout_economic_loss
+                  << std::endl;
+
+        if (playerCountry.infra.blackout_duration <= 0) {
+            playerCountry.infra.blackout_active = false;
+            std::cout << "[INFO] POWER RESTORED: Grid back online. Total loss: $"
+                      << (long long)playerCountry.infra.blackout_economic_loss << std::endl;
+        }
+    } else {
+        if (dist(rng) < playerCountry.infra.blackout_prob) {
+            playerCountry.infra.blackout_active = true;
+            std::uniform_int_distribution<int> dur_dist(1, 3);
+            playerCountry.infra.blackout_duration = dur_dist(rng);
+            playerCountry.infra.blackout_economic_loss = 0.0;
+
+            // Check if cyberattack caused it
+            if (dist(rng) < playerCountry.infra.cyber_grid_vulnerability) {
+                std::cout << "[!!!!] CYBERATTACK BLACKOUT: Grid compromised by hostile cyber operation! Duration: "
+                          << playerCountry.infra.blackout_duration << " turns." << std::endl;
+                playerCountry.security.diplomatic_prestige -= 0.05; // Humiliation
+            } else {
+                std::cout << "[!!!] MASS BLACKOUT: Grid failure! Duration: "
+                          << playerCountry.infra.blackout_duration << " turns." << std::endl;
+            }
+        }
+    }
+
     // --- INFRASTRUCTURE DYNAMICS ---
     // Logistics performance: composite of road, rail, port, and air
     playerCountry.infra.logistics_performance = playerCountry.infra.road_connectivity * 0.3
