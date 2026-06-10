@@ -3,6 +3,7 @@
 #include <optional>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 #include "ui/UIBridge.hpp"
 #include "ui/Dashboard.hpp"
 #include "ui/MapView.hpp"
@@ -218,6 +219,14 @@ int main(int argc, char** argv) {
     Tab currentTab = Tab::Dashboard;
     sf::Clock frameClock;
     Palette currentPalette = paletteForCountry(bridge.country());
+    // Animacion de paso de turno: sweep + shake del TopBar + glow en cards.
+    float turnSweep = 0.f;  // 0..0.3s
+    float turnShake = 0.f;  // 0..0.15s
+    auto triggerTurnAnim = [&]() {
+        turnSweep = 0.3f;
+        turnShake = 0.15f;
+        dashboard.triggerTurnGlow();
+    };
     std::string lastActionFeedback;
     actionPanel.setCallback([&](const std::string& id) {
         lastActionFeedback = ">> " + id;
@@ -267,6 +276,7 @@ int main(int argc, char** argv) {
                         dashboard.recordHistory(bridge.country());
                         popularitySumDemo += bridge.country().politics.popularity;
                         audio.play("turn_advance");
+                        triggerTurnAnim();
                     }
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
@@ -280,6 +290,7 @@ int main(int argc, char** argv) {
                     bridge.tick(); dashboard.recordHistory(bridge.country());
                     popularitySumDemo += bridge.country().politics.popularity;
                     audio.play("turn_advance");
+                    triggerTurnAnim();
                 }
                 if (kp->code == sf::Keyboard::Key::R) {
                     bridge.resetCountry(); dashboard.recordHistory(bridge.country());
@@ -328,6 +339,14 @@ int main(int argc, char** argv) {
             float k = dt / 0.2f; if (k > 1.f) k = 1.f;
             currentPalette = lerpPalette(currentPalette, target, k);
         }
+        // Avanzar timers de animacion de turno.
+        if (turnSweep > 0.f) { turnSweep -= dt; if (turnSweep < 0.f) turnSweep = 0.f; }
+        if (turnShake > 0.f) { turnShake -= dt; if (turnShake < 0.f) turnShake = 0.f; }
+        float shakeX = 0.f;
+        if (turnShake > 0.f) {
+            float phase = turnShake * 60.f;
+            shakeX = std::sin(phase) * 2.f;
+        }
         window.clear(currentPalette.bg);
 
         // === Menu state ===
@@ -338,39 +357,39 @@ int main(int argc, char** argv) {
         }
 
         // === TopBar ===
-        window.draw(makePanel(0, 0, 1280, 60, currentPalette.topbar));
+        window.draw(makePanel(shakeX, 0, 1280, 60, currentPalette.topbar));
         if (fontOk) {
             const Country& c = bridge.country();
             {
                 sf::Text titleHdr(fTitle, "HOMO POLITICUS", 24);
                 titleHdr.setFillColor(kAccent);
                 titleHdr.setStyle(sf::Text::Bold);
-                titleHdr.setPosition({16.f, 16.f});
+                titleHdr.setPosition({16.f + shakeX, 16.f});
                 window.draw(titleHdr);
             }
             std::ostringstream turnStr;
             turnStr << tr("ui.turn_prefix", "Turno") << " " << bridge.turn();
-            window.draw(makeText(font, turnStr.str(), 18, kMuted, 240, 22));
+            window.draw(makeText(font, turnStr.str(), 18, kMuted, 240 + shakeX, 22));
 
-            window.draw(makeText(font, tr("ui.pop_short", "Pop:"), 16, kMuted, 380, 25));
-            window.draw(makeText(font, fmtPct(c.politics.popularity), 20, popularityColor(c.politics.popularity), 425, 22));
-            drawProgressBar(window, 380, 47, 130, 6, c.politics.popularity, popularityColor(c.politics.popularity));
+            window.draw(makeText(font, tr("ui.pop_short", "Pop:"), 16, kMuted, 380 + shakeX, 25));
+            window.draw(makeText(font, fmtPct(c.politics.popularity), 20, popularityColor(c.politics.popularity), 425 + shakeX, 22));
+            drawProgressBar(window, 380 + shakeX, 47, 130, 6, c.politics.popularity, popularityColor(c.politics.popularity));
 
-            window.draw(makeText(font, "GDP: " + fmtMoney(c.economy.gdp), 18, kText, 560, 22));
+            window.draw(makeText(font, "GDP: " + fmtMoney(c.economy.gdp), 18, kText, 560 + shakeX, 22));
             std::ostringstream infStr;
             infStr << "Inflacion: " << std::fixed << std::setprecision(1) << (c.economy.inflation * 100) << "%";
-            window.draw(makeText(font, infStr.str(), 18, kText, 760, 22));
+            window.draw(makeText(font, infStr.str(), 18, kText, 760 + shakeX, 22));
 
             // Boton visible de Next turn (solo visual, la tecla N es la real)
             sf::RectangleShape nextBtn({110.f, 36.f});
-            nextBtn.setPosition({1015.f, 12.f});
+            nextBtn.setPosition({1015.f + shakeX, 12.f});
             nextBtn.setFillColor(sf::Color(50, 100, 160));
             nextBtn.setOutlineColor(kAccent);
             nextBtn.setOutlineThickness(2.f);
             window.draw(nextBtn);
-            window.draw(makeText(font, "[N] SIGUIENTE", 14, sf::Color(255,255,255), 1025, 21));
+            window.draw(makeText(font, "[N] SIGUIENTE", 14, sf::Color(255,255,255), 1025 + shakeX, 21));
 
-            window.draw(makeText(font, "1-5 tabs  D=decision  G=gameover  M=mute  L=lang", 11, kMuted, 1130, 22));
+            window.draw(makeText(font, "1-5 tabs  D=decision  G=gameover  M=mute  L=lang", 11, kMuted, 1130 + shakeX, 22));
         }
 
         // === SidebarLeft ===
@@ -447,6 +466,17 @@ int main(int argc, char** argv) {
         if (fontOk) {
             window.draw(makeText(font, "LOG DE TURNO", 14, kMuted, 16, 712));
             window.draw(makeText(font, "(Sprint 11 conectara feedback al area de log)", 14, kMuted, 16, 736));
+        }
+
+        // Sweep effect: linea blanca cruza el MainPanel horizontalmente en 300ms.
+        if (turnSweep > 0.f) {
+            float progress = 1.f - (turnSweep / 0.3f);
+            float sweepX = 200.f + (830.f) * progress;
+            sf::RectangleShape line({3.f, 640.f});
+            line.setPosition({sweepX, 60.f});
+            uint8_t alpha = (uint8_t)(180 * (1.f - std::abs(progress - 0.5f) * 2.f));
+            line.setFillColor(sf::Color(255, 255, 255, alpha));
+            window.draw(line);
         }
 
         // Modal overlay (siempre al final para estar encima)

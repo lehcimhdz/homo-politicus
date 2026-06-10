@@ -15,6 +15,8 @@ public:
     void recordHistory(const Country& c);    // Llamar cada tick
     void onMouseMove(sf::Vector2f mouse);     // Actualiza card hovered
     void update(float dt, const Country& c);  // Anima gauges
+    void triggerTurnGlow();                   // Borde dorado en cards 200ms
+    float goldGlow() const { return goldGlow_; }
     int hoveredCard() const { return hoveredCard_; }
     std::string hoveredDetail(const Country& c) const;
     void draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const;
@@ -26,6 +28,7 @@ private:
     std::vector<double> inflHist;
     int hoveredCard_ = -1;
     CircularGauge popGauge_;
+    float goldGlow_ = 0.f;
 
     void drawCard(sf::RenderWindow& win, const sf::Font& font,
                   float x, float y, float w, float h,

@@ -36,6 +36,14 @@ void Dashboard::recordHistory(const Country& c) {
 void Dashboard::update(float dt, const Country& c) {
     popGauge_.setTarget((float)c.politics.popularity);
     popGauge_.update(dt);
+    if (goldGlow_ > 0.f) {
+        goldGlow_ -= dt;
+        if (goldGlow_ < 0.f) goldGlow_ = 0.f;
+    }
+}
+
+void Dashboard::triggerTurnGlow() {
+    goldGlow_ = 0.2f; // 200ms
 }
 
 void Dashboard::onMouseMove(sf::Vector2f mouse) {
@@ -144,8 +152,16 @@ void Dashboard::drawCard(sf::RenderWindow& win, const sf::Font& font,
     sf::RectangleShape r({w, h});
     r.setPosition({x, y});
     r.setFillColor(isHovered ? sf::Color(40, 50, 70) : kPanel);
-    r.setOutlineColor(isHovered ? kAccent : kBorder);
-    r.setOutlineThickness(isHovered ? 2.f : 1.f);
+    // Borde dorado parpadeante mientras goldGlow_ > 0 (animacion de pasar turno).
+    if (goldGlow_ > 0.f) {
+        float t = goldGlow_ / 0.2f; // 1 -> 0
+        sf::Color gold(240, 200, 90, (uint8_t)(255 * t));
+        r.setOutlineColor(gold);
+        r.setOutlineThickness(3.f);
+    } else {
+        r.setOutlineColor(isHovered ? kAccent : kBorder);
+        r.setOutlineThickness(isHovered ? 2.f : 1.f);
+    }
     win.draw(r);
     win.draw(makeText(font, title, 14, isHovered ? kAccent : kMuted, x + 12, y + 10));
 }
