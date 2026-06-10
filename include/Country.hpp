@@ -206,6 +206,9 @@ struct PoliticalInstitutionalSystem {
     int marches = 0;
     int blockades = 0;
     int mobilizations = 0;
+    double protest_intensity = 0.0;            // 0=symbolic, 1=insurrectional
+    bool   protest_pro_government = false;     // Direction: pro-govt (true) or opposition-led (false)
+    int    protest_duration_turns = 0;         // Consecutive turns of sustained mobilization
     double polarization_index = 0.3;
 
     // Legislative

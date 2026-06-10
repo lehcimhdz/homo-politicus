@@ -3333,6 +3333,37 @@ void Game::update() {
         }
     }
 
+    // --- PROTEST DYNAMICS ---
+    {
+        int total_protests = playerCountry.politics.marches + playerCountry.politics.blockades
+                           + playerCountry.politics.mobilizations;
+        if (total_protests > 0) {
+            // Intensity scales with blockades (disruptive) and sustained duration
+            playerCountry.politics.protest_intensity = (playerCountry.politics.blockades * 0.15
+                                                      + playerCountry.politics.marches * 0.05
+                                                      + playerCountry.politics.mobilizations * 0.08);
+            if (playerCountry.politics.protest_intensity > 1.0) playerCountry.politics.protest_intensity = 1.0;
+            playerCountry.politics.protest_duration_turns++;
+            // Protests are pro-govt if popularity > 0.6 and polarization high
+            playerCountry.politics.protest_pro_government = (playerCountry.politics.popularity > 0.6
+                                                           && playerCountry.politics.polarization_index > 0.5);
+            // Sustained high-intensity protests destabilize
+            if (playerCountry.politics.protest_duration_turns > 3 && playerCountry.politics.protest_intensity > 0.5) {
+                playerCountry.economy.growth_rate -= 0.003;
+                playerCountry.economy.exchange_rate_stability -= 0.01;
+                if (!playerCountry.politics.protest_pro_government)
+                    playerCountry.politics.popularity -= 0.02;
+            }
+            // Natural decay of protests
+            playerCountry.politics.marches = (int)(playerCountry.politics.marches * 0.7);
+            playerCountry.politics.blockades = (int)(playerCountry.politics.blockades * 0.6);
+            playerCountry.politics.mobilizations = (int)(playerCountry.politics.mobilizations * 0.7);
+        } else {
+            playerCountry.politics.protest_intensity = 0.0;
+            playerCountry.politics.protest_duration_turns = 0;
+        }
+    }
+
     // --- CORRUPTION DYNAMICS ---
     // Derive administrative_corruption from petty + grand components
     playerCountry.politics.administrative_corruption = playerCountry.politics.petty_corruption * 0.6
