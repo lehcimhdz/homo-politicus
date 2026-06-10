@@ -6360,6 +6360,51 @@ void Game::update() {
         }
     }
 
+    // --- AUTONOMOUS ACTORS: CONGRESS ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Congress proposes hostile bills when support is low
+        if (playerCountry.politics.congressional_support < 0.4 && dist(rng) < 0.2) {
+            int bill_type = (int)(dist(rng) * 3);
+            if (bill_type == 0) {
+                // Budget amendment: congress redirects spending
+                playerCountry.economy.tax_collection *= 0.98;
+                std::cout << "[CONGRESS] Hostile budget amendment passed. Revenue redirected to opposition projects." << std::endl;
+            } else if (bill_type == 1) {
+                // Censure motion
+                playerCountry.politics.popularity -= 0.02;
+                std::cout << "[CONGRESS] Censure motion against a minister. Government credibility damaged." << std::endl;
+            } else {
+                // Regulatory obstruction
+                playerCountry.politics.pending_bills += 3;
+                playerCountry.politics.legislative_efficiency -= 0.05;
+                if (playerCountry.politics.legislative_efficiency < 0.1) playerCountry.politics.legislative_efficiency = 0.1;
+                std::cout << "[CONGRESS] Opposition floods agenda with counter-proposals. Legislative gridlock!" << std::endl;
+            }
+        }
+
+        // Impeachment motion: very low popularity + scandals active
+        if (playerCountry.politics.popularity < 0.25
+            && playerCountry.politics.active_scandals > 0
+            && playerCountry.politics.congressional_support < 0.35
+            && dist(rng) < 0.1) {
+            double impeach_votes = (1.0 - playerCountry.politics.congressional_support) * 0.8
+                                 + playerCountry.politics.active_scandals * 0.1;
+            if (impeach_votes > 0.67) {
+                std::cout << "[!!!] IMPEACHMENT: Congress votes to remove the president! "
+                          << (int)(impeach_votes * 100) << "% in favor." << std::endl;
+                std::cout << "GAME OVER." << std::endl;
+                exit(0);
+            } else {
+                std::cout << "[!!] IMPEACHMENT MOTION: Congress debates removal. "
+                          << (int)(impeach_votes * 100) << "% in favor (67% needed)." << std::endl;
+                playerCountry.politics.popularity -= 0.05;
+                playerCountry.politics.polarization_index += 0.05;
+            }
+        }
+    }
+
     // --- SCANDAL SYSTEM ---
     {
         std::uniform_real_distribution<double> dist(0.0, 1.0);
