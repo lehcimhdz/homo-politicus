@@ -1,4 +1,5 @@
 #include "AchievementTracker.hpp"
+#include "steam/SteamBridge.hpp"
 #include <sstream>
 
 const std::vector<AchievementTracker::Definition>& AchievementTracker::catalog() {
@@ -72,6 +73,7 @@ void AchievementTracker::noteCivilWarPeacefulEnd()     { history.civil_war_ended
 void AchievementTracker::tryUnlock(const std::string& id) {
     if (unlocked.insert(id).second) {
         std::cout << "[LOGRO DESBLOQUEADO] " << id << std::endl;
+        SteamBridge::unlockAchievement(id);
     }
 }
 
