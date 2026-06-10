@@ -3333,6 +3333,20 @@ void Game::update() {
         }
     }
 
+    // --- LEGISLATIVE DYNAMICS ---
+    // Coalition cohesion erodes with polarization and low popularity
+    playerCountry.politics.coalition_cohesion -= playerCountry.politics.polarization_index * 0.005;
+    if (playerCountry.politics.popularity < 0.35)
+        playerCountry.politics.coalition_cohesion -= 0.01; // Rats leaving sinking ship
+    if (playerCountry.politics.coalition_cohesion < 0.2) playerCountry.politics.coalition_cohesion = 0.2;
+    if (playerCountry.politics.coalition_cohesion > 1.0) playerCountry.politics.coalition_cohesion = 1.0;
+    // Opposition seats derived from support level
+    playerCountry.politics.opposition_seats = (int)((1.0 - playerCountry.politics.congressional_support) * 100);
+    // Veto player strength: fragmented opposition with strong institutions can block
+    playerCountry.politics.veto_player_strength = (1.0 - playerCountry.politics.congressional_support) * 0.5
+                                                + playerCountry.politics.judicial_independence * 0.3;
+    if (playerCountry.politics.veto_player_strength > 1.0) playerCountry.politics.veto_player_strength = 1.0;
+
     // --- POLARIZATION DYNAMICS ---
     // Derive composite polarization from sub-dimensions
     // Poverty and inequality drive economic polarization

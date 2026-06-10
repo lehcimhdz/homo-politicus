@@ -216,6 +216,9 @@ struct PoliticalInstitutionalSystem {
 
     // Legislative
     double congressional_support = 0.6;
+    double coalition_cohesion = 0.7;           // Internal unity of governing coalition (0–1)
+    int    opposition_seats = 40;              // Opposition seat count (out of 100)
+    double veto_player_strength = 0.3;         // Capacity of minorities to block legislation (0–1)
     double law_blockade_prob = 0.2;
     double party_fragmentation = 0.4;
     double lobbying_cost = 50000.0;
