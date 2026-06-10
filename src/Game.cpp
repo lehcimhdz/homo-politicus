@@ -28,7 +28,7 @@ void Game::processEvents() {
     if (!pendingDecisions.empty()) {
         const auto& d = pendingDecisions.front();
         std::cout << "\n>> Pending decision: " << d.prompt << std::endl;
-        std::cout << "Choose: ";
+        std::cout << "Choose (or 'skip_decision' / 'decisions' / 'status_brief'): ";
         for (size_t i = 0; i < d.options.size(); ++i) {
             std::cout << d.options[i];
             if (i + 1 < d.options.size()) std::cout << " | ";
@@ -36,10 +36,42 @@ void Game::processEvents() {
         std::cout << "\n> ";
         std::string choice;
         std::cin >> choice;
+        if (choice == "skip_decision" || choice == "decisions" || choice == "status_brief"
+            || choice == "help" || choice == "save" || choice == "exit") {
+            if (choice == "exit") { isRunning = false; return; }
+            std::string command = choice;
+            // fallthrough to command handler below
+            // duplicate the small subset here to avoid reentering
+            if (command == "skip_decision") {
+                PendingDecision d2 = pendingDecisions.front();
+                pendingDecisions.erase(pendingDecisions.begin());
+                pendingDecisions.push_back(d2);
+                playerCountry.politics.popular_pressure += 0.02;
+                std::cout << ">> Decisión '" << d2.id << "' pospuesta (-credibilidad)." << std::endl;
+            } else if (command == "decisions") {
+                std::cout << "\n=== DECISIONES PENDIENTES (" << pendingDecisions.size() << ") ===" << std::endl;
+                for (size_t i = 0; i < pendingDecisions.size(); ++i) {
+                    std::cout << "[" << i << "] " << pendingDecisions[i].id
+                              << " — " << pendingDecisions[i].prompt << std::endl;
+                }
+                std::cout << "=================================" << std::endl;
+            } else if (command == "save") {
+                saveGame("savegame.txt");
+            } else if (command == "help") {
+                std::cout << ">> Type the option text shown, or 'skip_decision' to defer." << std::endl;
+            } else if (command == "status_brief") {
+                auto& pol = playerCountry.politics;
+                auto& eco = playerCountry.economy;
+                std::cout << "Pop: " << (int)(pol.popularity * 100) << "% | GDP: $"
+                          << (long long)(eco.gdp / 1000000) << "M | Pendientes: "
+                          << pendingDecisions.size() << std::endl;
+            }
+            return;
+        }
         resolveDecision(choice);
         return;
     }
-    std::cout << "\nCommand (next/exit/help/status_brief/...): ";
+    std::cout << "\nCommand (next/exit/help/status_brief/decisions/...): ";
     std::string command;
     std::cin >> command;
 
@@ -1892,6 +1924,35 @@ void Game::processEvents() {
             playerCountry.security.diplomatic_prestige -= 0.03;
         } else {
             std::cout << ">> Usage: threaten <0-2>" << std::endl;
+        }
+    }
+    else if (command == "decisions") {
+        if (pendingDecisions.empty()) {
+            std::cout << ">> No hay decisiones pendientes." << std::endl;
+        } else {
+            std::cout << "\n=== DECISIONES PENDIENTES (" << pendingDecisions.size() << ") ===" << std::endl;
+            for (size_t i = 0; i < pendingDecisions.size(); ++i) {
+                std::cout << "[" << i << "] " << pendingDecisions[i].id
+                          << " — " << pendingDecisions[i].prompt << std::endl;
+                std::cout << "    Opciones: ";
+                for (size_t j = 0; j < pendingDecisions[i].options.size(); ++j) {
+                    std::cout << pendingDecisions[i].options[j];
+                    if (j + 1 < pendingDecisions[i].options.size()) std::cout << " | ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << "=================================" << std::endl;
+        }
+    }
+    else if (command == "skip_decision") {
+        if (pendingDecisions.empty()) {
+            std::cout << ">> No hay decisión que saltar." << std::endl;
+        } else {
+            PendingDecision d = pendingDecisions.front();
+            pendingDecisions.erase(pendingDecisions.begin());
+            pendingDecisions.push_back(d);
+            playerCountry.politics.popular_pressure += 0.02;
+            std::cout << ">> Decisión '" << d.id << "' pospuesta al final de la cola (-credibilidad)." << std::endl;
         }
     }
     else if (command == "save") {
