@@ -442,6 +442,8 @@ struct PowerSecuritySystem {
     bool   blue_water_capability = false;      // Can project force beyond coastal waters
 
     double military_insubordination_prob = 0.05;
+    bool military_mutiny_active = false;
+    int mutiny_duration = 0;
     double politicized_officer_corps = 0.2;    // Share of officers with partisan affiliations (0–1)
     double military_business_interests = 0.1;  // Fraction of economy controlled by military (0–1)
 

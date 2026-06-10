@@ -4429,6 +4429,69 @@ void Game::update() {
     if (playerCountry.politics.civilian_military_control < 0.1) playerCountry.politics.civilian_military_control = 0.1;
     if (playerCountry.politics.civilian_military_control > 1.0) playerCountry.politics.civilian_military_control = 1.0;
 
+    // --- MILITARY MUTINY CRISIS ---
+    if (playerCountry.security.military_mutiny_active) {
+        playerCountry.security.mutiny_duration--;
+
+        // Coup probability spikes during mutiny
+        playerCountry.politics.coup_d_etat_prob += 0.05;
+        if (playerCountry.politics.coup_d_etat_prob > 0.5)
+            playerCountry.politics.coup_d_etat_prob = 0.5;
+
+        // Defense capability compromised
+        playerCountry.security.equipment_modernization -= 0.02;
+        if (playerCountry.security.equipment_modernization < 0.1)
+            playerCountry.security.equipment_modernization = 0.1;
+
+        // Civilian control erodes
+        playerCountry.politics.civilian_military_control -= 0.05;
+        if (playerCountry.politics.civilian_military_control < 0.1)
+            playerCountry.politics.civilian_military_control = 0.1;
+
+        // International weakness exposed
+        playerCountry.security.alliance_protection -= 0.02;
+        if (playerCountry.security.alliance_protection < 0.0)
+            playerCountry.security.alliance_protection = 0.0;
+
+        playerCountry.politics.popularity -= 0.02;
+
+        std::cout << "[!!!] MILITARY MUTINY (Turn " << (playerCountry.security.mutiny_duration + 1)
+                  << " remaining): Barracks in revolt. Coup risk elevated." << std::endl;
+
+        if (playerCountry.security.mutiny_duration <= 0) {
+            // Suppression check
+            if (playerCountry.politics.civilian_military_control > 0.4) {
+                playerCountry.security.military_mutiny_active = false;
+                playerCountry.security.troop_morale += 0.05; // Purge restores some order
+                std::cout << "[INFO] MUTINY SUPPRESSED: Disloyal officers purged. Order restored." << std::endl;
+            } else {
+                // Escalates to coup attempt
+                playerCountry.security.military_mutiny_active = false;
+                if (dist(rng) < playerCountry.politics.coup_d_etat_prob) {
+                    if (dist(rng) < playerCountry.politics.coup_success_prob) {
+                        std::cout << "[!!!!!] MUTINY BECOMES COUP: Military seizes power!" << std::endl;
+                        std::cout << "GAME OVER." << std::endl;
+                        exit(0);
+                    } else {
+                        playerCountry.politics.coup_attempts_history++;
+                        std::cout << "[!!!!] FAILED COUP FROM MUTINY: Mutineers attempted to seize power but failed." << std::endl;
+                    }
+                } else {
+                    std::cout << "[INFO] MUTINY DISSIPATES: Officers return to barracks grudgingly." << std::endl;
+                }
+            }
+        }
+    } else {
+        if (playerCountry.security.troop_morale < 0.4
+            && dist(rng) < playerCountry.security.military_insubordination_prob) {
+            playerCountry.security.military_mutiny_active = true;
+            std::uniform_int_distribution<int> dur_dist(1, 3);
+            playerCountry.security.mutiny_duration = dur_dist(rng);
+            std::cout << "[!!!] MILITARY MUTINY: Troops refuse orders! Barracks revolt. Morale: "
+                      << (int)(playerCountry.security.troop_morale * 100) << "%" << std::endl;
+        }
+    }
+
     // --- INTELLIGENCE DYNAMICS ---
     // HUMINT scales with espionage budget and informant network
     playerCountry.security.humint_capability = playerCountry.security.informant_network * 0.5
