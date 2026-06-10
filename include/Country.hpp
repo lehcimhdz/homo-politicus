@@ -129,7 +129,10 @@ struct EconomicFinancialSystem {
     bool   remediation_active = false;    // State-funded cleanup program currently underway
 
     // Foreign Trade
-    double trade_balance = 0.0; // Exports - Imports
+    double trade_balance = 0.0;            // Goods: exports − imports
+    double services_balance = 0.0;         // Tourism, finance, IP royalties net flow
+    double current_account_balance = 0.0;  // trade + services + remittances (full external position)
+    double trade_openness = 0.6;           // (exports+imports)/GDP ratio — structural openness
     double average_tariffs = 0.1;
     int free_trade_agreements = 5;
     double import_dependency = 0.3;

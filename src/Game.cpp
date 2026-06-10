@@ -2831,6 +2831,24 @@ void Game::update() {
 
     playerCountry.economy.trade_balance = total_exports - imports;
 
+    // Services balance: tourism net + financial services + IP royalties (correlated with innovation)
+    double services_exports = tourism_exports
+                            + playerCountry.economy.gdp * playerCountry.infra.innovation_index * 0.005
+                            + playerCountry.economy.gdp * playerCountry.politics.financial_power * 0.003;
+    double services_imports = playerCountry.economy.gdp * 0.02; // Consulting, licenses, insurance
+    playerCountry.economy.services_balance = services_exports - services_imports;
+
+    // Current account = trade + services + remittances (already in economy struct)
+    playerCountry.economy.current_account_balance = playerCountry.economy.trade_balance
+                                                  + playerCountry.economy.services_balance
+                                                  + playerCountry.economy.remittances;
+
+    // Trade openness: structural measure of economic integration
+    double total_trade_volume = total_exports + imports;
+    if (playerCountry.economy.gdp > 0.0)
+        playerCountry.economy.trade_openness = total_trade_volume / playerCountry.economy.gdp;
+    if (playerCountry.economy.trade_openness > 2.0) playerCountry.economy.trade_openness = 2.0;
+
     // --- TARIFF REGIME EFFECTS ---
     {
         double tariffs = playerCountry.economy.average_tariffs;
@@ -2895,14 +2913,14 @@ void Game::update() {
     double gdp_now = playerCountry.economy.gdp;
 
     // Persistent current account deficit → currency depreciation pressure + import-price inflation
-    if (playerCountry.economy.trade_balance < -(gdp_now * 0.03)) {
+    if (playerCountry.economy.current_account_balance < -(gdp_now * 0.03)) {
         playerCountry.economy.exchange_rate_stability -= 0.012;
         playerCountry.economy.inflation              += 0.004;
-        std::cout << "[!] TRADE DEFICIT: Persistent current-account gap weakening currency." << std::endl;
+        std::cout << "[!] CURRENT ACCOUNT DEFICIT: Persistent external gap weakening currency." << std::endl;
     }
     // Large surplus → FX reserve accumulation bonus + mild demand-pull inflation
-    if (playerCountry.economy.trade_balance > gdp_now * 0.04) {
-        playerCountry.economy.international_reserves += playerCountry.economy.trade_balance * 0.08;
+    if (playerCountry.economy.current_account_balance > gdp_now * 0.04) {
+        playerCountry.economy.international_reserves += playerCountry.economy.current_account_balance * 0.08;
         playerCountry.economy.inflation              += 0.002;
     }
     // Import substitution: strong industry → domestic production displaces imports over time
@@ -2992,7 +3010,7 @@ void Game::update() {
     }
     
     // Net Change in Reserves
-    double reserves_change = playerCountry.economy.trade_balance + fdi + capital_flow_base - external_debt_interest;
+    double reserves_change = playerCountry.economy.current_account_balance + fdi + capital_flow_base - external_debt_interest;
     
     playerCountry.economy.international_reserves += reserves_change;
     
@@ -3013,11 +3031,16 @@ void Game::update() {
                                   : t < 0.35  ? "Heavy"
                                   :             "Near-Autarky";
         std::cout << "[TRADE] Imports: $" << (int)(imports / 1000000.0) << "M"
-                  << " | Balance: " << (playerCountry.economy.trade_balance >= 0 ? "+" : "")
+                  << " | Goods Balance: " << (playerCountry.economy.trade_balance >= 0 ? "+" : "")
                   << (int)(playerCountry.economy.trade_balance / 1000000.0) << "M"
-                  << " | Tariffs: " << (int)(t * 100) << "% [" << tariff_regime << "]"
+                  << " | Services: " << (playerCountry.economy.services_balance >= 0 ? "+" : "")
+                  << (int)(playerCountry.economy.services_balance / 1000000.0) << "M"
+                  << " | C/A: " << (playerCountry.economy.current_account_balance >= 0 ? "+" : "")
+                  << (int)(playerCountry.economy.current_account_balance / 1000000.0) << "M" << std::endl;
+        std::cout << "        Tariffs: " << (int)(t * 100) << "% [" << tariff_regime << "]"
                   << " | Customs: $" << (int)(customs_display / 1000000.0) << "M"
-                  << " | FTAs: " << playerCountry.economy.free_trade_agreements << std::endl;
+                  << " | FTAs: " << playerCountry.economy.free_trade_agreements
+                  << " | Openness: " << (int)(playerCountry.economy.trade_openness * 100) << "%" << std::endl;
     }
     std::cout << "[ECON] Reserves Change: " << (reserves_change >= 0 ? "+" : "") << reserves_change / 1000000.0 << "M USD. Total: $" << playerCountry.economy.international_reserves / 1000000.0 << "M" << std::endl;
     
