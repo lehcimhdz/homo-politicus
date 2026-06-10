@@ -85,8 +85,41 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
     if (stability < 0.30) homeFill = kBad;
     else if (stability < 0.50) homeFill = kWarn;
     if (homeSilhouette_.loaded()) {
+        // Base oscura de la silueta (provincias se pintan encima).
+        sf::Color baseFill(38, 42, 56);
         sf::Color outline(220, 222, 232, 200);
-        homeSilhouette_.draw(win, homePos_.x, homePos_.y, homeRadius_, homeFill, outline);
+        homeSilhouette_.draw(win, homePos_.x, homePos_.y, homeRadius_, baseFill, outline);
+        // Grid 4x4 de provincias - coloreadas segun satisfaccion regional derivada
+        // de popularidad global mas variacion deterministica por region.
+        auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
+        const int kCols = 4, kRows = 4;
+        float cw = bbox.size.x / (float)kCols;
+        float ch = bbox.size.y / (float)kRows;
+        for (int r = 0; r < kRows; ++r) {
+            for (int col = 0; col < kCols; ++col) {
+                float ux = bbox.position.x + col * cw;
+                float uy = bbox.position.y + r * ch;
+                float ccx = ux + cw * 0.5f;
+                float ccy = uy + ch * 0.5f;
+                if (!homeSilhouette_.containsScreen({ccx, ccy}, homePos_.x, homePos_.y, homeRadius_)) continue;
+                // Hash deterministico para esta region.
+                unsigned hash = (unsigned)(r * 73856093u ^ col * 19349663u);
+                float regOffset = ((hash & 0xFF) / 255.f - 0.5f) * 0.30f;
+                float sat = (float)c.politics.popularity + regOffset;
+                if (sat < 0.f) sat = 0.f; if (sat > 1.f) sat = 1.f;
+                sf::Color col_ = sat > 0.55f
+                    ? sf::Color((uint8_t)(40 + (1.f - sat) * 80), (uint8_t)(160 + sat * 40), (uint8_t)(80 + sat * 20), 200)
+                    : (sat > 0.30f
+                        ? sf::Color(220, (uint8_t)(140 + sat * 40), 60, 200)
+                        : sf::Color(200, 60, 60, 200));
+                sf::RectangleShape cell({cw - 1.f, ch - 1.f});
+                cell.setPosition({ux + 0.5f, uy + 0.5f});
+                cell.setFillColor(col_);
+                cell.setOutlineColor(sf::Color(0, 0, 0, 60));
+                cell.setOutlineThickness(0.5f);
+                win.draw(cell);
+            }
+        }
     } else {
         win.draw(circleShape(homePos_, homeRadius_, homeFill, kBorder));
     }

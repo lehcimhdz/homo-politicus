@@ -15,6 +15,8 @@ public:
     const std::vector<sf::Vector2f>& rawPoints() const { return points_; }
     void draw(sf::RenderWindow& win, float cx, float cy, float radius,
               sf::Color fill, sf::Color outline) const;
+    sf::FloatRect screenBBox(float cx, float cy, float radius) const;
+    bool containsScreen(sf::Vector2f p, float cx, float cy, float radius) const;
 
 private:
     std::vector<sf::Vector2f> points_;

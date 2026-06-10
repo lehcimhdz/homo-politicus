@@ -101,6 +101,42 @@ void CountrySilhouette::recomputeBBox() {
     }
 }
 
+sf::FloatRect CountrySilhouette::screenBBox(float cx, float cy, float radius) const {
+    if (points_.size() < 3) return sf::FloatRect({cx - radius, cy - radius}, {2.f * radius, 2.f * radius});
+    float w = bboxMax_.x - bboxMin_.x;
+    float h = bboxMax_.y - bboxMin_.y;
+    float maxDim = std::max(w, h);
+    float scale = (radius * 2.f) / maxDim;
+    float bx = (bboxMin_.x + bboxMax_.x) * 0.5f;
+    float by = (bboxMin_.y + bboxMax_.y) * 0.5f;
+    float sx = cx + (bboxMin_.x - bx) * scale;
+    float sy = cy + (bboxMin_.y - by) * scale;
+    return sf::FloatRect({sx, sy}, {w * scale, h * scale});
+}
+
+bool CountrySilhouette::containsScreen(sf::Vector2f p, float cx, float cy, float radius) const {
+    if (points_.size() < 3) return false;
+    float w = bboxMax_.x - bboxMin_.x;
+    float h = bboxMax_.y - bboxMin_.y;
+    float maxDim = std::max(w, h);
+    float scale = (radius * 2.f) / maxDim;
+    float bx = (bboxMin_.x + bboxMax_.x) * 0.5f;
+    float by = (bboxMin_.y + bboxMax_.y) * 0.5f;
+    // Convertir punto de pantalla a raw del SVG.
+    sf::Vector2f raw{ (p.x - cx) / scale + bx, (p.y - cy) / scale + by };
+    // Ray casting (horizontal +x ray).
+    bool inside = false;
+    size_t n = points_.size();
+    for (size_t i = 0, j = n - 1; i < n; j = i++) {
+        const auto& pi = points_[i];
+        const auto& pj = points_[j];
+        bool intersect = ((pi.y > raw.y) != (pj.y > raw.y)) &&
+                         (raw.x < (pj.x - pi.x) * (raw.y - pi.y) / (pj.y - pi.y + 1e-9f) + pi.x);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
 void CountrySilhouette::draw(sf::RenderWindow& win, float cx, float cy, float radius,
                              sf::Color fill, sf::Color outline) const {
     if (points_.size() < 3) return;
