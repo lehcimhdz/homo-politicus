@@ -10,6 +10,7 @@
 #include "ui/DecisionModal.hpp"
 #include "ui/AudioSystem.hpp"
 #include "ui/MainMenu.hpp"
+#include "ui/GameOverScreen.hpp"
 
 enum class AppState { Menu, Playing };
 enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
@@ -110,7 +111,22 @@ int main(int argc, char** argv) {
     DecisionModal modal;
     AudioSystem audio;
     MainMenu menu;
+    GameOverScreen gameOver;
+    double popularitySumDemo = 0.0;
     AppState appState = AppState::Menu;
+    gameOver.setCallback([&](GameOverScreen::Action a) {
+        audio.play("button_click");
+        if (a == GameOverScreen::Action::NewGame) {
+            bridge.resetCountry();
+            dashboard.recordHistory(bridge.country());
+            popularitySumDemo = 0.0;
+            gameOver.hide();
+            appState = AppState::Playing;
+        } else if (a == GameOverScreen::Action::MainMenu) {
+            gameOver.hide();
+            appState = AppState::Menu;
+        }
+    });
     menu.setCallback([&](MainMenu::Action a) {
         audio.play("button_click");
         switch (a) {
@@ -170,7 +186,8 @@ int main(int argc, char** argv) {
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {
                     sf::Vector2f pos((float)mb->position.x, (float)mb->position.y);
-                    if (appState == AppState::Menu) menu.onClick(pos);
+                    if (gameOver.visible()) gameOver.onClick(pos);
+                    else if (appState == AppState::Menu) menu.onClick(pos);
                     else if (modal.visible()) modal.onClick(pos);
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
@@ -182,6 +199,7 @@ int main(int argc, char** argv) {
                 }
                 if (kp->code == sf::Keyboard::Key::N) {
                     bridge.tick(); dashboard.recordHistory(bridge.country());
+                    popularitySumDemo += bridge.country().politics.popularity;
                     audio.play("turn_advance");
                 }
                 if (kp->code == sf::Keyboard::Key::R) {
@@ -202,6 +220,11 @@ int main(int argc, char** argv) {
                         "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
                         {"purge_military", "negotiate_military", "cede_power", "resist"}});
                     audio.play("decision_appears");
+                }
+                if (kp->code == sf::Keyboard::Key::G) {
+                    gameOver.show(EndCondition::COUP_SUCCESS, bridge.country(),
+                                  bridge.turn(), popularitySumDemo);
+                    audio.play("game_over");
                 }
             }
         }
@@ -299,6 +322,10 @@ int main(int argc, char** argv) {
 
         // Modal overlay (siempre al final para estar encima)
         if (fontOk) modal.draw(window, font);
+
+        // Game over screen (encima de TODO incluido el modal)
+        gameOver.update(dt);
+        if (fontOk) gameOver.draw(window, font);
 
         window.display();
     }
