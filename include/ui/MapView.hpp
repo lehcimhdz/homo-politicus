@@ -2,7 +2,9 @@
 #define MAP_VIEW_HPP
 
 #include <SFML/Graphics.hpp>
+#include <string>
 #include "Country.hpp"
+#include "ui/CountrySilhouette.hpp"
 
 // MapView: dibuja el pais central + 3 vecinos como poligonos con relaciones diplomaticas
 // y lineas comerciales animadas. Area: x=218..1028, y=100..680 (830 x 580).
@@ -13,6 +15,9 @@ public:
     void draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const;
     // Devuelve indice del vecino bajo el mouse (-1 si ninguno)
     int neighborAt(sf::Vector2f mouse) const;
+    // Carga silueta de pais por nombre (argentina, chile, cuba, brasil, usa).
+    bool loadSilhouette(const std::string& name);
+    bool hasSilhouette() const { return homeSilhouette_.loaded(); }
 
 private:
     float t_ = 0.f; // tiempo acumulado para animaciones
@@ -25,6 +30,7 @@ private:
     };
     float homeRadius_ = 80.f;
     float neighRadius_ = 55.f;
+    CountrySilhouette homeSilhouette_;
 };
 
 #endif

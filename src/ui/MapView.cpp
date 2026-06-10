@@ -11,7 +11,20 @@ static const sf::Color kGood   = sf::Color(80, 200, 120);
 static const sf::Color kBad    = sf::Color(220, 80, 80);
 static const sf::Color kWarn   = sf::Color(240, 180, 60);
 
-MapView::MapView() {}
+MapView::MapView() {
+    loadSilhouette("argentina");
+}
+
+bool MapView::loadSilhouette(const std::string& name) {
+    const std::string candidates[] = {
+        "assets/silhouettes/" + name + ".svg",
+        "/Users/michelcano/Documents/Repositorios/homo-politicus/assets/silhouettes/" + name + ".svg",
+    };
+    for (const auto& p : candidates) {
+        if (homeSilhouette_.loadFromFile(p)) return true;
+    }
+    return false;
+}
 
 void MapView::update(float dt) { t_ += dt; }
 
@@ -71,7 +84,12 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
     double stability = (c.politics.popularity + c.politics.regime_legitimacy) / 2.0;
     if (stability < 0.30) homeFill = kBad;
     else if (stability < 0.50) homeFill = kWarn;
-    win.draw(circleShape(homePos_, homeRadius_, homeFill, kBorder));
+    if (homeSilhouette_.loaded()) {
+        sf::Color outline(220, 222, 232, 200);
+        homeSilhouette_.draw(win, homePos_.x, homePos_.y, homeRadius_, homeFill, outline);
+    } else {
+        win.draw(circleShape(homePos_, homeRadius_, homeFill, kBorder));
+    }
     win.draw(makeText(font, "PAIS", 20, kText, homePos_.x - 26, homePos_.y - 14));
 
     std::ostringstream popStr;
