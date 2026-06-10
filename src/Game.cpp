@@ -3376,6 +3376,63 @@ void Game::update() {
         }
     }
 
+    // --- EPIDEMIC EVENT ---
+    if (playerCountry.welfare.epidemic_active) {
+        playerCountry.welfare.epidemic_duration--;
+        double sev = playerCountry.welfare.epidemic_severity;
+
+        // Moderate health impact
+        playerCountry.welfare.death_rate += sev * 0.001;
+        playerCountry.welfare.health_coverage -= sev * 0.015;
+        if (playerCountry.welfare.health_coverage < 0.05)
+            playerCountry.welfare.health_coverage = 0.05;
+
+        // Smaller economic hit than pandemic
+        double gdp_hit = playerCountry.economy.gdp * sev * 0.015;
+        playerCountry.economy.gdp -= gdp_hit;
+        playerCountry.welfare.unemployment_rate += sev * 0.005;
+
+        // Productivity loss
+        playerCountry.politics.popularity -= 0.01 * sev;
+
+        std::cout << "[!!] EPIDEMIC (Turn " << (playerCountry.welfare.epidemic_duration + 1)
+                  << " remaining): Severity " << (int)(sev * 100) << "%" << std::endl;
+
+        // Can escalate to pandemic if health system is overwhelmed
+        if (playerCountry.welfare.health_coverage < 0.4 && !playerCountry.welfare.pandemic_active) {
+            if (dist(rng) < 0.15) { // 15% chance per turn of escalation
+                playerCountry.welfare.pandemic_active = true;
+                playerCountry.welfare.pandemic_duration = 4;
+                playerCountry.welfare.pandemic_severity = sev * 2.0;
+                if (playerCountry.welfare.pandemic_severity > 1.0)
+                    playerCountry.welfare.pandemic_severity = 1.0;
+                playerCountry.welfare.pandemic_death_toll = 0.0;
+                playerCountry.welfare.pandemic_economic_cost = 0.0;
+                playerCountry.welfare.epidemic_active = false;
+                std::cout << "[!!!!] EPIDEMIC ESCALATION: Overwhelmed health system — epidemic has become a PANDEMIC!" << std::endl;
+            }
+        }
+
+        if (playerCountry.welfare.epidemic_active && playerCountry.welfare.epidemic_duration <= 0) {
+            playerCountry.welfare.epidemic_active = false;
+            playerCountry.welfare.epidemic_severity = 0.0;
+            std::cout << "[INFO] EPIDEMIC CONTAINED: Public health response has controlled the outbreak." << std::endl;
+        }
+    } else if (!playerCountry.welfare.pandemic_active) {
+        // Stochastic epidemic trigger (only if no pandemic active)
+        if (dist(rng) < playerCountry.welfare.epidemic_prob) {
+            playerCountry.welfare.epidemic_active = true;
+            std::uniform_int_distribution<int> dur_dist(1, 4);
+            playerCountry.welfare.epidemic_duration = dur_dist(rng);
+            std::uniform_real_distribution<double> sev_dist(0.1, 0.5);
+            playerCountry.welfare.epidemic_severity = sev_dist(rng);
+            std::cout << "[!!] EPIDEMIC OUTBREAK: Disease spreading. Severity: "
+                      << (int)(playerCountry.welfare.epidemic_severity * 100)
+                      << "%. Duration: " << playerCountry.welfare.epidemic_duration
+                      << " turns." << std::endl;
+        }
+    }
+
     // --- COUP RISK DYNAMICS ---
     // Coup probability driven by: low civilian control, low popularity, military insubordination, history
     playerCountry.politics.coup_d_etat_prob = (1.0 - playerCountry.politics.civilian_military_control) * 0.03

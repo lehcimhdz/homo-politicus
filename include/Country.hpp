@@ -39,6 +39,11 @@ struct WelfareSocietySystem {
     double pandemic_death_toll = 0.0;
     double pandemic_economic_cost = 0.0;
 
+    // Epidemic state
+    bool epidemic_active = false;
+    int epidemic_duration = 0;
+    double epidemic_severity = 0.0;  // 0.0–0.5 (smaller than pandemic)
+
     // Social Welfare (Mental)
     double mental_health_index = 0.7; // 0.0 (Despair) to 1.0 (Joy)
     double suicide_rate = 0.00014; // Base: 14 per 100k (Global Average)
