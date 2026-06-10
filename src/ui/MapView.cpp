@@ -133,9 +133,12 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
             float targetZoom = bbox0.size.x / (22.f * IsoCamera::kTileW * 0.55f);
             isoCam_.setZoom(targetZoom);
             isoWorld_.configure(homeSilhouette_, isoCam_, homePos_, homeRadius_, 22);
+            isoBuildings_.configure(isoWorld_, homeSilhouette_, homePos_, homeRadius_, c);
             isoConfigured_ = true;
         }
+        isoBuildings_.updateForCountry(c);
         isoWorld_.draw(win, isoCam_, c, nightAmount);
+        isoBuildings_.draw(win, isoCam_, c, nightAmount);
         auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
         // Population dots: cantidad escalada por urbanizacion, micro-movimiento.
         int dotCount = 60 + (int)(c.welfare.urban_population_ratio * 180);

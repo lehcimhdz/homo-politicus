@@ -8,6 +8,7 @@
 #include "ui/CountrySilhouette.hpp"
 #include "ui/IsoCamera.hpp"
 #include "ui/IsoWorld.hpp"
+#include "ui/IsoBuilding.hpp"
 
 // MapView: dibuja el pais central + 3 vecinos como poligonos con relaciones diplomaticas
 // y lineas comerciales animadas. Area: x=218..1028, y=100..680 (830 x 580).
@@ -39,6 +40,7 @@ private:
     CountrySilhouette homeSilhouette_;
     mutable IsoCamera isoCam_;
     mutable IsoWorld isoWorld_;
+    mutable IsoBuilding isoBuildings_;
     mutable bool isoConfigured_ = false;
 
     // Population dots: posiciones precomputadas dentro de la silueta
