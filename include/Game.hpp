@@ -40,6 +40,8 @@ private:
     void checkGameOver();
     void renderEndScreen();
     void resolveDecision(const std::string& choice);
+    void saveGame(const std::string& path);
+    void loadGame(const std::string& path);
 
     bool isRunning;
     bool nextTurn; // Moved from global
