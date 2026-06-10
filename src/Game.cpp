@@ -3813,6 +3813,59 @@ void Game::update() {
                                            + playerCountry.infra.autonomous_weapons_restraint * 0.2;
     if (playerCountry.infra.algorithmic_ethics > 1.0) playerCountry.infra.algorithmic_ethics = 1.0;
 
+    // --- TECHNOLOGY / CYBER CRISIS ---
+    if (playerCountry.infra.tech_crisis_active) {
+        playerCountry.infra.tech_crisis_duration--;
+
+        // Financial system disruption: GDP hit
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.025;
+
+        // Banking/payment systems down
+        playerCountry.economy.international_reserves -= 5000000.0;
+
+        // Intelligence compromised
+        playerCountry.security.document_leak_prob += 0.1;
+        if (playerCountry.security.document_leak_prob > 0.8)
+            playerCountry.security.document_leak_prob = 0.8;
+        playerCountry.security.informant_network -= 0.05;
+        if (playerCountry.security.informant_network < 0.0)
+            playerCountry.security.informant_network = 0.0;
+
+        // Automation shock: unemployment spike
+        playerCountry.welfare.unemployment_rate += 0.008;
+
+        // Grid vulnerability exposed
+        playerCountry.infra.cyber_grid_vulnerability += 0.05;
+        if (playerCountry.infra.cyber_grid_vulnerability > 0.8)
+            playerCountry.infra.cyber_grid_vulnerability = 0.8;
+
+        playerCountry.politics.popularity -= 0.02;
+
+        std::cout << "[!!!] TECH CRISIS (Turn " << (playerCountry.infra.tech_crisis_duration + 1)
+                  << " remaining): Critical systems compromised. Financial disruption ongoing." << std::endl;
+
+        if (playerCountry.infra.tech_crisis_duration <= 0) {
+            playerCountry.infra.tech_crisis_active = false;
+            playerCountry.infra.cyber_defense_maturity += 0.05; // Lessons learned
+            std::cout << "[INFO] TECH CRISIS RESOLVED: Systems restored. Cyber defense strengthened." << std::endl;
+        }
+    } else {
+        if (dist(rng) < playerCountry.infra.ai_cyberattack_prob) {
+            playerCountry.infra.tech_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(1, 3);
+            playerCountry.infra.tech_crisis_duration = dur_dist(rng);
+            // State-sponsored attribution
+            if (playerCountry.infra.state_sponsored_cyber_threat > 0.3) {
+                std::cout << "[!!!!] STATE-SPONSORED CYBERATTACK: Foreign power has breached critical infrastructure! "
+                          << "Duration: " << playerCountry.infra.tech_crisis_duration << " turns." << std::endl;
+                playerCountry.security.diplomatic_prestige -= 0.05;
+            } else {
+                std::cout << "[!!!] MAJOR CYBERATTACK: Banking, defense, and communications systems compromised! "
+                          << "Duration: " << playerCountry.infra.tech_crisis_duration << " turns." << std::endl;
+            }
+        }
+    }
+
     // --- SPACE PROGRAM DYNAMICS ---
     // Total satellites
     playerCountry.infra.satellite_capacity = playerCountry.infra.satellites_civil + playerCountry.infra.satellites_military;

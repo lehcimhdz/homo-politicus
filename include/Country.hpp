@@ -627,6 +627,8 @@ struct InfrastructureFutureSystem {
     double automation_retraining_investment = 0.001; // % GDP in reskilling programs
 
     double ai_cyberattack_prob = 0.05;
+    bool tech_crisis_active = false;
+    int tech_crisis_duration = 0;
     double critical_infrastructure_cyber_risk = 0.15; // Grid/water/finance exposure (0–1)
     double state_sponsored_cyber_threat = 0.1; // Foreign state hacking intensity (0–1)
     double cyber_defense_maturity = 0.4;       // National cybersecurity capability (0–1)
