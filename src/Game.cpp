@@ -2,6 +2,7 @@
 #include "Persistence.hpp"
 #include "GameOverChecker.hpp"
 #include "ScenarioLoader.hpp"
+#include "LeaderLoader.hpp"
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
@@ -2152,6 +2153,23 @@ void Game::processEvents() {
             }
         }
         if (!any_war) std::cout << ">> No active wars with neighbors." << std::endl;
+    }
+    else if (command == "leader") {
+        std::string path;
+        std::cin >> path;
+        if (path.empty()) {
+            std::cout << ">> Usage: leader <path-to-yaml>" << std::endl;
+            std::cout << "   Ej: leader ../homo-politicus-game/content/leaders/peron.yaml" << std::endl;
+            return;
+        }
+        LeaderLoader::Metadata meta;
+        if (LeaderLoader::load(path, playerCountry, meta)) {
+            std::cout << ">> LIDER CARGADO: " << meta.name_es
+                      << " (" << meta.country_origin << ")" << std::endl;
+            std::cout << "   Modificadores aplicados al estado actual." << std::endl;
+        } else {
+            std::cout << ">> LEADER: no se pudo cargar " << path << std::endl;
+        }
     }
     else if (command == "scenario") {
         std::string path;
