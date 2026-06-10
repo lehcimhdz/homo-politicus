@@ -3685,6 +3685,71 @@ void Game::update() {
         if (playerCountry.infra.fossil_fuel_dependency < 0.0) playerCountry.infra.fossil_fuel_dependency = 0.0;
     }
 
+    // --- DROUGHT EVENT ---
+    if (playerCountry.infra.drought_active) {
+        playerCountry.infra.drought_duration--;
+        double sev = playerCountry.infra.drought_severity;
+
+        // Crop loss accumulates
+        playerCountry.infra.crop_loss_pct += sev * 0.15;
+        if (playerCountry.infra.crop_loss_pct > 0.9) playerCountry.infra.crop_loss_pct = 0.9;
+
+        // Inflation: food prices spike
+        playerCountry.economy.inflation += sev * 0.02;
+
+        // Agricultural GDP hit (agri sector ~ agricultural_power proxy)
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * sev * 0.01;
+
+        // Water scarcity: health impact
+        playerCountry.welfare.health_coverage -= sev * 0.01;
+        if (playerCountry.welfare.health_coverage < 0.05)
+            playerCountry.welfare.health_coverage = 0.05;
+
+        // Rural-to-urban migration
+        playerCountry.welfare.urban_population_ratio += sev * 0.005;
+        if (playerCountry.welfare.urban_population_ratio > 0.98)
+            playerCountry.welfare.urban_population_ratio = 0.98;
+
+        // Popularity hit: people blame government
+        playerCountry.politics.popularity -= 0.015 * sev;
+
+        // Prolonged drought → social unrest
+        if (playerCountry.infra.crop_loss_pct > 0.6) {
+            playerCountry.politics.protest_intensity += 0.03;
+            std::cout << "[!!!] DROUGHT FAMINE RISK: Crop losses exceed 60%. Social unrest rising." << std::endl;
+        }
+
+        std::cout << "[!!] DROUGHT (Turn " << (playerCountry.infra.drought_duration + 1)
+                  << " remaining): Crop loss " << (int)(playerCountry.infra.crop_loss_pct * 100)
+                  << "%. Severity " << (int)(sev * 100) << "%." << std::endl;
+
+        if (playerCountry.infra.drought_duration <= 0) {
+            playerCountry.infra.drought_active = false;
+            std::cout << "[INFO] DROUGHT ENDED: Rains return. Crop recovery will take time." << std::endl;
+            // Slow crop recovery over subsequent turns
+            playerCountry.infra.crop_loss_pct *= 0.5; // Halve immediately, rest recovers naturally
+        }
+    } else {
+        // Natural crop recovery
+        if (playerCountry.infra.crop_loss_pct > 0.0) {
+            playerCountry.infra.crop_loss_pct -= 0.05;
+            if (playerCountry.infra.crop_loss_pct < 0.0) playerCountry.infra.crop_loss_pct = 0.0;
+        }
+        // Stochastic drought trigger
+        if (dist(rng) < playerCountry.infra.drought_prob) {
+            playerCountry.infra.drought_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 6);
+            playerCountry.infra.drought_duration = dur_dist(rng);
+            std::uniform_real_distribution<double> sev_dist(0.2, 1.0);
+            playerCountry.infra.drought_severity = sev_dist(rng);
+            playerCountry.infra.crop_loss_pct = 0.0;
+            std::cout << "[!!] DROUGHT BEGINS: Rainfall has plummeted. Severity: "
+                      << (int)(playerCountry.infra.drought_severity * 100)
+                      << "%. Expected duration: " << playerCountry.infra.drought_duration
+                      << " turns." << std::endl;
+        }
+    }
+
     // --- MEDIA & PROPAGANDA DYNAMICS ---
     // Media pluralism: inverse of control + ownership concentration
     playerCountry.security.media_pluralism = 1.0 - playerCountry.security.media_control * 0.5

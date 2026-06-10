@@ -447,6 +447,11 @@ struct InfrastructureFutureSystem {
     double illegal_wildlife_trade = 0.1;       // Poaching/trafficking intensity (0–1)
 
     double drought_prob = 0.1;
+    bool drought_active = false;
+    int drought_duration = 0;
+    double drought_severity = 0.0;
+    double crop_loss_pct = 0.0;
+
     double storm_prob = 0.1;
     double tornado_prob = 0.01;
     double flood_prob = 0.15;                  // River/coastal flood probability
