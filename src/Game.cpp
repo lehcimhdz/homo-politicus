@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include "Persistence.hpp"
+#include "GameOverChecker.hpp"
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
@@ -7946,40 +7947,10 @@ void Game::checkGameOver() {
             {"preemptive_strike", "diplomatic_summit", "evacuate_cities"}});
     }
 
-    if (sec.nuclear_strike && sec.nuclear_casualties > 1000000.0) {
-        endCondition = EndCondition::NUCLEAR_ANNIHILATION;
+    EndCondition triggered = GameOverChecker::evaluate(playerCountry, rng);
+    if (triggered != EndCondition::NONE) {
+        endCondition = triggered;
         isRunning = false;
-        return;
-    }
-    if (pol.military_pressure >= 0.85 && roll(rng) < pol.coup_success_prob) {
-        endCondition = EndCondition::COUP_SUCCESS;
-        isRunning = false;
-        return;
-    }
-    if (pol.popular_pressure >= 0.9 && pol.revolution_prob > 0.5) {
-        endCondition = EndCondition::REVOLUTION;
-        isRunning = false;
-        return;
-    }
-    if (pol.congressional_pressure >= 0.85 && pol.popularity < 0.3) {
-        endCondition = EndCondition::IMPEACHMENT;
-        isRunning = false;
-        return;
-    }
-    if (pol.judicial_pressure >= 0.85 && pol.active_scandals > 2) {
-        endCondition = EndCondition::LAWFARE_REMOVAL;
-        isRunning = false;
-        return;
-    }
-    if (pol.international_pressure >= 0.9 && pol.popularity < 0.2) {
-        endCondition = EndCondition::EXILE;
-        isRunning = false;
-        return;
-    }
-    if (pol.active_scandals >= 4 && pol.popularity < 0.1 && roll(rng) < 0.02) {
-        endCondition = EndCondition::ASSASSINATION;
-        isRunning = false;
-        return;
     }
 }
 
