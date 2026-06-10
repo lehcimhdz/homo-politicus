@@ -6,6 +6,7 @@
 #include "ui/UIBridge.hpp"
 #include "ui/Dashboard.hpp"
 #include "ui/MapView.hpp"
+#include "ui/ActionPanel.hpp"
 
 enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 
@@ -101,8 +102,13 @@ int main(int argc, char** argv) {
     UIBridge bridge;
     Dashboard dashboard;
     MapView mapView;
+    ActionPanel actionPanel;
     Tab currentTab = Tab::Dashboard;
     sf::Clock frameClock;
+    std::string lastActionFeedback;
+    actionPanel.setCallback([&](const std::string& id) {
+        lastActionFeedback = ">> " + id;
+    });
     dashboard.recordHistory(bridge.country());
 
     if (headless) {
@@ -117,6 +123,14 @@ int main(int argc, char** argv) {
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) window.close();
+            if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
+                if (currentTab == Tab::Action) actionPanel.onMouseMove({(float)mm->position.x, (float)mm->position.y});
+            }
+            if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
+                if (mb->button == sf::Mouse::Button::Left && currentTab == Tab::Action) {
+                    actionPanel.onClick({(float)mb->position.x, (float)mb->position.y});
+                }
+            }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
                 if (kp->code == sf::Keyboard::Key::Escape) window.close();
                 if (kp->code == sf::Keyboard::Key::N) { bridge.tick(); dashboard.recordHistory(bridge.country()); }
@@ -182,7 +196,11 @@ int main(int argc, char** argv) {
                     mapView.draw(window, font, bridge.country());
                     break;
                 case Tab::Action:
-                    window.draw(makeText(font, "ACCION  [3]  (Sprint 13)", 18, kAccent, 220, 76));
+                    window.draw(makeText(font, "ACCION  [3]", 18, kAccent, 220, 76));
+                    actionPanel.draw(window, font);
+                    if (!lastActionFeedback.empty()) {
+                        window.draw(makeText(font, lastActionFeedback, 13, kGood, 220, 96));
+                    }
                     break;
                 case Tab::Decisions:
                     window.draw(makeText(font, "DECISIONES  [4]  (Sprint 14)", 18, kAccent, 220, 76));
