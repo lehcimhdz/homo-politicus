@@ -16,6 +16,7 @@
 #include "ui/ParticleEmitter.hpp"
 #include "ui/LeaderPortrait.hpp"
 #include "ui/MandateTimeline.hpp"
+#include "ui/CourtNetwork.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -26,7 +27,7 @@ static std::string tr(const std::string& key, const std::string& fallback) {
     if (v.find("[missing:") != std::string::npos) return fallback;
     return v;
 }
-enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
+enum class Tab { Dashboard, Map, Action, Decisions, Achievements, Court };
 
 // Layout (1280x800):
 //   TopBar:    1280 x 60
@@ -186,6 +187,8 @@ int main(int argc, char** argv) {
     ParticleEmitter particles;
     MandateTimeline timeline;
     timeline.addEvent(0, "Asuncion", sf::Color(80, 160, 240));
+    CourtNetwork court;
+    court.configure(bridge.country());
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     AppState appState = AppState::Menu;
@@ -299,6 +302,7 @@ int main(int argc, char** argv) {
                 else if (modal.visible()) modal.onMouseMove(pos);
                 else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
                 else if (currentTab == Tab::Dashboard) dashboard.onMouseMove(pos);
+                else if (currentTab == Tab::Court) court.onMouseMove(pos);
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {
@@ -340,6 +344,7 @@ int main(int argc, char** argv) {
                 if (kp->code == sf::Keyboard::Key::Num3) currentTab = Tab::Action;
                 if (kp->code == sf::Keyboard::Key::Num4) currentTab = Tab::Decisions;
                 if (kp->code == sf::Keyboard::Key::Num5) currentTab = Tab::Achievements;
+                if (kp->code == sf::Keyboard::Key::Num6) currentTab = Tab::Court;
                 if (kp->code == sf::Keyboard::Key::D) {
                     modal.show({"coup_threat",
                         "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
@@ -495,6 +500,17 @@ int main(int argc, char** argv) {
                     sf::Text hdr(fTitle, "LOGROS  [5]  (Sprint futuro)", 18);
                     hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
                     hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+                    break;
+                }
+                case Tab::Court: {
+                    sf::Text hdr(fTitle, "CORTE  [6]", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+                    court.update(dt);
+                    court.draw(window, font, 218.f, 110.f, 794.f, 540.f);
+                    if (court.hovered() >= 0) {
+                        window.draw(makeText(font, court.hoveredDetail(), 12, kAccent, 220, 668));
+                    }
                     break;
                 }
             }
