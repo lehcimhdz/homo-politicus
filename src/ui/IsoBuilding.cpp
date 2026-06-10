@@ -174,13 +174,89 @@ void IsoBuilding::draw(sf::RenderWindow& win, const IsoCamera& cam,
         float kb = B.gx + B.gy;
         return ka < kb;
     });
+    float z = cam.zoom();
     for (size_t i : order) {
         const auto& b = buildings_[i];
+        // Sombra direccional simple en el piso (desplazada al SO).
+        {
+            sf::Vector2f shCenter = cam.worldToScreen(b.gx + 0.15f * b.h, b.gy + 0.15f * b.h, 0.f);
+            sf::ConvexShape shadow(4);
+            float sw = b.w * IsoCamera::kTileW * 0.55f * z;
+            float sh = b.d * IsoCamera::kTileH * 0.55f * z;
+            shadow.setPoint(0, {shCenter.x,        shCenter.y - sh * 0.5f});
+            shadow.setPoint(1, {shCenter.x + sw*0.5f, shCenter.y});
+            shadow.setPoint(2, {shCenter.x,        shCenter.y + sh * 0.5f});
+            shadow.setPoint(3, {shCenter.x - sw*0.5f, shCenter.y});
+            shadow.setFillColor(sf::Color(0, 0, 0, (uint8_t)(70 + 60 * (1.f - nightAmount))));
+            win.draw(shadow);
+        }
+
         drawPrism(win, cam, b.gx, b.gy, b.w, b.d, b.h, b.baseColor, nightAmount);
-        // Banderita dorada en la capital.
+
+        // Ventanas iluminadas de noche en City.
+        if (b.kind == Kind::City) {
+            sf::Vector2f topBL = cam.worldToScreen(b.gx - b.w*0.5f, b.gy + b.d*0.5f, b.h);
+            sf::Vector2f topBR = cam.worldToScreen(b.gx + b.w*0.5f, b.gy + b.d*0.5f, b.h);
+            sf::Vector2f baseBL = cam.worldToScreen(b.gx - b.w*0.5f, b.gy + b.d*0.5f, 0.f);
+            sf::Vector2f baseBR = cam.worldToScreen(b.gx + b.w*0.5f, b.gy + b.d*0.5f, 0.f);
+            (void)topBL; (void)topBR;
+            // Grid 3 columnas x 3 filas en cara derecha (front-right).
+            for (int row = 0; row < 3; ++row) {
+                for (int col = 0; col < 3; ++col) {
+                    float tx = (col + 1.f) / 4.f;
+                    float ty = (row + 1.f) / 4.f;
+                    sf::Vector2f anchor = baseBR + (baseBL - baseBR) * tx;
+                    sf::Vector2f anchorTop = cam.worldToScreen(b.gx - b.w*0.5f + b.w * tx, b.gy + b.d*0.5f, b.h);
+                    sf::Vector2f winPos = anchor + (anchorTop - anchor) * ty;
+                    sf::CircleShape w2(1.1f * z);
+                    w2.setOrigin({1.1f * z, 1.1f * z});
+                    w2.setPosition(winPos);
+                    // Pseudo-random apagada.
+                    unsigned h = (unsigned)((int)(b.gx * 100) ^ (int)(b.gy * 100 + row * 17 + col * 31));
+                    bool lit = (h & 0x3) != 0;
+                    if (lit && nightAmount > 0.3f) {
+                        uint8_t a = (uint8_t)std::min(255.f, 100.f + 155.f * nightAmount);
+                        w2.setFillColor(sf::Color(255, 230, 130, a));
+                    } else {
+                        w2.setFillColor(sf::Color(40, 40, 50, 180));
+                    }
+                    win.draw(w2);
+                }
+            }
+        }
+        // Capitolio: cupula, columnas y bandera.
         if (b.kind == Kind::Capital) {
-            sf::Vector2f flagBase = cam.worldToScreen(b.gx, b.gy, b.h);
-            sf::Vector2f flagTip  = cam.worldToScreen(b.gx, b.gy, b.h + 0.7f);
+            // Cupula: semicirculo encima del top center.
+            sf::Vector2f topCenter = cam.worldToScreen(b.gx, b.gy, b.h);
+            float domeR = b.w * IsoCamera::kTileW * 0.4f * z;
+            sf::CircleShape dome(domeR);
+            dome.setOrigin({domeR, domeR});
+            dome.setPosition(topCenter);
+            // Cupula dorada.
+            sf::Color domeColor(230, 195, 100);
+            domeColor.r = (uint8_t)(domeColor.r * (1.f - 0.3f * nightAmount));
+            domeColor.g = (uint8_t)(domeColor.g * (1.f - 0.3f * nightAmount));
+            domeColor.b = (uint8_t)(domeColor.b * (1.f - 0.2f * nightAmount));
+            dome.setFillColor(domeColor);
+            dome.setOutlineColor(sf::Color(120, 90, 30));
+            dome.setOutlineThickness(0.8f);
+            win.draw(dome);
+            // Columnas: 4 lineas verticales en la fachada frontal.
+            sf::Vector2f baseBL = cam.worldToScreen(b.gx - b.w*0.45f, b.gy + b.d*0.5f, 0.f);
+            sf::Vector2f baseBR = cam.worldToScreen(b.gx + b.w*0.45f, b.gy + b.d*0.5f, 0.f);
+            for (int k = 0; k < 4; ++k) {
+                float t = (k + 0.5f) / 4.f;
+                sf::Vector2f bot = baseBL + (baseBR - baseBL) * t;
+                sf::Vector2f topC = cam.worldToScreen(b.gx - b.w*0.45f + b.w * 0.9f * t, b.gy + b.d*0.5f, b.h * 0.85f);
+                sf::Vertex col[2] = {
+                    sf::Vertex{bot,  sf::Color(220, 220, 210, 230), {}},
+                    sf::Vertex{topC, sf::Color(220, 220, 210, 230), {}},
+                };
+                win.draw(col, 2, sf::PrimitiveType::Lines);
+            }
+            // Bandera dorada en la cupula.
+            sf::Vector2f flagBase = cam.worldToScreen(b.gx, b.gy, b.h + 0.4f);
+            sf::Vector2f flagTip  = cam.worldToScreen(b.gx, b.gy, b.h + 1.1f);
             sf::Vertex pole[2] = {
                 sf::Vertex{flagBase, sf::Color(180, 180, 180), {}},
                 sf::Vertex{flagTip,  sf::Color(180, 180, 180), {}},
@@ -188,8 +264,8 @@ void IsoBuilding::draw(sf::RenderWindow& win, const IsoCamera& cam,
             win.draw(pole, 2, sf::PrimitiveType::Lines);
             sf::ConvexShape flag(3);
             flag.setPoint(0, flagTip);
-            flag.setPoint(1, {flagTip.x + 14.f * cam.zoom(), flagTip.y + 4.f * cam.zoom()});
-            flag.setPoint(2, {flagTip.x,                     flagTip.y + 8.f * cam.zoom()});
+            flag.setPoint(1, {flagTip.x + 14.f * z, flagTip.y + 4.f * z});
+            flag.setPoint(2, {flagTip.x,           flagTip.y + 8.f * z});
             flag.setFillColor(sf::Color(220, 180, 80));
             win.draw(flag);
         }
