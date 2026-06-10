@@ -548,9 +548,26 @@ struct InfrastructureFutureSystem {
 
     // AI
     double state_ai_development = 0.2;
+    bool   ai_national_strategy = false;       // Formal national AI strategy exists
+    double ai_talent_pool = 0.2;               // Domestic AI research talent (0–1)
+    double ai_compute_capacity = 0.1;          // GPU/HPC infrastructure (0–1)
+    double ai_data_governance = 0.3;           // Legal framework for AI data use (0–1)
+
     double employment_automation = 0.1;
+    double manufacturing_automation_risk = 0.4; // Factory/assembly job exposure
+    double service_automation_risk = 0.3;      // White-collar/service job exposure
+    double automation_retraining_investment = 0.001; // % GDP in reskilling programs
+
     double ai_cyberattack_prob = 0.05;
+    double critical_infrastructure_cyber_risk = 0.15; // Grid/water/finance exposure (0–1)
+    double state_sponsored_cyber_threat = 0.1; // Foreign state hacking intensity (0–1)
+    double cyber_defense_maturity = 0.4;       // National cybersecurity capability (0–1)
+
     double algorithmic_ethics = 0.5;
+    bool   ai_ethics_law = false;              // AI regulation enacted
+    double algorithmic_bias_index = 0.3;       // Measured bias in public AI (0–1)
+    double ai_accountability_framework = 0.3;  // Audit/explainability requirements (0–1)
+    double autonomous_weapons_restraint = 0.7; // Compliance with lethal AI norms (0–1)
 };
 
 class Country {

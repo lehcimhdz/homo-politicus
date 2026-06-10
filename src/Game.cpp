@@ -3333,6 +3333,49 @@ void Game::update() {
         }
     }
 
+    // --- AI & AUTOMATION DYNAMICS ---
+    // AI development level: driven by talent, compute, data governance, and strategy
+    playerCountry.infra.state_ai_development = playerCountry.infra.ai_talent_pool * 0.3
+                                             + playerCountry.infra.ai_compute_capacity * 0.25
+                                             + playerCountry.infra.ai_data_governance * 0.15
+                                             + (playerCountry.infra.ai_national_strategy ? 0.15 : 0.0)
+                                             + playerCountry.infra.innovation_index * 0.15;
+    if (playerCountry.infra.state_ai_development > 1.0) playerCountry.infra.state_ai_development = 1.0;
+    // AI talent pool grows with education and R&D
+    playerCountry.infra.ai_talent_pool += playerCountry.infra.university_research_quality * 0.003
+                                        + playerCountry.infra.total_rd_gdp * 0.5 * 0.002;
+    // Brain drain reduces talent pool
+    playerCountry.infra.ai_talent_pool -= playerCountry.welfare.brain_drain * 0.005;
+    if (playerCountry.infra.ai_talent_pool < 0.05) playerCountry.infra.ai_talent_pool = 0.05;
+    if (playerCountry.infra.ai_talent_pool > 1.0) playerCountry.infra.ai_talent_pool = 1.0;
+    // Employment automation risk: scales with AI development, mitigated by retraining
+    playerCountry.infra.employment_automation = playerCountry.infra.state_ai_development * 0.3
+                                              + playerCountry.infra.manufacturing_automation_risk * 0.3
+                                              + playerCountry.infra.service_automation_risk * 0.3
+                                              - playerCountry.infra.automation_retraining_investment * 50.0;
+    if (playerCountry.infra.employment_automation < 0.0) playerCountry.infra.employment_automation = 0.0;
+    if (playerCountry.infra.employment_automation > 0.5) playerCountry.infra.employment_automation = 0.5;
+    // High automation with low retraining → unemployment spike
+    if (playerCountry.infra.employment_automation > 0.3 && playerCountry.infra.automation_retraining_investment < 0.005) {
+        playerCountry.welfare.unemployment_rate += 0.005;
+        playerCountry.politics.popularity -= 0.005;
+    }
+    // Cyber threat landscape
+    playerCountry.infra.ai_cyberattack_prob = playerCountry.infra.state_sponsored_cyber_threat * 0.3
+                                            + playerCountry.infra.critical_infrastructure_cyber_risk * 0.2
+                                            + (1.0 - playerCountry.infra.cyber_defense_maturity) * 0.2;
+    if (playerCountry.infra.ai_cyberattack_prob > 0.5) playerCountry.infra.ai_cyberattack_prob = 0.5;
+    // Cyber defense maturity grows with intelligence capability + investment
+    playerCountry.infra.cyber_defense_maturity += playerCountry.security.sigint_capability * 0.003
+                                                + playerCountry.infra.total_rd_gdp * 0.01;
+    if (playerCountry.infra.cyber_defense_maturity > 1.0) playerCountry.infra.cyber_defense_maturity = 1.0;
+    // Algorithmic ethics: composite governance score
+    playerCountry.infra.algorithmic_ethics = (playerCountry.infra.ai_ethics_law ? 0.3 : 0.0)
+                                           + (1.0 - playerCountry.infra.algorithmic_bias_index) * 0.3
+                                           + playerCountry.infra.ai_accountability_framework * 0.2
+                                           + playerCountry.infra.autonomous_weapons_restraint * 0.2;
+    if (playerCountry.infra.algorithmic_ethics > 1.0) playerCountry.infra.algorithmic_ethics = 1.0;
+
     // --- SPACE PROGRAM DYNAMICS ---
     // Total satellites
     playerCountry.infra.satellite_capacity = playerCountry.infra.satellites_civil + playerCountry.infra.satellites_military;
