@@ -2339,17 +2339,8 @@ void Game::update() {
     // GDP = Consumption + Investment + Government + (Exports - Imports)
     // We simulate growth based on factors of production: Labor, Capital, TFP.
 
-    // 1. Labor Factor (Workforce Quality & Quantity)
-    // Quantity: 
-    double workforce_participation = (1.0 - playerCountry.welfare.unemployment_rate) 
-                                   * (1.0 - (playerCountry.welfare.aging_index * 0.5)); // Age reduces active workforce
-    
-    // Quality (Human Capital):
-    double human_capital = (playerCountry.welfare.literacy_rate * 0.4) 
-                         + (playerCountry.welfare.secondary_enrollment * 0.3)
-                         + (playerCountry.welfare.health_coverage * 0.3); // Healthy workers work better
-                         
-    double labor_factor = workforce_participation * human_capital;
+    // 1. Labor Factor: workforce_participation, human_capital y labor_factor
+    //    removidos hasta que el growth model los consuma.
 
     // 2. Capital Factor (Infrastructure & Machines)
     double physical_capital = (playerCountry.infra.road_connectivity * 0.3)
@@ -2423,8 +2414,8 @@ void Game::update() {
     // Internal Market Strength (Consumption Base)
     // Large population with money shields from global shocks.
     // Normalized somewhat to 10M pop baseline.
-    double internal_market_strength = (playerCountry.welfare.population / 10000000.0) * consumption_modifier; 
-    
+    // internal_market_strength removido (no consumido).
+
     // Display Global Context
     if (global_growth_trend > 0.04) std::cout << "[INFO] GLOBAL ECONOMY: Boom Times! World trade is surging." << std::endl;
     else if (global_growth_trend < 0.015) std::cout << "[INFO] GLOBAL ECONOMY: Recession. World demand is weak." << std::endl;
@@ -3900,9 +3891,7 @@ void Game::update() {
     
     // 2. Demand Pull (Overheated consumption)
     // net_purchasing_power is already adjusted by taxes and remittances in previous section
-    double demand_pull = 0.0;
-    // We need to re-fetch net_purchasing_power from the scope (it's in Game::update)
-    // If net_purchasing_power > 1.1, add (net_purchasing_power - 1.1) * 0.1 to inflation.
+    // demand_pull pendiente de implementar cuando se acceda a net_purchasing_power
     
     // 3. Cost Push (Devaluation / Pass-through)
     double cost_push = 0.0;
@@ -4066,13 +4055,8 @@ void Game::update() {
                                               + playerCountry.economy.tariff_agricultural * 0.30
                                               + playerCountry.economy.tariff_strategic * 0.20;
 
-        // Non-tariff barriers act as hidden tariff equivalent (add ~40% of NTB index to effective rate)
-        double effective_tariff_with_ntb = playerCountry.economy.average_tariffs
-                                         + playerCountry.economy.non_tariff_barriers * 0.4;
-
-        // Anti-dumping cases: each active case raises effective protection and diplomatic friction
+        // Anti-dumping cases: cada caso activo erosiona prestigio diplomático
         if (playerCountry.economy.antidumping_cases > 0) {
-            effective_tariff_with_ntb += playerCountry.economy.antidumping_cases * 0.005;
             playerCountry.security.diplomatic_prestige -= playerCountry.economy.antidumping_cases * 0.003;
             if (playerCountry.security.diplomatic_prestige < 0.0) playerCountry.security.diplomatic_prestige = 0.0;
         }
