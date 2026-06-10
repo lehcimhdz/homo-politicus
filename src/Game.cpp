@@ -23,6 +23,18 @@ void Game::registerCommands() {
     commandHandlers["next"]         = [this]() { nextTurn = true; };
     commandHandlers["save"]         = [this]() { saveGame("savegame.txt"); };
     commandHandlers["load"]         = [this]() { loadGame("savegame.txt"); };
+    commandHandlers["save_slot"]    = [this]() {
+        std::string slot;
+        std::cin >> slot;
+        if (slot.empty()) { std::cout << ">> Usage: save_slot <1-5|quick>" << std::endl; return; }
+        saveGame("savegame_" + slot + ".txt");
+    };
+    commandHandlers["load_slot"]    = [this]() {
+        std::string slot;
+        std::cin >> slot;
+        if (slot.empty()) { std::cout << ">> Usage: load_slot <1-5|quick>" << std::endl; return; }
+        loadGame("savegame_" + slot + ".txt");
+    };
     commandHandlers["tax+"]         = [this]() {
         double current_tax_level = playerCountry.economy.tax_collection / (playerCountry.economy.gdp * 0.30);
         if (current_tax_level > 1.0) current_tax_level = 1.0;
