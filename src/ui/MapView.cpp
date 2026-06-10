@@ -148,6 +148,71 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
         isoNpcs_.draw(win, isoCam_, nightAmount);
         isoVehicles_.drawVehicles(win, isoCam_, nightAmount);
         isoBuildings_.draw(win, isoCam_, c, nightAmount);
+        // === Eventos contextuales animados ===
+        auto capPos = isoBuildings_.buildings().empty() ? sf::Vector2f{0.f, 0.f}
+                       : sf::Vector2f{isoBuildings_.buildings()[0].gx, isoBuildings_.buildings()[0].gy};
+
+        // Parade militar: 12 NPCs marchando en formacion 3x4 frente a la capital.
+        if (c.security.war_active || c.politics.military_pressure > 0.7) {
+            sf::Vector2f marchOrigin{capPos.x - 4.f, capPos.y - 0.5f};
+            float marchPhase = std::fmod(t_ * 0.6f, 6.f);
+            for (int row = 0; row < 4; ++row) {
+                for (int col = 0; col < 3; ++col) {
+                    float gx = marchOrigin.x + (float)col * 0.6f + marchPhase;
+                    float gy = marchOrigin.y + (float)row * 0.4f;
+                    auto s = isoCam_.worldToScreen(gx, gy, 0.f);
+                    sf::ConvexShape body(3);
+                    body.setPoint(0, {s.x,           s.y - 5.f * isoCam_.zoom()});
+                    body.setPoint(1, {s.x - 2.5f * isoCam_.zoom(), s.y + 2.f * isoCam_.zoom()});
+                    body.setPoint(2, {s.x + 2.5f * isoCam_.zoom(), s.y + 2.f * isoCam_.zoom()});
+                    body.setFillColor(sf::Color(80, 100, 60));
+                    body.setOutlineColor(sf::Color(0, 0, 0, 130));
+                    body.setOutlineThickness(0.5f);
+                    win.draw(body);
+                }
+            }
+            // Etiqueta.
+            auto lbl = isoCam_.worldToScreen(marchOrigin.x, marchOrigin.y - 1.5f, 0.f);
+            win.draw(makeText(font, "DESFILE MILITAR", 11, sf::Color(150, 200, 110), lbl.x - 50.f, lbl.y));
+        }
+
+        // Protesta: cluster en circulo girando frente al capitolio.
+        if (c.politics.popular_pressure > 0.6) {
+            int marchers = 12 + (int)((c.politics.popular_pressure - 0.6) * 30);
+            for (int m = 0; m < marchers; ++m) {
+                float ang = t_ * 1.2f + (float)m * (6.28318f / (float)marchers);
+                float r = 1.8f + 0.4f * std::sin(t_ * 2.f + m);
+                float gx = capPos.x + std::cos(ang) * r;
+                float gy = capPos.y + std::sin(ang) * r * 0.6f;
+                auto s = isoCam_.worldToScreen(gx, gy, 0.f);
+                sf::CircleShape head(1.5f * isoCam_.zoom());
+                head.setOrigin({1.5f * isoCam_.zoom(), 1.5f * isoCam_.zoom()});
+                head.setPosition(s);
+                head.setFillColor(sf::Color(220, 80, 70));
+                win.draw(head);
+            }
+        }
+
+        // Eleccion: cuando turn % 4 == 0 y turno > 0, NPCs convergen a la capital.
+        if (turn_ > 0 && turn_ % 4 == 0) {
+            int queues = 8;
+            for (int q = 0; q < queues; ++q) {
+                float ang = (float)q * (6.28318f / (float)queues);
+                for (int i = 0; i < 5; ++i) {
+                    float r = 0.8f + (float)i * 0.3f;
+                    float gx = capPos.x + std::cos(ang) * r;
+                    float gy = capPos.y + std::sin(ang) * r * 0.6f;
+                    auto s = isoCam_.worldToScreen(gx, gy, 0.f);
+                    sf::CircleShape head(1.2f * isoCam_.zoom());
+                    head.setOrigin({1.2f * isoCam_.zoom(), 1.2f * isoCam_.zoom()});
+                    head.setPosition(s);
+                    head.setFillColor(sf::Color(100, 160, 220, 200));
+                    win.draw(head);
+                }
+            }
+            auto lbl = isoCam_.worldToScreen(capPos.x - 3.f, capPos.y - 3.5f, 0.f);
+            win.draw(makeText(font, "ELECCION EN CURSO", 11, sf::Color(160, 200, 240), lbl.x, lbl.y));
+        }
         auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
         // Population dots: cantidad escalada por urbanizacion, micro-movimiento.
         int dotCount = 60 + (int)(c.welfare.urban_population_ratio * 180);
