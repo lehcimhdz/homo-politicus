@@ -134,6 +134,11 @@ struct EconomicFinancialSystem {
     double current_account_balance = 0.0;  // trade + services + remittances (full external position)
     double trade_openness = 0.6;           // (exports+imports)/GDP ratio — structural openness
     double average_tariffs = 0.1;
+    double tariff_manufactured = 0.08;    // Industrial goods tariff rate
+    double tariff_agricultural = 0.15;    // Food/agro tariff rate
+    double tariff_strategic = 0.25;       // Defense/tech tariff rate
+    double non_tariff_barriers = 0.2;     // Regulatory, quota, bureaucratic friction (0–1)
+    int    antidumping_cases = 0;         // Active anti-dumping investigations
     int free_trade_agreements = 5;
     double import_dependency = 0.3;
     double international_sanctions_prob = 0.0;

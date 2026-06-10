@@ -2820,8 +2820,10 @@ void Game::update() {
 
     double total_exports = exports_goods + tourism_exports + agri_exports + mining_exports;
 
-    // Imports: tariffs reduce volume but FTAs re-open them; purchasing power drives demand
-    double tariff_import_reduction = playerCountry.economy.average_tariffs * 0.25;
+    // Imports: tariffs + NTBs reduce volume but FTAs re-open them; purchasing power drives demand
+    double total_trade_friction = (playerCountry.economy.average_tariffs
+                                 + playerCountry.economy.non_tariff_barriers * 0.4) * 0.25;
+    double tariff_import_reduction = total_trade_friction;
     double fta_import_boost        = playerCountry.economy.free_trade_agreements * 0.008;
     double imports = playerCountry.economy.gdp
                    * playerCountry.economy.import_dependency
@@ -2851,6 +2853,23 @@ void Game::update() {
 
     // --- TARIFF REGIME EFFECTS ---
     {
+        // Compute weighted average tariff from sector-specific rates
+        // Weights: manufactured ~50%, agricultural ~30%, strategic ~20% of import basket
+        playerCountry.economy.average_tariffs = playerCountry.economy.tariff_manufactured * 0.50
+                                              + playerCountry.economy.tariff_agricultural * 0.30
+                                              + playerCountry.economy.tariff_strategic * 0.20;
+
+        // Non-tariff barriers act as hidden tariff equivalent (add ~40% of NTB index to effective rate)
+        double effective_tariff_with_ntb = playerCountry.economy.average_tariffs
+                                         + playerCountry.economy.non_tariff_barriers * 0.4;
+
+        // Anti-dumping cases: each active case raises effective protection and diplomatic friction
+        if (playerCountry.economy.antidumping_cases > 0) {
+            effective_tariff_with_ntb += playerCountry.economy.antidumping_cases * 0.005;
+            playerCountry.security.diplomatic_prestige -= playerCountry.economy.antidumping_cases * 0.003;
+            if (playerCountry.security.diplomatic_prestige < 0.0) playerCountry.security.diplomatic_prestige = 0.0;
+        }
+
         double tariffs = playerCountry.economy.average_tariffs;
 
         // 1. Customs revenue: tariffs collect duties on import flow
@@ -3038,9 +3057,16 @@ void Game::update() {
                   << " | C/A: " << (playerCountry.economy.current_account_balance >= 0 ? "+" : "")
                   << (int)(playerCountry.economy.current_account_balance / 1000000.0) << "M" << std::endl;
         std::cout << "        Tariffs: " << (int)(t * 100) << "% [" << tariff_regime << "]"
-                  << " | Customs: $" << (int)(customs_display / 1000000.0) << "M"
+                  << " (Mfg " << (int)(playerCountry.economy.tariff_manufactured * 100)
+                  << "% | Agri " << (int)(playerCountry.economy.tariff_agricultural * 100)
+                  << "% | Strat " << (int)(playerCountry.economy.tariff_strategic * 100) << "%)"
+                  << " | NTB: " << (int)(playerCountry.economy.non_tariff_barriers * 100) << "%" << std::endl;
+        std::cout << "        Customs: $" << (int)(customs_display / 1000000.0) << "M"
                   << " | FTAs: " << playerCountry.economy.free_trade_agreements
-                  << " | Openness: " << (int)(playerCountry.economy.trade_openness * 100) << "%" << std::endl;
+                  << " | Openness: " << (int)(playerCountry.economy.trade_openness * 100) << "%";
+        if (playerCountry.economy.antidumping_cases > 0)
+            std::cout << " | Antidumping: " << playerCountry.economy.antidumping_cases << " cases";
+        std::cout << std::endl;
     }
     std::cout << "[ECON] Reserves Change: " << (reserves_change >= 0 ? "+" : "") << reserves_change / 1000000.0 << "M USD. Total: $" << playerCountry.economy.international_reserves / 1000000.0 << "M" << std::endl;
     
