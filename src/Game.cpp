@@ -3333,6 +3333,16 @@ void Game::update() {
         }
     }
 
+    // --- LEGISLATIVE FRICTION ---
+    // Law blockade probability derives from veto players, filibuster, and low support
+    playerCountry.politics.filibuster_usage = playerCountry.politics.veto_player_strength * 0.3
+                                            + playerCountry.politics.party_fragmentation * 0.2;
+    if (playerCountry.politics.filibuster_usage > 0.8) playerCountry.politics.filibuster_usage = 0.8;
+    playerCountry.politics.law_blockade_prob = (1.0 - playerCountry.politics.congressional_support) * 0.3
+                                            + playerCountry.politics.filibuster_usage * 0.3
+                                            + playerCountry.politics.presidential_veto_prob;
+    if (playerCountry.politics.law_blockade_prob > 0.9) playerCountry.politics.law_blockade_prob = 0.9;
+
     // --- LEGISLATIVE DYNAMICS ---
     // Coalition cohesion erodes with polarization and low popularity
     playerCountry.politics.coalition_cohesion -= playerCountry.politics.polarization_index * 0.005;
