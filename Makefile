@@ -3,10 +3,19 @@ CXXFLAGS = -std=c++17 -Wall -Iinclude
 SRC = src/main.cpp src/Game.cpp src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp
 TARGET = HomoPoliticus
 
+TEST_SRC = src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp tests/test_main.cpp tests/test_persistence.cpp tests/test_gameover.cpp tests/test_invariants.cpp tests/test_decisions.cpp
+TEST_BIN = tests_bin
+
 all: $(TARGET)
 
 $(TARGET): $(SRC)
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
 
+test: $(TEST_BIN)
+	./$(TEST_BIN)
+
+$(TEST_BIN): $(TEST_SRC)
+	$(CXX) $(CXXFLAGS) $(TEST_SRC) -o $(TEST_BIN)
+
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(TEST_BIN)

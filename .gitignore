@@ -1,5 +1,6 @@
 # Binaries
 HomoPoliticus
+tests_bin
 *.o
 *.out
 
