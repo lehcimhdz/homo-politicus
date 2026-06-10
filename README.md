@@ -1,8 +1,22 @@
-# Homo Politicus — v0.7 Open Beta
+# Homo Politicus — v1.0 Final Release
 
 **Homo Politicus** is a deep, realistic turn-based political and economic strategy simulator written in C++17. You take the role of a nation's President and must manage complex, interconnected systems while maintaining enough popularity to win democratic elections every 4 years.
 
-**v0.7 Open Beta** ships **both** a CLI engine (`HomoPoliticus`) **and** a graphical UI (`HomoPoliticusUI`) built on SFML 3. v1.0 Early Access targets full feature parity. See `inicial_prompt.md` for the full product vision and `homo-politicus-game/specs/MASTER_DEVELOPMENT_SPEC.md` for the 52-week roadmap.
+**v1.0 Full Release** ships:
+- CLI engine (`HomoPoliticus`) + graphical UI (`HomoPoliticusUI`) on SFML 3
+- 11 historical scenarios researched seriously
+- 20 historical leaders with personality modifiers
+- 40+ events with flavor text
+- 40 Steam achievements
+- 5 game modes (Sandbox, Missions, Historical, Successor, Iron Man)
+- 6 languages (ES/EN/PT/FR/DE/IT)
+- AI Advisor with Claude API (optional)
+- Steam Workshop mod loader
+- Accessibility (4 color blindness profiles + high contrast)
+- 211 passing unit tests
+- 35 modules, 0 warnings
+
+See `inicial_prompt.md` for product vision, `homo-politicus-game/RELEASE_NOTES_v1.0.md` for changes.
 
 ## Quick start (beta testers)
 
