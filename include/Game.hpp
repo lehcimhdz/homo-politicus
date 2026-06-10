@@ -4,6 +4,8 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 #include "Country.hpp"
 #include "EventManager.hpp"
 
@@ -42,6 +44,8 @@ private:
     void resolveDecision(const std::string& choice);
     void saveGame(const std::string& path);
     void loadGame(const std::string& path);
+    void registerCommands();
+    std::unordered_map<std::string, std::function<void()>> commandHandlers;
 
     bool isRunning;
     bool nextTurn; // Moved from global

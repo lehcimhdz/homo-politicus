@@ -9,7 +9,47 @@
 
 Game::Game() : isRunning(true), nextTurn(false), turnCount(0), rng(std::random_device{}()) {
     std::cout << "Initializing Game..." << std::endl;
-    // std::srand removed, using std::mt19937 initialized in member initializer list
+    registerCommands();
+}
+
+void Game::registerCommands() {
+    commandHandlers["exit"]         = [this]() { isRunning = false; };
+    commandHandlers["next"]         = [this]() { nextTurn = true; };
+    commandHandlers["save"]         = [this]() { saveGame("savegame.txt"); };
+    commandHandlers["load"]         = [this]() { loadGame("savegame.txt"); };
+    commandHandlers["tax+"]         = [this]() {
+        playerCountry.economy.tax_collection *= 1.10;
+        playerCountry.politics.popularity -= 0.05;
+        playerCountry.economy.inflation += 0.01;
+        playerCountry.politics.economic_ideology -= 0.02;
+        if (playerCountry.politics.economic_ideology < 0.0) playerCountry.politics.economic_ideology = 0.0;
+        std::cout << ">> Taxes RAISED! Revenue up, Popularity down." << std::endl;
+    };
+    commandHandlers["tax-"]         = [this]() {
+        playerCountry.economy.tax_collection *= 0.90;
+        playerCountry.politics.popularity += 0.03;
+        playerCountry.economy.inflation -= 0.005;
+        playerCountry.politics.economic_ideology += 0.02;
+        if (playerCountry.politics.economic_ideology > 1.0) playerCountry.politics.economic_ideology = 1.0;
+        std::cout << ">> Taxes CUT! Popularity up, revenue down." << std::endl;
+    };
+    commandHandlers["decisions"] = [this]() {
+        if (pendingDecisions.empty()) { std::cout << ">> No hay decisiones pendientes." << std::endl; return; }
+        std::cout << "\n=== DECISIONES PENDIENTES (" << pendingDecisions.size() << ") ===" << std::endl;
+        for (size_t i = 0; i < pendingDecisions.size(); ++i) {
+            std::cout << "[" << i << "] " << pendingDecisions[i].id
+                      << " — " << pendingDecisions[i].prompt << std::endl;
+        }
+        std::cout << "=================================" << std::endl;
+    };
+    commandHandlers["skip_decision"] = [this]() {
+        if (pendingDecisions.empty()) { std::cout << ">> No hay decisión que saltar." << std::endl; return; }
+        PendingDecision d = pendingDecisions.front();
+        pendingDecisions.erase(pendingDecisions.begin());
+        pendingDecisions.push_back(d);
+        playerCountry.politics.popular_pressure += 0.02;
+        std::cout << ">> Decisión '" << d.id << "' pospuesta (-credibilidad)." << std::endl;
+    };
 }
 
 void Game::run() {
@@ -75,29 +115,13 @@ void Game::processEvents() {
     std::string command;
     std::cin >> command;
 
-    if (command == "exit") {
-        isRunning = false;
-    } 
-    else if (command == "next") {
-        nextTurn = true;
+    auto it = commandHandlers.find(command);
+    if (it != commandHandlers.end()) {
+        it->second();
+        return;
     }
-    else if (command == "tax+") {
-        playerCountry.economy.tax_collection *= 1.10; // +10% revenue
-        playerCountry.politics.popularity -= 0.05;    // -5% popularity
-        playerCountry.economy.inflation += 0.01;      // +1% inflation
-        playerCountry.politics.economic_ideology -= 0.02; // Left shift
-        if (playerCountry.politics.economic_ideology < 0.0) playerCountry.politics.economic_ideology = 0.0;
-        std::cout << ">> Taxes RAISED! Revenue up, Popularity down." << std::endl;
-    }
-    else if (command == "tax-") {
-        playerCountry.economy.tax_collection *= 0.90; // -10% revenue
-        playerCountry.politics.popularity += 0.03;    // +3% popularity
-        playerCountry.politics.economic_ideology += 0.02; // Right shift
-        if (playerCountry.politics.economic_ideology > 1.0) playerCountry.politics.economic_ideology = 1.0;
-        std::cout << ">> Taxes LOWERED! Revenue down, Popularity up." << std::endl;
-    }
-    // --- BUDGET COMMANDS ---
-    else if (command == "wage-") {
+
+    if (command == "wage-") {
         playerCountry.welfare.minimum_wage *= 0.90; // -10%
         std::cout << ">> DECREE: Cutting Minimum Wage to $" << playerCountry.welfare.minimum_wage << std::endl;
         std::cout << "   (Competitiveness +, Poverty ++, Popularity --)" << std::endl;
