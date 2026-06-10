@@ -300,6 +300,8 @@ struct PoliticalInstitutionalSystem {
     double average_case_duration_years = 3.0;  // Mean time from charge to verdict
 
     double ruling_against_state_prob = 0.2;
+    bool judiciary_crisis_active = false;
+    int judiciary_crisis_duration = 0;
     bool   constitutional_review_active = true; // Courts can strike down legislation
     double state_compliance_rate = 0.7;        // Rate at which state complies with adverse rulings
 

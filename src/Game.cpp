@@ -5001,6 +5001,58 @@ void Game::update() {
                                                   + playerCountry.politics.state_compliance_rate * 0.2;
     if (playerCountry.politics.elite_trust_in_justice > 1.0) playerCountry.politics.elite_trust_in_justice = 1.0;
 
+    // --- JUDICIARY CRISIS (Judiciary vs Executive) ---
+    if (playerCountry.politics.judiciary_crisis_active) {
+        playerCountry.politics.judiciary_crisis_duration--;
+
+        // Constitutional crisis: courts block executive
+        playerCountry.politics.pending_bills += 2; // Reform bills blocked
+        playerCountry.politics.state_compliance_rate -= 0.05;
+        if (playerCountry.politics.state_compliance_rate < 0.1)
+            playerCountry.politics.state_compliance_rate = 0.1;
+
+        // Democratic backsliding pressure (temptation to pack courts)
+        playerCountry.politics.court_packing_risk += 0.03;
+        if (playerCountry.politics.court_packing_risk > 0.8)
+            playerCountry.politics.court_packing_risk = 0.8;
+        playerCountry.politics.democratic_backsliding_index += 0.01;
+
+        // International scrutiny
+        playerCountry.economy.international_sanctions_prob += 0.01;
+        playerCountry.welfare.un_score -= 0.01;
+
+        // Trust in justice shifts
+        playerCountry.politics.trust_in_justice -= 0.02;
+        if (playerCountry.politics.trust_in_justice < 0.1)
+            playerCountry.politics.trust_in_justice = 0.1;
+
+        playerCountry.politics.popularity -= 0.015;
+
+        std::cout << "[!!] JUDICIARY CRISIS (Turn " << (playerCountry.politics.judiciary_crisis_duration + 1)
+                  << " remaining): Courts blocking executive agenda. Constitutional showdown." << std::endl;
+
+        if (playerCountry.politics.judiciary_crisis_duration <= 0) {
+            playerCountry.politics.judiciary_crisis_active = false;
+            // Court wins: judicial independence asserted
+            playerCountry.politics.judicial_independence += 0.05;
+            if (playerCountry.politics.judicial_independence > 1.0)
+                playerCountry.politics.judicial_independence = 1.0;
+            std::cout << "[INFO] JUDICIARY CRISIS RESOLVED: Courts assert independence. Executive backs down."
+                      << std::endl;
+        }
+    } else {
+        if (playerCountry.politics.ruling_against_state_prob > 0.6
+            && playerCountry.politics.judicial_independence > 0.7
+            && playerCountry.politics.popularity < 0.4
+            && dist(rng) < 0.12) {
+            playerCountry.politics.judiciary_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 3);
+            playerCountry.politics.judiciary_crisis_duration = dur_dist(rng);
+            std::cout << "[!!] JUDICIARY CRISIS: Supreme Court strikes down key executive policy! "
+                      << "Constitutional confrontation." << std::endl;
+        }
+    }
+
     // --- REGIONAL DYNAMICS ---
     // Fiscal transfer inadequacy + budget disparity erode regional loyalty
     playerCountry.politics.fiscal_transfer_adequacy = 0.5 + (1.0 - playerCountry.politics.federal_budget_disparity) * 0.3
