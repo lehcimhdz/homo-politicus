@@ -123,6 +123,10 @@ struct EconomicFinancialSystem {
 
     // Environmental Legacy
     double mining_legacy_damage = 0.0;    // Accumulated contamination from past extraction (0–1)
+    double contaminated_area_km2 = 0.0;   // Surface area affected by tailings/leaching (km²)
+    double remediation_cost = 0.0;        // Estimated cleanup liability (USD)
+    int    superfund_sites = 0;           // Critical contamination zones requiring emergency intervention
+    bool   remediation_active = false;    // State-funded cleanup program currently underway
 
     // Foreign Trade
     double trade_balance = 0.0; // Exports - Imports

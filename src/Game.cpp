@@ -575,8 +575,20 @@ void Game::processEvents() {
             }
             double net_cost = base_cost - cofinance;
             playerCountry.economy.gdp -= net_cost;
+            double prev_legacy = playerCountry.economy.mining_legacy_damage;
             playerCountry.economy.mining_legacy_damage -= legacy_reduction;
             if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
+            // Spatial cleanup: area reduced proportionally to legacy reduction
+            if (prev_legacy > 0.0) {
+                double area_fraction = legacy_reduction / prev_legacy;
+                playerCountry.economy.contaminated_area_km2 *= (1.0 - area_fraction);
+            }
+            playerCountry.economy.remediation_cost = playerCountry.economy.contaminated_area_km2 * 1800000.0;
+            if (playerCountry.economy.mining_legacy_damage >= 0.50)
+                playerCountry.economy.superfund_sites = (int)((playerCountry.economy.mining_legacy_damage - 0.50) / 0.25) + 1;
+            else
+                playerCountry.economy.superfund_sites = 0;
+            playerCountry.economy.remediation_active = true;
             playerCountry.infra.potable_water_access += 0.04;
             if (playerCountry.infra.potable_water_access > 1.0) playerCountry.infra.potable_water_access = 1.0;
             playerCountry.infra.pollution_prob -= 0.06;
@@ -608,8 +620,19 @@ void Game::processEvents() {
             double bond_size = 120000000.0; // $120M green bond
             double gdp = playerCountry.economy.gdp;
             playerCountry.economy.debt_to_gdp_ratio += bond_size / gdp; // New sovereign debt
+            double prev_legacy_bond = playerCountry.economy.mining_legacy_damage;
             playerCountry.economy.mining_legacy_damage -= 0.28;
             if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
+            if (prev_legacy_bond > 0.0) {
+                double area_fraction_bond = 0.28 / prev_legacy_bond;
+                playerCountry.economy.contaminated_area_km2 *= (1.0 - area_fraction_bond);
+            }
+            playerCountry.economy.remediation_cost = playerCountry.economy.contaminated_area_km2 * 1800000.0;
+            if (playerCountry.economy.mining_legacy_damage >= 0.50)
+                playerCountry.economy.superfund_sites = (int)((playerCountry.economy.mining_legacy_damage - 0.50) / 0.25) + 1;
+            else
+                playerCountry.economy.superfund_sites = 0;
+            playerCountry.economy.remediation_active = true;
             playerCountry.infra.potable_water_access += 0.06;
             if (playerCountry.infra.potable_water_access > 1.0) playerCountry.infra.potable_water_access = 1.0;
             playerCountry.infra.pollution_prob -= 0.10;
@@ -1792,6 +1815,13 @@ void Game::update() {
         tailings *= oversight_factor;
         playerCountry.economy.mining_legacy_damage += tailings;
         if (playerCountry.economy.mining_legacy_damage > 1.0) playerCountry.economy.mining_legacy_damage = 1.0;
+        // Spatial and financial dimensions grow with each tailings pulse
+        playerCountry.economy.contaminated_area_km2 += tailings * playerCountry.economy.mining_concessions * 40.0;
+        playerCountry.economy.remediation_cost = playerCountry.economy.contaminated_area_km2 * 1800000.0; // ~$1.8M/km²
+        if (playerCountry.economy.mining_legacy_damage >= 0.50)
+            playerCountry.economy.superfund_sites = (int)((playerCountry.economy.mining_legacy_damage - 0.50) / 0.25) + 1;
+        else
+            playerCountry.economy.superfund_sites = 0;
     }
 
     {
@@ -1801,6 +1831,8 @@ void Game::update() {
         if (legacy > 0.0 && legacy < 0.15 && playerCountry.economy.mining_concessions == 0) {
             playerCountry.economy.mining_legacy_damage -= 0.002; // Bioremediation / rainfall flushing
             if (playerCountry.economy.mining_legacy_damage < 0.0) playerCountry.economy.mining_legacy_damage = 0.0;
+            playerCountry.economy.contaminated_area_km2 *= 0.97; // Natural area recovery ~3%/yr
+            playerCountry.economy.remediation_cost = playerCountry.economy.contaminated_area_km2 * 1800000.0;
         }
 
         // --- TIER 1: LATENT CONTAMINATION (0.10 – 0.25) ---
@@ -2089,6 +2121,14 @@ void Game::update() {
                   << " | Depletion: " << dep * 100 << "%"
                   << " | Conflict: " << playerCountry.economy.community_conflicts * 100 << "%"
                   << " | Legacy: " << playerCountry.economy.mining_legacy_damage * 100 << "%" << std::endl;
+        if (playerCountry.economy.contaminated_area_km2 > 0.1 || playerCountry.economy.superfund_sites > 0) {
+            std::cout << "         Contaminated: " << (int)playerCountry.economy.contaminated_area_km2 << " km²"
+                      << " | Cleanup Liability: $" << playerCountry.economy.remediation_cost / 1000000.0 << "M"
+                      << " | Superfund Zones: " << playerCountry.economy.superfund_sites;
+            if (playerCountry.economy.remediation_active)
+                std::cout << " | [REMEDIATION ACTIVE]";
+            std::cout << std::endl;
+        }
         std::cout << "         Corruption Loss: $" << royalty_evasion / 1000000.0 << "M";
         if (playerCountry.economy.commodity_hedge_turns > 0)
             std::cout << " | HEDGE ACTIVE (" << playerCountry.economy.commodity_hedge_turns << " yr)";
