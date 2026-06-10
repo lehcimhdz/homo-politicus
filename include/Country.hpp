@@ -184,6 +184,10 @@ struct PoliticalInstitutionalSystem {
     int    honeymoon_turns_remaining = 4;    // Post-election goodwill period
     double crisis_approval_floor = 0.2;      // Minimum floor during severe crises
     double stay_in_power_prob = 0.8;
+    bool   term_limit_active = true;         // Constitutional re-election limit in effect
+    int    terms_served = 1;                 // Completed terms in current office
+    double incumbent_advantage = 0.15;       // Electoral bonus from office resources
+    double electoral_manipulation_capacity = 0.1; // Ability to tilt outcomes (0–1)
     double authoritarianism_prob = 0.1;
     double coup_d_etat_prob = 0.01;
     double administrative_corruption = 0.2;

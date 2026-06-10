@@ -3323,15 +3323,36 @@ void Game::update() {
     turnCount++;
     if (turnCount % 4 == 0) {
         std::cout << "\n=== ELECTION YEAR (Year " << turnCount << ") ===" << std::endl;
-        std::cout << "Current Popularity: " << playerCountry.politics.popularity * 100 << "%" << std::endl;
-        
-        if (playerCountry.politics.popularity > 0.50) {
+        // Compute effective electoral strength: popularity + incumbency + manipulation
+        double effective_vote = playerCountry.politics.popularity
+                              + playerCountry.politics.incumbent_advantage
+                              + playerCountry.politics.electoral_manipulation_capacity * 0.5;
+        // Term limits: if active and 2+ terms served, cannot run
+        bool term_blocked = playerCountry.politics.term_limit_active
+                         && playerCountry.politics.terms_served >= 2;
+        std::cout << "Current Popularity: " << playerCountry.politics.popularity * 100 << "%"
+                  << " | Effective Vote: " << (int)(effective_vote * 100) << "%"
+                  << " | Terms: " << playerCountry.politics.terms_served;
+        if (term_blocked) std::cout << " [TERM-LIMITED]";
+        std::cout << std::endl;
+
+        if (term_blocked) {
+            std::cout << "TERM LIMIT: Constitutional term limits force transition of power." << std::endl;
+            std::cout << "Your legacy continues. A successor from your party takes office." << std::endl;
+            playerCountry.politics.terms_served = 0;
+            playerCountry.politics.popularity *= 0.6; // Successor starts weaker
+            playerCountry.politics.honeymoon_turns_remaining = 4;
+            playerCountry.politics.incumbent_advantage = 0.05; // New leader, less advantage
+        } else if (effective_vote > 0.50) {
             std::cout << "VICTORY: The people love you! You have been re-elected for 4 more years." << std::endl;
-            playerCountry.politics.honeymoon_turns_remaining = 4; // Fresh mandate honeymoon
+            playerCountry.politics.terms_served++;
+            playerCountry.politics.honeymoon_turns_remaining = 4;
+            playerCountry.politics.incumbent_advantage += 0.02; // Entrench slightly
+            if (playerCountry.politics.incumbent_advantage > 0.3) playerCountry.politics.incumbent_advantage = 0.3;
         } else {
             std::cout << "DEFEAT: You have lost the support of the people." << std::endl;
             std::cout << "GAME OVER." << std::endl;
-            isRunning = false; // Stop the game
+            isRunning = false;
         }
     }
 }
