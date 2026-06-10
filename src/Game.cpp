@@ -1607,6 +1607,50 @@ void Game::processEvents() {
         std::cout << ">> EDUCATION INVESTMENT: Quality improved to " << (int)(playerCountry.welfare.educational_quality * 100)
                   << "%. Cost: $" << (int)(cost / 1000000.0) << "M" << std::endl;
     }
+    // --- ANTI-CORRUPTION COMMANDS ---
+    else if (command == "anticorruption") {
+        double cost = 15000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.politics.anticorruption_enforcement += 0.1;
+        if (playerCountry.politics.anticorruption_enforcement > 1.0) playerCountry.politics.anticorruption_enforcement = 1.0;
+        playerCountry.politics.administrative_corruption -= 0.03;
+        if (playerCountry.politics.administrative_corruption < 0.05) playerCountry.politics.administrative_corruption = 0.05;
+        playerCountry.politics.corruption_perception_index += 3.0;
+        if (playerCountry.politics.corruption_perception_index > 100.0) playerCountry.politics.corruption_perception_index = 100.0;
+        playerCountry.politics.popularity += 0.03;
+        // Backlash from corrupt elites
+        playerCountry.politics.congressional_support -= 0.05;
+        if (playerCountry.politics.congressional_support < 0.1) playerCountry.politics.congressional_support = 0.1;
+        std::cout << ">> ANTI-CORRUPTION DRIVE: Enforcement strengthened. Corrupt officials nervous." << std::endl;
+        std::cout << "   (Corruption -, CPI +, Popularity +, Congressional Support -)" << std::endl;
+    }
+    else if (command == "purge") {
+        playerCountry.politics.administrative_corruption -= 0.1;
+        if (playerCountry.politics.administrative_corruption < 0.05) playerCountry.politics.administrative_corruption = 0.05;
+        playerCountry.politics.petty_corruption -= 0.05;
+        if (playerCountry.politics.petty_corruption < 0.02) playerCountry.politics.petty_corruption = 0.02;
+        playerCountry.politics.grand_corruption -= 0.03;
+        if (playerCountry.politics.grand_corruption < 0.01) playerCountry.politics.grand_corruption = 0.01;
+        // Institutional disruption
+        playerCountry.politics.legislative_efficiency -= 0.1;
+        if (playerCountry.politics.legislative_efficiency < 0.1) playerCountry.politics.legislative_efficiency = 0.1;
+        playerCountry.politics.coup_d_etat_prob += 0.02; // Purged officials may plot
+        playerCountry.politics.popularity += 0.05; // Public loves purges
+        std::cout << ">> OFFICIAL PURGE: Corrupt officials removed. Institutional disruption." << std::endl;
+        std::cout << "   (Corruption --, Efficiency -, Coup Risk +, Popularity +)" << std::endl;
+    }
+    else if (command == "transparency") {
+        playerCountry.politics.corruption_perception_index += 5.0;
+        if (playerCountry.politics.corruption_perception_index > 100.0) playerCountry.politics.corruption_perception_index = 100.0;
+        playerCountry.politics.administrative_corruption -= 0.02;
+        if (playerCountry.politics.administrative_corruption < 0.05) playerCountry.politics.administrative_corruption = 0.05;
+        playerCountry.infra.investment_climate_index += 0.03;
+        if (playerCountry.infra.investment_climate_index > 1.0) playerCountry.infra.investment_climate_index = 1.0;
+        playerCountry.security.diplomatic_prestige += 0.02;
+        playerCountry.economy.sovereign_wealth_fund *= 1.01; // Better SWF governance
+        std::cout << ">> TRANSPARENCY REFORM: Open government, public procurement, FOI laws enacted." << std::endl;
+        std::cout << "   (CPI +, Investment Climate +, Prestige +, SWF Governance +)" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
