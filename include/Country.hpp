@@ -193,6 +193,9 @@ struct PoliticalInstitutionalSystem {
     bool   state_of_emergency_active = false;  // Emergency decree powers in effect
     int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
+    int    coup_attempts_history = 0;         // Total past coup attempts (increases risk)
+    double civilian_military_control = 0.8;   // Civilian oversight of armed forces (0–1)
+    double coup_success_prob = 0.3;           // If attempted, probability of success
     double administrative_corruption = 0.2;
 
     // Governance

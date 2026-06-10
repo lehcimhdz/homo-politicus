@@ -3302,6 +3302,37 @@ void Game::update() {
         playerCountry.economy.gdp -= 10000000; // $10M annual cleanup cost
     }
     
+    // --- COUP RISK DYNAMICS ---
+    // Coup probability driven by: low civilian control, low popularity, military insubordination, history
+    playerCountry.politics.coup_d_etat_prob = (1.0 - playerCountry.politics.civilian_military_control) * 0.03
+                                            + playerCountry.security.military_insubordination_prob * 0.15
+                                            + playerCountry.politics.coup_attempts_history * 0.005
+                                            + (playerCountry.politics.popularity < 0.25 ? 0.02 : 0.0);
+    if (playerCountry.politics.coup_d_etat_prob > 0.5) playerCountry.politics.coup_d_etat_prob = 0.5;
+    // Coup success probability: higher with weak institutions
+    playerCountry.politics.coup_success_prob = (1.0 - playerCountry.politics.judicial_independence) * 0.4
+                                             + (1.0 - playerCountry.politics.civilian_military_control) * 0.3;
+    if (playerCountry.politics.coup_success_prob > 0.9) playerCountry.politics.coup_success_prob = 0.9;
+    // Coup attempt event (stochastic)
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        if (dist(rng) < playerCountry.politics.coup_d_etat_prob) {
+            playerCountry.politics.coup_attempts_history++;
+            if (dist(rng) < playerCountry.politics.coup_success_prob) {
+                std::cout << "[!!!] COUP D'ETAT: Military seizes power. Democratic order overthrown." << std::endl;
+                std::cout << "GAME OVER." << std::endl;
+                isRunning = false;
+            } else {
+                std::cout << "[!!] FAILED COUP ATTEMPT: Military faction attempted seizure — loyalists held." << std::endl;
+                playerCountry.politics.popularity += 0.05; // Rally-around-flag
+                playerCountry.politics.civilian_military_control += 0.05; // Purge strengthens control
+                playerCountry.security.military_insubordination_prob -= 0.03;
+                playerCountry.economy.international_reserves -= 20000000.0; // Crisis cost
+                playerCountry.economy.exchange_rate_stability -= 0.08;
+            }
+        }
+    }
+
     // --- DEMOCRATIC BACKSLIDING & EMERGENCY POWERS ---
     // Electoral manipulation and media control erode democracy over time
     playerCountry.politics.democratic_backsliding_index += playerCountry.politics.electoral_manipulation_capacity * 0.005
