@@ -7,6 +7,7 @@
 #include "ui/Dashboard.hpp"
 #include "ui/MapView.hpp"
 #include "ui/ActionPanel.hpp"
+#include "ui/DecisionModal.hpp"
 
 enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 
@@ -103,11 +104,20 @@ int main(int argc, char** argv) {
     Dashboard dashboard;
     MapView mapView;
     ActionPanel actionPanel;
+    DecisionModal modal;
     Tab currentTab = Tab::Dashboard;
     sf::Clock frameClock;
     std::string lastActionFeedback;
     actionPanel.setCallback([&](const std::string& id) {
         lastActionFeedback = ">> " + id;
+    });
+    modal.setChoiceCallback([&](const std::string& choice) {
+        lastActionFeedback = ">> Decision: " + choice;
+        modal.hide();
+    });
+    modal.setSkipCallback([&]() {
+        lastActionFeedback = ">> Decision saltada (-credibilidad)";
+        modal.hide();
     });
     dashboard.recordHistory(bridge.country());
 
@@ -124,11 +134,15 @@ int main(int argc, char** argv) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) window.close();
             if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
-                if (currentTab == Tab::Action) actionPanel.onMouseMove({(float)mm->position.x, (float)mm->position.y});
+                sf::Vector2f pos((float)mm->position.x, (float)mm->position.y);
+                if (modal.visible()) modal.onMouseMove(pos);
+                else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
-                if (mb->button == sf::Mouse::Button::Left && currentTab == Tab::Action) {
-                    actionPanel.onClick({(float)mb->position.x, (float)mb->position.y});
+                if (mb->button == sf::Mouse::Button::Left) {
+                    sf::Vector2f pos((float)mb->position.x, (float)mb->position.y);
+                    if (modal.visible()) modal.onClick(pos);
+                    else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
             }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
@@ -140,6 +154,12 @@ int main(int argc, char** argv) {
                 if (kp->code == sf::Keyboard::Key::Num3) currentTab = Tab::Action;
                 if (kp->code == sf::Keyboard::Key::Num4) currentTab = Tab::Decisions;
                 if (kp->code == sf::Keyboard::Key::Num5) currentTab = Tab::Achievements;
+                if (kp->code == sf::Keyboard::Key::D) {
+                    // Demo: dispara una decision de prueba
+                    modal.show({"coup_threat",
+                        "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
+                        {"purge_military", "negotiate_military", "cede_power", "resist"}});
+                }
             }
         }
 
@@ -163,7 +183,7 @@ int main(int argc, char** argv) {
             infStr << "Inflacion: " << std::fixed << std::setprecision(1) << (c.economy.inflation * 100) << "%";
             window.draw(makeText(font, infStr.str(), 18, kText, 760, 22));
 
-            window.draw(makeText(font, "ESC=salir  N=next  R=reset", 14, kMuted, 1020, 22));
+            window.draw(makeText(font, "ESC=salir N=next R=reset D=decision 1-5=tabs", 12, kMuted, 1000, 24));
         }
 
         // === SidebarLeft ===
@@ -226,6 +246,9 @@ int main(int argc, char** argv) {
             window.draw(makeText(font, "LOG DE TURNO", 14, kMuted, 16, 712));
             window.draw(makeText(font, "(Sprint 11 conectara feedback al area de log)", 14, kMuted, 16, 736));
         }
+
+        // Modal overlay (siempre al final para estar encima)
+        if (fontOk) modal.draw(window, font);
 
         window.display();
     }
