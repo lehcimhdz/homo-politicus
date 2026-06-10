@@ -263,6 +263,8 @@ struct PoliticalInstitutionalSystem {
     double coalition_formation_cost = 0.3;     // Resources/concessions needed to build majority (0–1)
     double lobbying_cost = 50000.0;
     double regulatory_capture_index = 0.3;     // Degree industry controls its regulator (0–1)
+    bool regulatory_capture_crisis = false;
+    int regulatory_capture_crisis_duration = 0;
     double revolving_door_intensity = 0.4;     // Frequency of regulator-industry personnel flow (0–1)
     int pending_bills = 5;
     int    bills_passed_this_turn = 0;         // Legislative throughput
@@ -317,6 +319,8 @@ struct PoliticalInstitutionalSystem {
     double witness_protection_capacity = 0.4;  // Ability to protect key witnesses (0–1)
 
     double impunity = 0.4;
+    bool impunity_crisis_active = false;
+    int impunity_crisis_duration = 0;
     double impunity_homicide = 0.7;            // Impunity specifically for murder
     double impunity_corruption = 0.85;         // Impunity for political corruption
     double impunity_organized_crime = 0.75;    // Organized crime conviction rate gap

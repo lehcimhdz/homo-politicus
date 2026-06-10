@@ -4969,6 +4969,42 @@ void Game::update() {
     if (playerCountry.politics.trust_in_justice < 0.1) playerCountry.politics.trust_in_justice = 0.1;
     if (playerCountry.politics.trust_in_justice > 1.0) playerCountry.politics.trust_in_justice = 1.0;
 
+    // --- IMPUNITY CRISIS (High-profile case collapse) ---
+    if (playerCountry.politics.impunity_crisis_active) {
+        playerCountry.politics.impunity_crisis_duration--;
+
+        // Public outrage: protests
+        playerCountry.politics.protest_intensity += 0.04;
+        playerCountry.politics.popularity -= 0.03;
+
+        // Trust in justice collapses
+        playerCountry.politics.trust_in_justice -= 0.03;
+        if (playerCountry.politics.trust_in_justice < 0.05)
+            playerCountry.politics.trust_in_justice = 0.05;
+
+        // Vigilante justice risk
+        playerCountry.security.homicide_rate += 0.5; // People taking law into own hands
+
+        // International shame
+        playerCountry.welfare.un_score -= 0.02;
+
+        std::cout << "[!!] IMPUNITY CRISIS (Turn " << (playerCountry.politics.impunity_crisis_duration + 1)
+                  << " remaining): High-profile case collapsed. Public fury." << std::endl;
+
+        if (playerCountry.politics.impunity_crisis_duration <= 0) {
+            playerCountry.politics.impunity_crisis_active = false;
+            std::cout << "[INFO] IMPUNITY CRISIS SUBSIDES: Prosecution reforms promised." << std::endl;
+        }
+    } else {
+        if (playerCountry.politics.impunity > 0.8 && dist(rng) < 0.1) {
+            playerCountry.politics.impunity_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 3);
+            playerCountry.politics.impunity_crisis_duration = dur_dist(rng);
+            std::cout << "[!!] IMPUNITY CRISIS: Major criminal case dismissed! Impunity rate: "
+                      << (int)(playerCountry.politics.impunity * 100) << "%. Public outrage erupts." << std::endl;
+        }
+    }
+
     // --- JUDICIAL SYSTEM DYNAMICS ---
     // Court packing risk rises with democratic backsliding and low independence
     playerCountry.politics.court_packing_risk = playerCountry.politics.democratic_backsliding_index * 0.3
@@ -5163,6 +5199,42 @@ void Game::update() {
     // High capture reduces effective tax collection (regulatory loopholes)
     if (playerCountry.politics.regulatory_capture_index > 0.5)
         playerCountry.economy.tax_collection *= (1.0 - (playerCountry.politics.regulatory_capture_index - 0.5) * 0.06);
+
+    // --- REGULATORY CAPTURE / LOBBIES CRISIS ---
+    if (playerCountry.politics.regulatory_capture_crisis) {
+        playerCountry.politics.regulatory_capture_crisis_duration--;
+
+        // Lobbies block critical reform (health, environment, labor)
+        playerCountry.politics.pending_bills += 2;
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.003; // Rent-seeking drag
+
+        // Public outrage at plutocracy
+        playerCountry.politics.protest_intensity += 0.02;
+        playerCountry.politics.popularity -= 0.02;
+        playerCountry.politics.polarization_index += 0.02;
+
+        // Tax loopholes widen
+        playerCountry.economy.tax_collection *= 0.97;
+
+        std::cout << "[!!] LOBBIES CRISIS (Turn " << (playerCountry.politics.regulatory_capture_crisis_duration + 1)
+                  << " remaining): Industry lobbies blocking reform. Rent-seeking: "
+                  << (int)(playerCountry.politics.total_lobby_rent_gdp * 100) << "% GDP." << std::endl;
+
+        if (playerCountry.politics.regulatory_capture_crisis_duration <= 0) {
+            playerCountry.politics.regulatory_capture_crisis = false;
+            std::cout << "[INFO] LOBBIES CRISIS RESOLVED: Anti-corruption push breaks deadlock." << std::endl;
+        }
+    } else {
+        if (total_lobby_power > 0.7
+            && playerCountry.politics.regulatory_capture_index > 0.6
+            && dist(rng) < 0.08) {
+            playerCountry.politics.regulatory_capture_crisis = true;
+            std::uniform_int_distribution<int> dur_dist(2, 3);
+            playerCountry.politics.regulatory_capture_crisis_duration = dur_dist(rng);
+            std::cout << "[!!] LOBBIES CRISIS: Powerful lobbies capture regulatory process! "
+                      << "Critical reforms blocked." << std::endl;
+        }
+    }
 
     // --- PARTY SYSTEM DYNAMICS ---
     // Effective parties from fragmentation index: frag 0.2=~2 parties, 0.8=~6+
