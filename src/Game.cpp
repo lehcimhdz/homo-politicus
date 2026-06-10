@@ -4502,6 +4502,58 @@ void Game::update() {
         }
     }
 
+    // --- DIPLOMATIC CRISIS ---
+    if (playerCountry.security.diplomatic_crisis_active) {
+        playerCountry.security.diplomatic_crisis_duration--;
+        playerCountry.security.diplomatic_fallout += 0.05;
+        if (playerCountry.security.diplomatic_fallout > 1.0)
+            playerCountry.security.diplomatic_fallout = 1.0;
+
+        // Trade partners reduce cooperation
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.005 * playerCountry.security.diplomatic_fallout;
+
+        // Tariff retaliation
+        playerCountry.economy.average_tariffs += 0.01;
+
+        // Tourism warning
+        playerCountry.economy.travel_warning_level = std::max(playerCountry.economy.travel_warning_level, 2);
+
+        // FDI drops
+        playerCountry.economy.international_reserves -= 2000000.0;
+
+        // Diplomatic prestige erodes
+        playerCountry.security.diplomatic_prestige -= 0.03;
+        if (playerCountry.security.diplomatic_prestige < 0.0)
+            playerCountry.security.diplomatic_prestige = 0.0;
+
+        std::cout << "[!!] DIPLOMATIC CRISIS (Turn " << (playerCountry.security.diplomatic_crisis_duration + 1)
+                  << " remaining): International fallout " << (int)(playerCountry.security.diplomatic_fallout * 100)
+                  << "%." << std::endl;
+
+        if (playerCountry.security.diplomatic_crisis_duration <= 0) {
+            playerCountry.security.diplomatic_crisis_active = false;
+            playerCountry.security.diplomatic_fallout *= 0.5; // Partial recovery
+            std::cout << "[INFO] DIPLOMATIC CRISIS RESOLVED: Relations normalizing." << std::endl;
+        }
+    } else {
+        // Trigger: low prestige, active sanctions, or spy leak
+        bool diplo_trigger = false;
+        if (playerCountry.security.diplomatic_prestige < 0.2) diplo_trigger = true;
+        if (playerCountry.economy.international_sanctions_prob > 0.5) diplo_trigger = true;
+        if (playerCountry.security.document_leak_prob > 0.3 && dist(rng) < playerCountry.security.document_leak_prob * 0.2) {
+            diplo_trigger = true;
+            std::cout << "[!!] SPY LEAK: Classified documents exposed — triggering diplomatic fallout!" << std::endl;
+        }
+        if (diplo_trigger && dist(rng) < 0.1) { // 10% chance when conditions met
+            playerCountry.security.diplomatic_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 4);
+            playerCountry.security.diplomatic_crisis_duration = dur_dist(rng);
+            playerCountry.security.diplomatic_fallout = 0.0;
+            std::cout << "[!!] DIPLOMATIC CRISIS: International incident! Duration: "
+                      << playerCountry.security.diplomatic_crisis_duration << " turns." << std::endl;
+        }
+    }
+
     // Soft power: education + heritage + diplomacy
     playerCountry.security.soft_power_index = playerCountry.welfare.educational_quality * 0.3
                                             + playerCountry.economy.heritage_preservation * 0.2

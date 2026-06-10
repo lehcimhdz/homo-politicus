@@ -355,6 +355,9 @@ struct PowerSecuritySystem {
     double alliance_protection = 0.5;          // Military alliance coverage (0–1)
 
     double diplomatic_prestige = 0.6;
+    bool diplomatic_crisis_active = false;
+    int diplomatic_crisis_duration = 0;
+    double diplomatic_fallout = 0.0;           // Accumulated damage (0–1)
     double soft_power_index = 0.5;             // Cultural/educational/aid influence (0–1)
     int    ambassadors_accredited = 80;        // Countries with diplomatic representation
     double multilateral_leadership = 0.3;      // Active role in intl organizations (0–1)
