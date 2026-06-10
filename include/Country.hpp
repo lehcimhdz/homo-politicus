@@ -219,6 +219,16 @@ struct PoliticalInstitutionalSystem {
     double electoral_manipulation_capacity = 0.1; // Ability to tilt outcomes (0–1)
     double authoritarianism_prob = 0.1;
     double democratic_backsliding_index = 0.1; // Cumulative erosion of democratic norms (0–1)
+
+    // Ideology spectrum
+    double economic_ideology = 0.5;       // 0=far-left (state control), 1=far-right (free market)
+    double social_ideology = 0.5;         // 0=progressive, 1=conservative
+    double auth_dem_axis = 0.3;           // 0=full democracy, 1=full authoritarian
+    double population_economic_pref = 0.5; // What the population wants economically
+    double population_social_pref = 0.5;   // What the population wants socially
+    double opposition_ideology = 0.5;      // Rival's economic position
+    double opposition_social = 0.5;        // Rival's social position
+    double ideology_alignment_bonus = 0.0; // Popularity bonus/penalty from alignment
     bool   state_of_emergency_active = false;  // Emergency decree powers in effect
     int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
