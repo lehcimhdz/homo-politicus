@@ -3302,6 +3302,23 @@ void Game::update() {
         playerCountry.economy.gdp -= 10000000; // $10M annual cleanup cost
     }
     
+    // --- POPULARITY DYNAMICS ---
+    // Honeymoon effect: fresh mandate gives a buffer that decays each turn
+    if (playerCountry.politics.honeymoon_turns_remaining > 0) {
+        playerCountry.politics.popularity += 0.01; // Small honeymoon uplift
+        playerCountry.politics.honeymoon_turns_remaining--;
+    }
+    // Track popularity trend (smoothed delta from last turn)
+    static double last_popularity = playerCountry.politics.popularity;
+    playerCountry.politics.popularity_trend = (playerCountry.politics.popularity - last_popularity) * 0.7
+                                            + playerCountry.politics.popularity_trend * 0.3;
+    last_popularity = playerCountry.politics.popularity;
+    // Crisis floor: even in worst case, some base support remains
+    if (playerCountry.politics.popularity < playerCountry.politics.crisis_approval_floor)
+        playerCountry.politics.popularity = playerCountry.politics.crisis_approval_floor;
+    // Ceiling
+    if (playerCountry.politics.popularity > 1.0) playerCountry.politics.popularity = 1.0;
+
     // --- ELECTION LOGIC ---
     turnCount++;
     if (turnCount % 4 == 0) {
@@ -3310,6 +3327,7 @@ void Game::update() {
         
         if (playerCountry.politics.popularity > 0.50) {
             std::cout << "VICTORY: The people love you! You have been re-elected for 4 more years." << std::endl;
+            playerCountry.politics.honeymoon_turns_remaining = 4; // Fresh mandate honeymoon
         } else {
             std::cout << "DEFEAT: You have lost the support of the people." << std::endl;
             std::cout << "GAME OVER." << std::endl;

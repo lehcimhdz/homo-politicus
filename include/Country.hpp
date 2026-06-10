@@ -180,6 +180,9 @@ struct EconomicFinancialSystem {
 struct PoliticalInstitutionalSystem {
     // Politics
     double popularity = 0.6;
+    double popularity_trend = 0.0;           // Monthly delta (positive = rising)
+    int    honeymoon_turns_remaining = 4;    // Post-election goodwill period
+    double crisis_approval_floor = 0.2;      // Minimum floor during severe crises
     double stay_in_power_prob = 0.8;
     double authoritarianism_prob = 0.1;
     double coup_d_etat_prob = 0.01;
