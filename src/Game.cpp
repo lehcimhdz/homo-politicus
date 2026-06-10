@@ -3333,6 +3333,39 @@ void Game::update() {
         }
     }
 
+    // --- DEFENSE & MILITARY DYNAMICS ---
+    // Troop morale driven by veteran benefits, combat stress, and pay (personnel budget)
+    playerCountry.security.troop_morale = 0.5 + playerCountry.security.veteran_benefit_adequacy * 0.2
+                                        + playerCountry.security.personnel_vs_equipment_ratio * 0.15
+                                        - playerCountry.security.combat_stress_index * 0.2;
+    if (playerCountry.security.troop_morale < 0.1) playerCountry.security.troop_morale = 0.1;
+    if (playerCountry.security.troop_morale > 1.0) playerCountry.security.troop_morale = 1.0;
+    // Desertion rises with low morale and active conflict
+    playerCountry.security.desertion_rate = (1.0 - playerCountry.security.troop_morale) * 0.02
+                                          + playerCountry.security.conflict_with_groups * 0.01;
+    // Combat stress from active conflict
+    playerCountry.security.combat_stress_index = playerCountry.security.conflict_with_groups * 0.3
+                                               + playerCountry.security.conflict_casualties_annual * 0.0002;
+    if (playerCountry.security.combat_stress_index > 1.0) playerCountry.security.combat_stress_index = 1.0;
+    // Equipment readiness: spending, corruption, and domestic production
+    double effective_defense_spend = playerCountry.security.military_spending_gdp * playerCountry.economy.gdp
+                                   * (1.0 - playerCountry.security.corruption_in_procurement);
+    playerCountry.security.equipment_readiness = playerCountry.security.equipment_modernization * 0.6
+                                               + playerCountry.security.defense_industrial_base * 0.2
+                                               + (effective_defense_spend > 0 ? 0.2 : 0.0);
+    if (playerCountry.security.equipment_readiness > 1.0) playerCountry.security.equipment_readiness = 1.0;
+    // Naval: blue water capability requires submarines + modernization
+    playerCountry.security.sea_lane_control = playerCountry.security.naval_force_strength * 0.6
+                                            + playerCountry.security.submarines * 0.02;
+    if (playerCountry.security.sea_lane_control > 1.0) playerCountry.security.sea_lane_control = 1.0;
+    playerCountry.security.blue_water_capability = (playerCountry.security.naval_force_strength > 0.7
+                                                   && playerCountry.security.submarines > 3);
+    // Politicized military erodes civilian control → feeds coup risk
+    playerCountry.politics.civilian_military_control -= playerCountry.security.politicized_officer_corps * 0.005
+                                                     + playerCountry.security.military_business_interests * 0.003;
+    if (playerCountry.politics.civilian_military_control < 0.1) playerCountry.politics.civilian_military_control = 0.1;
+    if (playerCountry.politics.civilian_military_control > 1.0) playerCountry.politics.civilian_military_control = 1.0;
+
     // --- INTELLIGENCE DYNAMICS ---
     // HUMINT scales with espionage budget and informant network
     playerCountry.security.humint_capability = playerCountry.security.informant_network * 0.5

@@ -373,11 +373,30 @@ struct PowerSecuritySystem {
 
     // Defense
     double troop_morale = 0.8;
+    double veteran_benefit_adequacy = 0.6;     // Veterans' support programs quality (0–1)
+    double desertion_rate = 0.005;             // Annual fraction leaving without authorization
+    double combat_stress_index = 0.1;          // PTSD/combat fatigue burden (0–1)
+
     double equipment_modernization = 0.6;
+    double equipment_readiness = 0.7;          // Operational availability (0–1)
+    double defense_industrial_base = 0.3;      // Domestic arms production (0–1)
+
     double air_force_strength = 0.5;
+    int    combat_aircraft = 30;               // Fighter/attack aircraft count
+    double drone_capability = 0.2;             // UAV/UCAV operational capacity (0–1)
+
     double naval_force_strength = 0.5;
+    int    submarines = 0;                     // Submarine fleet size
+    double sea_lane_control = 0.4;             // Maritime trade route protection (0–1)
+    bool   blue_water_capability = false;      // Can project force beyond coastal waters
+
     double military_insubordination_prob = 0.05;
+    double politicized_officer_corps = 0.2;    // Share of officers with partisan affiliations (0–1)
+    double military_business_interests = 0.1;  // Fraction of economy controlled by military (0–1)
+
     double military_spending_gdp = 0.02;
+    double personnel_vs_equipment_ratio = 0.6; // Fraction of budget on personnel vs hardware
+    double corruption_in_procurement = 0.15;   // Kickback/overpricing in defense contracts (0–1)
 
     // Communication and Propaganda
     double media_control = 0.3;
