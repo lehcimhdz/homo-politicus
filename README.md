@@ -1,6 +1,73 @@
-# Homo Politicus
+# Homo Politicus — v0.5 Closed Alpha
 
 **Homo Politicus** is a deep, realistic turn-based political and economic strategy simulator written in C++17. You take the role of a nation's President and must manage complex, interconnected systems while maintaining enough popularity to win democratic elections every 4 years.
+
+**v0.5 Closed Alpha** ships the full simulation engine in terminal form. A graphical UI is planned for v0.7 (open beta) and v1.0-EA. See `inicial_prompt.md` for the full product vision and `homo-politicus-game/specs/MASTER_DEVELOPMENT_SPEC.md` for the 52-week roadmap.
+
+## Quick start (alpha testers)
+
+```bash
+git clone https://github.com/lehcimhdz/homo-politicus.git
+cd homo-politicus
+make
+./HomoPoliticus
+```
+
+Then type `tutorial_start` for a 5-mission guided onboarding (~15 min).
+
+### Essential commands
+- `next` — advance one turn (3 months).
+- `status_brief` — 5-line state summary.
+- `help` — list all command families.
+- `tutorial_start` / `tutorial_skip` — onboarding.
+- `scenario <yaml-path>` — load a historical scenario.
+- `leader <yaml-path>` — apply a historical leader's modifiers.
+- `achievements` — list unlocked achievements (15 unlocked at start, 40 in catalog).
+- `advisors` / `ask <id>` — query LLM-style advisors (canned heuristics, real LLM in v1.0).
+- `language es|en` — switch interface language.
+- `save_slot <1-5>` / `load_slot <1-5>` — multiple save slots.
+- `exit` — quit (autosave on next `save`).
+
+### Sample scenarios
+```bash
+scenario ../homo-politicus-game/content/scenarios/chile_1973.yaml
+leader ../homo-politicus-game/content/leaders/allende.yaml
+```
+
+## What's working in v0.5
+- 200+ interconnected variables across 5 systems.
+- 8 historical scenarios with researched starting states.
+- 15 historical leaders with personality modifiers.
+- 30+ YAML events loadable at runtime.
+- 9 game over conditions.
+- 40 achievements with history tracking.
+- 5 advisor personalities (heuristic, not LLM yet).
+- Tutorial with 5 missions.
+- Save/load with 80+ persisted variables.
+- Localization ES/EN.
+- 96 passing tests, 0 warnings.
+
+## What's NOT in v0.5 (coming in v0.7 / v1.0)
+- Graphical UI (SFML + ImGui).
+- Audio.
+- Real LLM advisor (currently canned responses).
+- Steam achievements.
+- Workshop / mods.
+- Cloud saves.
+
+## Feedback
+
+This is a closed alpha. We **need** your feedback:
+
+1. Bug reports: GitHub Issues with version + repro steps.
+2. Feature feedback: Discord (link upcoming).
+3. General: email bmichelcano@gmail.com.
+
+Anonymous survey: https://forms.gle/... (link upcoming).
+
+---
+
+**Original concept (preserved):**
 
 ---
 
