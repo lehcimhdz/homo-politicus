@@ -3,6 +3,7 @@
 #include "GameOverChecker.hpp"
 #include "ScenarioLoader.hpp"
 #include "LeaderLoader.hpp"
+#include "Advisor.hpp"
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
@@ -56,6 +57,23 @@ void Game::registerCommands() {
                       << " — " << pendingDecisions[i].prompt << std::endl;
         }
         std::cout << "=================================" << std::endl;
+    };
+    commandHandlers["advisors"] = []() {
+        std::cout << "\n=== ASESORES DEL GABINETE ===" << std::endl;
+        for (const auto& a : Advisors::all())
+            std::cout << "  " << a->id() << " - " << a->name_es() << std::endl;
+        std::cout << "Uso: ask <id>" << std::endl;
+    };
+    commandHandlers["ask"] = [this]() {
+        std::string id;
+        std::cin >> id;
+        Advisor* a = Advisors::findById(id);
+        if (!a) {
+            std::cout << ">> Advisor '" << id << "' no existe. Tipea 'advisors' para listar." << std::endl;
+        } else {
+            std::cout << "\n[" << a->name_es() << "]" << std::endl;
+            std::cout << a->respond(playerCountry, "") << std::endl;
+        }
     };
     commandHandlers["wage-"] = [this]() {
         playerCountry.welfare.minimum_wage *= 0.90;
