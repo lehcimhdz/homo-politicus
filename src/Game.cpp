@@ -1172,6 +1172,63 @@ void Game::processEvents() {
         if (playerCountry.politics.democratic_backsliding_index < 0.0) playerCountry.politics.democratic_backsliding_index = 0.0;
         std::cout << ">> SURVEILLANCE REDUCED: Civil liberties restored. Detection capability down." << std::endl;
     }
+    // --- ENERGY POLICY COMMANDS ---
+    else if (command == "renewables+") {
+        double cost = playerCountry.economy.gdp * 0.01;
+        if (playerCountry.economy.gdp < cost * 5) {
+            std::cout << ">> INSUFFICIENT RESOURCES for renewable energy investment." << std::endl;
+        } else {
+            playerCountry.economy.gdp -= cost;
+            playerCountry.infra.renewables_percentage += 0.05;
+            if (playerCountry.infra.renewables_percentage > 0.95) playerCountry.infra.renewables_percentage = 0.95;
+            playerCountry.infra.solar_capacity_gw += 0.5;
+            playerCountry.infra.wind_capacity_gw += 0.3;
+            playerCountry.infra.fossil_fuel_dependency -= 0.03;
+            if (playerCountry.infra.fossil_fuel_dependency < 0.05) playerCountry.infra.fossil_fuel_dependency = 0.05;
+            playerCountry.infra.co2_emissions *= 0.97;
+            playerCountry.infra.energy_transition_speed += 0.005;
+            // Industry backlash
+            playerCountry.politics.extractive_sector_power -= 0.02;
+            std::cout << ">> RENEWABLE ENERGY INVESTMENT: $" << (int)(cost / 1000000.0) << "M deployed." << std::endl;
+            std::cout << "   Renewables: " << (int)(playerCountry.infra.renewables_percentage * 100)
+                      << "%, Fossil dependency: " << (int)(playerCountry.infra.fossil_fuel_dependency * 100) << "%" << std::endl;
+        }
+    }
+    else if (command == "carbon_tax") {
+        if (playerCountry.infra.carbon_tax_active) {
+            playerCountry.infra.carbon_tax_active = false;
+            playerCountry.infra.carbon_tax_rate = 0.0;
+            playerCountry.politics.popularity += 0.02;
+            playerCountry.politics.industrial_power += 0.05;
+            std::cout << ">> CARBON TAX REPEALED: Industry celebrates, emissions resume." << std::endl;
+        } else {
+            playerCountry.infra.carbon_tax_active = true;
+            playerCountry.infra.carbon_tax_rate = 30.0; // $30/ton
+            playerCountry.infra.co2_emissions *= 0.95;
+            playerCountry.economy.tax_collection += playerCountry.infra.co2_emissions * 0.00003;
+            playerCountry.politics.popularity -= 0.03;
+            playerCountry.politics.industrial_power -= 0.05;
+            if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
+            playerCountry.infra.energy_transition_speed += 0.01;
+            std::cout << ">> CARBON TAX ENACTED: $30/ton CO2. Emissions reduced, industry unhappy." << std::endl;
+            std::cout << "   (Emissions -, Revenue +, Industry -, Popularity -)" << std::endl;
+        }
+    }
+    else if (command == "energy_subsidy") {
+        double cost = playerCountry.economy.gdp * 0.005;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.infra.energy_subsidy_gdp += 0.005;
+        playerCountry.infra.energy_affordability += 0.05;
+        if (playerCountry.infra.energy_affordability > 1.0) playerCountry.infra.energy_affordability = 1.0;
+        playerCountry.infra.kwh_price *= 0.95;
+        playerCountry.politics.popularity += 0.02;
+        // Distortion: keeps fossil dependency
+        playerCountry.infra.fossil_fuel_dependency += 0.01;
+        if (playerCountry.infra.fossil_fuel_dependency > 1.0) playerCountry.infra.fossil_fuel_dependency = 1.0;
+        std::cout << ">> ENERGY SUBSIDIES INCREASED: Affordable energy, fiscal cost $"
+                  << (int)(cost / 1000000.0) << "M." << std::endl;
+        std::cout << "   (Affordability +, Popularity +, Fossil Lock-in +, Budget -)" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
