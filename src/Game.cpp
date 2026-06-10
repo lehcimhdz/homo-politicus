@@ -1053,6 +1053,64 @@ void Game::processEvents() {
             std::cout << "   (Growth +, FDI +, UN +, Industry -, Agri -, Popularity -, Cost $25M)" << std::endl;
         }
     }
+    // --- DEFENSE COMMANDS ---
+    else if (command == "mil_budget+") {
+        playerCountry.security.military_spending_gdp += 0.005;
+        if (playerCountry.security.military_spending_gdp > 0.10) playerCountry.security.military_spending_gdp = 0.10;
+        double cost = playerCountry.economy.gdp * 0.005;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.security.troop_morale += 0.05;
+        if (playerCountry.security.troop_morale > 1.0) playerCountry.security.troop_morale = 1.0;
+        playerCountry.security.equipment_modernization += 0.03;
+        if (playerCountry.security.equipment_modernization > 1.0) playerCountry.security.equipment_modernization = 1.0;
+        playerCountry.politics.popularity -= 0.01; // Guns vs butter
+        std::cout << ">> DEFENSE BUDGET INCREASED to " << playerCountry.security.military_spending_gdp * 100
+                  << "% GDP. Cost: $" << (int)(cost / 1000000.0) << "M" << std::endl;
+        std::cout << "   (Morale +, Equipment +, Budget -, Popularity -)" << std::endl;
+    }
+    else if (command == "mil_budget-") {
+        playerCountry.security.military_spending_gdp -= 0.005;
+        if (playerCountry.security.military_spending_gdp < 0.005) playerCountry.security.military_spending_gdp = 0.005;
+        playerCountry.security.troop_morale -= 0.05;
+        if (playerCountry.security.troop_morale < 0.1) playerCountry.security.troop_morale = 0.1;
+        playerCountry.security.military_insubordination_prob += 0.02;
+        playerCountry.politics.popularity += 0.01; // Peace dividend
+        std::cout << ">> DEFENSE BUDGET CUT to " << playerCountry.security.military_spending_gdp * 100
+                  << "% GDP. Peace dividend unlocked." << std::endl;
+        std::cout << "   (Morale -, Insubordination +, Popularity +)" << std::endl;
+    }
+    else if (command == "modernize") {
+        double cost = 100000000.0; // $100M
+        if (playerCountry.economy.gdp < cost * 5) {
+            std::cout << ">> INSUFFICIENT RESOURCES: Equipment modernization requires $100M." << std::endl;
+        } else {
+            playerCountry.economy.gdp -= cost;
+            playerCountry.security.equipment_modernization += 0.1;
+            if (playerCountry.security.equipment_modernization > 1.0) playerCountry.security.equipment_modernization = 1.0;
+            playerCountry.security.equipment_readiness += 0.05;
+            if (playerCountry.security.equipment_readiness > 1.0) playerCountry.security.equipment_readiness = 1.0;
+            playerCountry.security.troop_morale += 0.03;
+            std::cout << ">> MILITARY MODERNIZATION: $100M invested in new equipment." << std::endl;
+            std::cout << "   Equipment: " << (int)(playerCountry.security.equipment_modernization * 100)
+                      << "%, Readiness: " << (int)(playerCountry.security.equipment_readiness * 100) << "%" << std::endl;
+        }
+    }
+    else if (command == "deploy") {
+        if (playerCountry.security.troop_morale < 0.3) {
+            std::cout << ">> REFUSED: Troop morale too low for deployment." << std::endl;
+        } else {
+            playerCountry.security.conflict_with_groups += 0.1;
+            if (playerCountry.security.conflict_with_groups > 1.0) playerCountry.security.conflict_with_groups = 1.0;
+            playerCountry.security.troop_morale -= 0.05;
+            playerCountry.security.combat_stress_index += 0.05;
+            playerCountry.security.conflict_casualties_annual += 20;
+            playerCountry.security.homicide_rate -= 1.0; // Temporarily reduces crime
+            if (playerCountry.security.homicide_rate < 1.0) playerCountry.security.homicide_rate = 1.0;
+            playerCountry.welfare.torture_index += 0.05; // Human rights cost
+            std::cout << ">> TROOPS DEPLOYED: Military operations against non-state groups." << std::endl;
+            std::cout << "   (Security +, Morale -, Casualties +, Human Rights -)" << std::endl;
+        }
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
