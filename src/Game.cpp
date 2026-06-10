@@ -6767,13 +6767,63 @@ void Game::update() {
                       << (int)(playerCountry.politics.scandal_treason_severity * 100) << "%" << std::endl;
         }
 
+        // --- EXPANDED SCANDAL TYPES ---
+        if (playerCountry.politics.scandal_organized_crime_severity == 0.0
+            && dist(rng) < playerCountry.security.homicide_rate / 200.0 * 0.05) {
+            std::uniform_real_distribution<double> sev(0.4, 0.9);
+            playerCountry.politics.scandal_organized_crime_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] ORGANIZED CRIME: Government officials linked to cartel operations!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_trafficking_severity == 0.0
+            && dist(rng) < playerCountry.security.nsg_territorial_control * 0.03) {
+            std::uniform_real_distribution<double> sev(0.5, 1.0);
+            playerCountry.politics.scandal_trafficking_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] TRAFFICKING: Human/arms trafficking ring tied to state officials!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_money_laundering_severity == 0.0
+            && dist(rng) < playerCountry.politics.grand_corruption * 0.06) {
+            std::uniform_real_distribution<double> sev(0.3, 0.8);
+            playerCountry.politics.scandal_money_laundering_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] MONEY LAUNDERING: Offshore accounts and shell companies exposed!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_blackmail_severity == 0.0
+            && dist(rng) < playerCountry.security.cyber_surveillance * 0.03) {
+            std::uniform_real_distribution<double> sev(0.3, 0.7);
+            playerCountry.politics.scandal_blackmail_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] BLACKMAIL: State surveillance data used for political coercion!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_extortion_severity == 0.0
+            && dist(rng) < playerCountry.politics.impunity * 0.04) {
+            std::uniform_real_distribution<double> sev(0.2, 0.6);
+            playerCountry.politics.scandal_extortion_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] EXTORTION: Officials running protection rackets exposed!" << std::endl;
+        }
+        if (playerCountry.politics.scandal_environmental_severity == 0.0
+            && dist(rng) < playerCountry.economy.mining_legacy_damage * 0.05) {
+            std::uniform_real_distribution<double> sev(0.3, 0.8);
+            playerCountry.politics.scandal_environmental_severity = sev(rng);
+            playerCountry.politics.active_scandals++;
+            std::cout << "[SCANDAL] ENVIRONMENTAL: Illegal dumping and pollution cover-up revealed!" << std::endl;
+        }
+
         // SCANDAL EXPOSURE: Cover-up vs press freedom
         double total_scandal_severity = playerCountry.politics.scandal_corruption_severity
                                       + playerCountry.politics.scandal_sex_severity
                                       + playerCountry.politics.scandal_financial_severity
                                       + playerCountry.politics.scandal_violence_severity
                                       + playerCountry.politics.scandal_substance_severity
-                                      + playerCountry.politics.scandal_treason_severity;
+                                      + playerCountry.politics.scandal_treason_severity
+                                      + playerCountry.politics.scandal_organized_crime_severity
+                                      + playerCountry.politics.scandal_trafficking_severity
+                                      + playerCountry.politics.scandal_money_laundering_severity
+                                      + playerCountry.politics.scandal_blackmail_severity
+                                      + playerCountry.politics.scandal_extortion_severity
+                                      + playerCountry.politics.scandal_environmental_severity;
 
         if (total_scandal_severity > 0.0) {
             // Cover-up attempt: success depends on media control vs press freedom
@@ -6835,6 +6885,46 @@ void Game::update() {
                 playerCountry.security.diplomatic_crisis_active = true;
                 playerCountry.security.diplomatic_crisis_duration = 3;
             }
+            // Expanded scandal cascading effects
+            if (playerCountry.politics.scandal_organized_crime_severity > 0.3) {
+                playerCountry.economy.international_sanctions_prob += 0.02;
+                playerCountry.security.homicide_rate += 0.5;
+                playerCountry.politics.trust_in_justice -= 0.02;
+                playerCountry.infra.fdi_inflow_gdp -= 0.003;
+            }
+            if (playerCountry.politics.scandal_trafficking_severity > 0.3) {
+                playerCountry.economy.international_sanctions_prob += 0.03;
+                playerCountry.welfare.un_score -= 0.03;
+                playerCountry.security.diplomatic_prestige -= 0.03;
+                playerCountry.welfare.torture_index += 0.02;
+            }
+            if (playerCountry.politics.scandal_money_laundering_severity > 0.3) {
+                playerCountry.economy.exchange_rate_stability -= 0.02;
+                playerCountry.infra.capital_flight_risk += 0.02;
+                playerCountry.politics.corruption_perception_index -= 2.0;
+            }
+            if (playerCountry.politics.scandal_blackmail_severity > 0.3) {
+                playerCountry.security.press_freedom -= 0.02;
+                playerCountry.politics.trust_in_justice -= 0.02;
+                playerCountry.politics.democratic_backsliding_index += 0.01;
+            }
+            if (playerCountry.politics.scandal_extortion_severity > 0.3) {
+                playerCountry.politics.impunity += 0.01;
+                playerCountry.infra.investment_climate_index -= 0.02;
+            }
+            if (playerCountry.politics.scandal_environmental_severity > 0.3) {
+                playerCountry.infra.pollution_prob += 0.02;
+                playerCountry.economy.community_conflicts += 0.03;
+                playerCountry.security.diplomatic_prestige -= 0.01;
+                playerCountry.infra.biodiversity_index -= 0.01;
+            }
+            // Multiple simultaneous scandals compound exponentially
+            if (playerCountry.politics.active_scandals >= 3) {
+                double compound_penalty = playerCountry.politics.active_scandals * 0.01;
+                playerCountry.politics.popularity -= compound_penalty;
+                playerCountry.politics.regime_legitimacy -= compound_penalty * 0.5;
+                if (playerCountry.politics.regime_legitimacy < 0.1) playerCountry.politics.regime_legitimacy = 0.1;
+            }
 
             // SCANDAL RESOLUTION: Scandals fade after 4-6 turns
             auto decay_scandal = [&](double& severity) {
@@ -6853,6 +6943,12 @@ void Game::update() {
             decay_scandal(playerCountry.politics.scandal_violence_severity);
             decay_scandal(playerCountry.politics.scandal_substance_severity);
             decay_scandal(playerCountry.politics.scandal_treason_severity);
+            decay_scandal(playerCountry.politics.scandal_organized_crime_severity);
+            decay_scandal(playerCountry.politics.scandal_trafficking_severity);
+            decay_scandal(playerCountry.politics.scandal_money_laundering_severity);
+            decay_scandal(playerCountry.politics.scandal_blackmail_severity);
+            decay_scandal(playerCountry.politics.scandal_extortion_severity);
+            decay_scandal(playerCountry.politics.scandal_environmental_severity);
 
             // Display active scandals summary
             if (playerCountry.politics.active_scandals > 0) {

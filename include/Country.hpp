@@ -238,6 +238,12 @@ struct PoliticalInstitutionalSystem {
     double scandal_violence_severity = 0.0;    // Assault, harassment
     double scandal_substance_severity = 0.0;   // Drug, alcohol, gambling
     double scandal_treason_severity = 0.0;     // Treason, espionage
+    double scandal_organized_crime_severity = 0.0; // Ties to cartels/mafia
+    double scandal_trafficking_severity = 0.0;    // Human/arms/drug trafficking
+    double scandal_money_laundering_severity = 0.0;
+    double scandal_blackmail_severity = 0.0;      // Surveillance used for political gain
+    double scandal_extortion_severity = 0.0;      // Shakedowns, protection rackets
+    double scandal_environmental_severity = 0.0;  // Pollution cover-up, illegal mining
     double cover_up_probability = 0.5;         // Ability to suppress scandals
     double media_exposure_intensity = 0.0;     // How much media is covering scandals
     int scandal_fatigue_turns = 0;             // Diminishing impact over time
