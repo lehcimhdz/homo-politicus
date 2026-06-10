@@ -607,6 +607,8 @@ struct InfrastructureFutureSystem {
     int    international_space_partnerships = 0; // Active bilateral space agreements
 
     double launch_failure_prob = 0.1;
+    bool space_disaster = false;
+    double space_disaster_cost = 0.0;
     int    successful_launches = 0;            // Cumulative successful launches
     bool   human_spaceflight_capable = false;  // Can launch crewed missions
 

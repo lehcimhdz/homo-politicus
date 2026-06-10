@@ -3894,6 +3894,51 @@ void Game::update() {
                                                + playerCountry.infra.tech_export_share * 0.3;
     if (playerCountry.infra.technological_prestige > 1.0) playerCountry.infra.technological_prestige = 1.0;
 
+    // --- SPACE RACE CRISIS (Launch Disaster) ---
+    // Check each turn if a launch attempt happens AND fails
+    if (playerCountry.infra.own_launch_capability && dist(rng) < 0.3) { // 30% chance of launch attempt per turn
+        if (dist(rng) < playerCountry.infra.launch_failure_prob) {
+            playerCountry.infra.space_disaster = true;
+
+            // Cost of lost payload
+            playerCountry.infra.space_disaster_cost = playerCountry.infra.space_budget * 0.5;
+            playerCountry.economy.international_reserves -= playerCountry.infra.space_disaster_cost;
+
+            // Prestige collapses
+            playerCountry.infra.space_prestige *= 0.5;
+            playerCountry.infra.technological_prestige -= 0.1;
+            if (playerCountry.infra.technological_prestige < 0.0)
+                playerCountry.infra.technological_prestige = 0.0;
+
+            // Crewed mission: casualties
+            if (playerCountry.infra.human_spaceflight_capable && dist(rng) < 0.3) {
+                int crew_lost = 3 + (int)(dist(rng) * 4); // 3-7 astronauts
+                playerCountry.welfare.death_rate += (double)crew_lost / (double)playerCountry.welfare.population;
+                playerCountry.politics.popularity -= 0.04;
+                std::cout << "[!!!!] SPACE DISASTER: Crewed launch failure! " << crew_lost
+                          << " astronauts killed. National mourning." << std::endl;
+            } else {
+                std::cout << "[!!!] SPACE DISASTER: Launch failure! Payload lost. Cost: $"
+                          << (long long)playerCountry.infra.space_disaster_cost << std::endl;
+            }
+
+            // Public questions spending during hardship
+            if (playerCountry.economy.in_recession) {
+                playerCountry.politics.popularity -= 0.03;
+                std::cout << "       Public outrage: Why spend on space during a recession?" << std::endl;
+            } else {
+                playerCountry.politics.popularity -= 0.01;
+            }
+        } else {
+            // Successful launch
+            playerCountry.infra.successful_launches++;
+            playerCountry.infra.space_prestige += 0.02;
+            playerCountry.infra.space_disaster = false;
+        }
+    } else {
+        playerCountry.infra.space_disaster = false;
+    }
+
     // --- ENERGY DYNAMICS ---
     // Renewables percentage: sum of solar + wind vs total capacity
     double total_re_gw = playerCountry.infra.solar_capacity_gw + playerCountry.infra.wind_capacity_gw;
