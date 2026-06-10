@@ -6444,6 +6444,152 @@ void Game::update() {
         }
     }
 
+    // --- AUTONOMOUS ACTORS: OPPOSITION PARTIES ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Opposition exploits scandals
+        if (playerCountry.politics.active_scandals > 0 && dist(rng) < 0.3) {
+            playerCountry.politics.popularity -= 0.01 * playerCountry.politics.active_scandals;
+            playerCountry.politics.protest_intensity += 0.02;
+            std::cout << "[OPPOSITION] Parties amplify scandal coverage. Street protests organized." << std::endl;
+        }
+
+        // Opposition coalition building when combined opposition > 50%
+        if (playerCountry.politics.opposition_seats > 50 && dist(rng) < 0.15) {
+            playerCountry.politics.coalition_cohesion -= 0.03;
+            if (playerCountry.politics.coalition_cohesion < 0.2) playerCountry.politics.coalition_cohesion = 0.2;
+            playerCountry.politics.congressional_support -= 0.02;
+            if (playerCountry.politics.congressional_support < 0.1) playerCountry.politics.congressional_support = 0.1;
+            std::cout << "[OPPOSITION] Coalition bloc formed. Government coalition weakening." << std::endl;
+        }
+
+        // Alternative policy proposals during crisis
+        if (playerCountry.economy.in_recession && dist(rng) < 0.2) {
+            playerCountry.politics.popularity -= 0.01;
+            std::cout << "[OPPOSITION] Rival party presents alternative economic plan. Public comparing." << std::endl;
+        }
+    }
+
+    // --- AUTONOMOUS ACTORS: MILITARY PRESSURE ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Budget demands
+        if (playerCountry.security.military_spending_gdp < 0.015 && dist(rng) < 0.2) {
+            playerCountry.security.military_insubordination_prob += 0.01;
+            playerCountry.security.troop_morale -= 0.02;
+            std::cout << "[MILITARY] Armed forces demand higher budget allocation. Tension rising." << std::endl;
+        }
+
+        // Policy influence from politicized officer corps
+        if (playerCountry.security.politicized_officer_corps > 0.4 && dist(rng) < 0.15) {
+            playerCountry.politics.auth_dem_axis += 0.01;
+            if (playerCountry.politics.auth_dem_axis > 1.0) playerCountry.politics.auth_dem_axis = 1.0;
+            std::cout << "[MILITARY] Generals privately pressure cabinet on security policy." << std::endl;
+        }
+    }
+
+    // --- AUTONOMOUS ACTORS: LOBBIES ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Industrial lobby blocks environmental regulation
+        if (playerCountry.politics.industrial_power > 0.6 && playerCountry.infra.carbon_tax_active && dist(rng) < 0.15) {
+            playerCountry.infra.carbon_tax_rate *= 0.9;
+            playerCountry.politics.popularity += 0.01; // Industry workers grateful
+            std::cout << "[LOBBY] Industrial lobby weakens carbon tax through legal challenges." << std::endl;
+        }
+
+        // Financial lobby resists regulation
+        if (playerCountry.politics.financial_power > 0.7 && dist(rng) < 0.1) {
+            playerCountry.politics.regulatory_capture_index += 0.02;
+            if (playerCountry.politics.regulatory_capture_index > 0.8) playerCountry.politics.regulatory_capture_index = 0.8;
+            std::cout << "[LOBBY] Financial sector successfully lobbies against new regulations." << std::endl;
+        }
+
+        // Agricultural lobby demands subsidies
+        if (playerCountry.politics.agricultural_power > 0.5 && dist(rng) < 0.1) {
+            playerCountry.economy.gdp -= 5000000.0;
+            playerCountry.welfare.poverty_rate -= 0.005;
+            std::cout << "[LOBBY] Agricultural lobby secures $5M in subsidies." << std::endl;
+        }
+    }
+
+    // --- AUTONOMOUS ACTORS: INTERNATIONAL ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // UN sends observers when democracy erodes
+        if (playerCountry.politics.democratic_backsliding_index > 0.5 && dist(rng) < 0.15) {
+            playerCountry.security.diplomatic_prestige -= 0.02;
+            std::cout << "[INTERNATIONAL] UN Human Rights Council deploys observers." << std::endl;
+        }
+
+        // IMF conditionality during debt crisis
+        if (playerCountry.economy.debt_to_gdp_ratio > 0.8
+            && playerCountry.economy.in_recession && dist(rng) < 0.2) {
+            // IMF demands austerity
+            playerCountry.economy.tax_collection *= 1.05; // Forced tax hike
+            playerCountry.welfare.minimum_wage *= 0.95; // Wage cuts
+            playerCountry.politics.popularity -= 0.03;
+            std::cout << "[INTERNATIONAL] IMF imposes austerity conditions for bailout. Public outrage!" << std::endl;
+        }
+
+        // Foreign powers meddle in politics
+        if (playerCountry.security.foreign_disinfo_operations > 0.3 && dist(rng) < 0.1) {
+            playerCountry.politics.polarization_index += 0.03;
+            playerCountry.security.fake_news_success_prob += 0.02;
+            std::cout << "[INTERNATIONAL] Foreign disinformation campaign detected. Polarization rising." << std::endl;
+        }
+
+        // NGOs report on human rights
+        if (playerCountry.welfare.torture_index > 0.3 && dist(rng) < 0.2) {
+            playerCountry.welfare.un_score -= 0.02;
+            playerCountry.security.diplomatic_prestige -= 0.01;
+            std::cout << "[INTERNATIONAL] Human rights NGO publishes critical report." << std::endl;
+        }
+    }
+
+    // --- AUTONOMOUS ACTORS: PEOPLE / CIVIL SOCIETY ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Spontaneous protests during deteriorating conditions
+        if (playerCountry.welfare.poverty_rate > 0.4 && playerCountry.welfare.unemployment_rate > 0.15
+            && dist(rng) < 0.2) {
+            playerCountry.politics.marches += 1;
+            playerCountry.politics.protest_intensity += 0.05;
+            if (playerCountry.politics.protest_intensity > 1.0) playerCountry.politics.protest_intensity = 1.0;
+            std::cout << "[PEOPLE] Spontaneous protests erupt over economic hardship." << std::endl;
+        }
+
+        // Brain drain during crises
+        if ((playerCountry.security.war_active || playerCountry.economy.in_recession
+             || playerCountry.politics.democratic_backsliding_index > 0.6) && dist(rng) < 0.3) {
+            playerCountry.welfare.brain_drain += 0.01;
+            if (playerCountry.welfare.brain_drain > 0.3) playerCountry.welfare.brain_drain = 0.3;
+            playerCountry.welfare.diaspora_population += (int)(playerCountry.welfare.population * 0.001);
+            std::cout << "[PEOPLE] Educated professionals emigrating. Brain drain accelerating." << std::endl;
+        }
+
+        // Vigilante justice when impunity is extreme
+        if (playerCountry.politics.impunity > 0.8 && dist(rng) < 0.1) {
+            playerCountry.security.homicide_rate += 0.5;
+            playerCountry.politics.trust_in_justice -= 0.03;
+            if (playerCountry.politics.trust_in_justice < 0.05) playerCountry.politics.trust_in_justice = 0.05;
+            std::cout << "[PEOPLE] Vigilante justice: mobs attack suspected criminals. Rule of law collapsing." << std::endl;
+        }
+
+        // Social media amplification
+        if (playerCountry.security.social_media_reach > 0.7 && playerCountry.politics.active_scandals > 0
+            && dist(rng) < 0.25) {
+            playerCountry.politics.media_exposure_intensity += 0.05;
+            playerCountry.politics.protest_intensity += 0.02;
+            std::cout << "[PEOPLE] Scandal goes viral on social media. Hashtag campaigns trending." << std::endl;
+        }
+    }
+
     // --- AUTONOMOUS ACTORS: PROSECUTOR ---
     {
         std::uniform_real_distribution<double> dist(0.0, 1.0);
