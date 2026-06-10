@@ -156,6 +156,37 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
             dot.setFillColor(sf::Color(245, 240, 220, 200));
             win.draw(dot);
         }
+        // Marcha de protesta: columna animada cuando popular_pressure es alto.
+        if (c.politics.popular_pressure > 0.5) {
+            float pressure = (float)c.politics.popular_pressure;
+            int marchers = 6 + (int)((pressure - 0.5f) * 30.f);
+            float marchY = bbox.position.y + bbox.size.y * 0.45f;
+            float marchSpeed = 50.f + pressure * 30.f;
+            for (int m = 0; m < marchers; ++m) {
+                float phase = (float)m * 12.f;
+                float traveled = std::fmod(t_ * marchSpeed + phase, bbox.size.x + 40.f);
+                float mx = bbox.position.x - 20.f + traveled;
+                float my = marchY + std::sin(t_ * 8.f + m * 0.9f) * 2.f;
+                if (!homeSilhouette_.containsScreen({mx, my}, homePos_.x, homePos_.y, homeRadius_)) continue;
+                sf::RectangleShape body({3.f, 5.f});
+                body.setOrigin({1.5f, 2.5f});
+                body.setPosition({mx, my});
+                body.setFillColor(sf::Color(230, 70, 70, 230));
+                win.draw(body);
+                // Cabeza chica.
+                sf::CircleShape head(1.5f);
+                head.setOrigin({1.5f, 1.5f});
+                head.setPosition({mx, my - 3.5f});
+                head.setFillColor(sf::Color(245, 215, 175));
+                win.draw(head);
+            }
+            // Etiqueta sobre el bbox.
+            sf::Text warn(font, "PROTESTAS ACTIVAS", 11);
+            warn.setFillColor(sf::Color(240, 100, 80));
+            warn.setStyle(sf::Text::Bold);
+            warn.setPosition({bbox.position.x, bbox.position.y - 18.f});
+            win.draw(warn);
+        }
     } else {
         win.draw(circleShape(homePos_, homeRadius_, homeFill, kBorder));
     }
