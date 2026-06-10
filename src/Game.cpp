@@ -3302,6 +3302,80 @@ void Game::update() {
         playerCountry.economy.gdp -= 10000000; // $10M annual cleanup cost
     }
     
+    // --- PANDEMIC EVENT ---
+    if (playerCountry.welfare.pandemic_active) {
+        // Active pandemic: accumulate damage each turn
+        playerCountry.welfare.pandemic_duration--;
+        double sev = playerCountry.welfare.pandemic_severity;
+
+        // Deaths: worse with low health coverage, high density
+        double mortality_factor = sev * 0.003 * (1.0 + (1.0 - playerCountry.welfare.health_coverage));
+        if (playerCountry.welfare.population_density > 300.0) mortality_factor *= 1.5;
+        playerCountry.welfare.death_rate += mortality_factor;
+        playerCountry.welfare.pandemic_death_toll += mortality_factor * 1000000.0; // Rough absolute
+
+        // Economic damage: lockdowns, supply chain, labor loss
+        double gdp_hit = playerCountry.economy.gdp * sev * 0.04;
+        playerCountry.economy.gdp -= gdp_hit;
+        playerCountry.welfare.pandemic_economic_cost += gdp_hit;
+        playerCountry.welfare.unemployment_rate += sev * 0.02;
+        if (playerCountry.welfare.unemployment_rate > 0.40)
+            playerCountry.welfare.unemployment_rate = 0.40;
+
+        // Health system strain
+        playerCountry.welfare.health_coverage -= sev * 0.03;
+        if (playerCountry.welfare.health_coverage < 0.05)
+            playerCountry.welfare.health_coverage = 0.05;
+        playerCountry.welfare.mental_health_index -= sev * 0.02;
+        if (playerCountry.welfare.mental_health_index < 0.1)
+            playerCountry.welfare.mental_health_index = 0.1;
+
+        // Tourism collapses
+        playerCountry.economy.annual_visitors *= (1.0 - sev * 0.4);
+
+        // Popularity hit
+        playerCountry.politics.popularity -= 0.02 * sev;
+
+        // Hospital overload: if hospitals per capita too low, severity worsens
+        double hospitals_per_million = (double)playerCountry.welfare.hospitals / (playerCountry.welfare.population / 1000000.0);
+        if (hospitals_per_million < 20.0) {
+            playerCountry.welfare.pandemic_severity += 0.02; // Overwhelmed system
+            if (playerCountry.welfare.pandemic_severity > 1.0)
+                playerCountry.welfare.pandemic_severity = 1.0;
+        }
+
+        std::cout << "[!!!] PANDEMIC (Turn " << (playerCountry.welfare.pandemic_duration + 1)
+                  << " remaining): Severity " << (int)(sev * 100) << "%. Deaths: "
+                  << (int)playerCountry.welfare.pandemic_death_toll
+                  << ". GDP loss: $" << (long long)playerCountry.welfare.pandemic_economic_cost << std::endl;
+
+        // End condition
+        if (playerCountry.welfare.pandemic_duration <= 0) {
+            playerCountry.welfare.pandemic_active = false;
+            playerCountry.welfare.pandemic_severity = 0.0;
+            std::cout << "[INFO] PANDEMIC OVER: Recovery begins. Total death toll: "
+                      << (int)playerCountry.welfare.pandemic_death_toll
+                      << ". Economic cost: $" << (long long)playerCountry.welfare.pandemic_economic_cost << std::endl;
+            // Slow recovery: epidemic_prob elevated for a while
+            playerCountry.welfare.epidemic_prob += 0.05;
+        }
+    } else {
+        // Stochastic pandemic trigger
+        if (dist(rng) < playerCountry.welfare.pandemic_prob) {
+            playerCountry.welfare.pandemic_active = true;
+            std::uniform_int_distribution<int> dur_dist(3, 8);
+            playerCountry.welfare.pandemic_duration = dur_dist(rng);
+            std::uniform_real_distribution<double> sev_dist(0.3, 1.0);
+            playerCountry.welfare.pandemic_severity = sev_dist(rng);
+            playerCountry.welfare.pandemic_death_toll = 0.0;
+            playerCountry.welfare.pandemic_economic_cost = 0.0;
+            std::cout << "[!!!!] PANDEMIC OUTBREAK: A novel pathogen has emerged! Severity: "
+                      << (int)(playerCountry.welfare.pandemic_severity * 100)
+                      << "%. Expected duration: " << playerCountry.welfare.pandemic_duration
+                      << " turns." << std::endl;
+        }
+    }
+
     // --- COUP RISK DYNAMICS ---
     // Coup probability driven by: low civilian control, low popularity, military insubordination, history
     playerCountry.politics.coup_d_etat_prob = (1.0 - playerCountry.politics.civilian_military_control) * 0.03

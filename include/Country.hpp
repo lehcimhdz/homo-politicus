@@ -31,7 +31,14 @@ struct WelfareSocietySystem {
     double severe_burn_prob = 0.01;
     double major_accident_prob = 0.05; // Transport Infra (Trains/Bridges)
     double aviation_accident_prob = 0.001; // Airplanes (0.1% - Rare but Tragic)
-    
+
+    // Pandemic / Epidemic state
+    bool pandemic_active = false;
+    int pandemic_duration = 0;       // Turns remaining
+    double pandemic_severity = 0.0;  // 0.0–1.0 (mild flu to COVID/plague)
+    double pandemic_death_toll = 0.0;
+    double pandemic_economic_cost = 0.0;
+
     // Social Welfare (Mental)
     double mental_health_index = 0.7; // 0.0 (Despair) to 1.0 (Joy)
     double suicide_rate = 0.00014; // Base: 14 per 100k (Global Average)
