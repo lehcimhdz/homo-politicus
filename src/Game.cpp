@@ -6405,6 +6405,74 @@ void Game::update() {
         }
     }
 
+    // --- AUTONOMOUS ACTORS: JUDICIARY ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Courts strike down unconstitutional laws
+        if (playerCountry.politics.judicial_independence > 0.6
+            && playerCountry.politics.democratic_backsliding_index > 0.3
+            && dist(rng) < playerCountry.politics.ruling_against_state_prob) {
+            std::cout << "[JUDICIARY] Supreme Court strikes down executive order as unconstitutional!" << std::endl;
+            playerCountry.politics.democratic_backsliding_index -= 0.03;
+            if (playerCountry.politics.democratic_backsliding_index < 0.0) playerCountry.politics.democratic_backsliding_index = 0.0;
+            playerCountry.politics.popularity -= 0.02; // Government embarrassed
+            playerCountry.politics.trust_in_justice += 0.02;
+        }
+
+        // Judicial investigation of leader when scandals are active
+        if (playerCountry.politics.judicial_independence > 0.5
+            && playerCountry.politics.active_scandals > 0
+            && dist(rng) < playerCountry.politics.anticorruption_enforcement * 0.15) {
+            std::cout << "[JUDICIARY] Court orders investigation into leader's financial dealings!" << std::endl;
+            playerCountry.politics.popularity -= 0.03;
+            playerCountry.politics.media_exposure_intensity += 0.1;
+            if (playerCountry.politics.media_exposure_intensity > 1.0) playerCountry.politics.media_exposure_intensity = 1.0;
+            // Asset freeze
+            if (dist(rng) < 0.3) {
+                std::cout << "   [!] Assets of officials frozen pending investigation." << std::endl;
+            }
+        }
+
+        // Habeas corpus challenges to emergency measures
+        if (playerCountry.politics.state_of_emergency_active
+            && playerCountry.politics.judicial_independence > 0.7
+            && dist(rng) < 0.2) {
+            std::cout << "[JUDICIARY] Court challenges emergency measures: some restrictions lifted." << std::endl;
+            playerCountry.politics.protest_intensity += 0.05; // Protests resume
+            playerCountry.welfare.freedom_of_expression += 0.02;
+        }
+    }
+
+    // --- AUTONOMOUS ACTORS: PROSECUTOR ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Prosecutor opens investigations against corrupt officials
+        if (playerCountry.politics.anticorruption_enforcement > 0.4
+            && playerCountry.politics.administrative_corruption > 0.3
+            && dist(rng) < playerCountry.politics.anticorruption_enforcement * 0.1) {
+            // Plea bargain: exposes larger network
+            if (dist(rng) < 0.4) {
+                playerCountry.politics.administrative_corruption -= 0.02;
+                playerCountry.politics.popularity += 0.01;
+                std::cout << "[PROSECUTOR] Plea bargain reveals corruption network. More officials implicated." << std::endl;
+            } else {
+                playerCountry.politics.impunity += 0.01;
+                std::cout << "[PROSECUTOR] Investigation stalls. Key witnesses refuse to cooperate." << std::endl;
+            }
+        }
+
+        // International court cooperation
+        if (playerCountry.welfare.torture_index > 0.3
+            && playerCountry.welfare.un_score < 0.5
+            && dist(rng) < 0.05) {
+            std::cout << "[PROSECUTOR] International Criminal Court opens preliminary examination!" << std::endl;
+            playerCountry.security.diplomatic_prestige -= 0.05;
+            playerCountry.economy.international_sanctions_prob += 0.03;
+        }
+    }
+
     // --- SCANDAL SYSTEM ---
     {
         std::uniform_real_distribution<double> dist(0.0, 1.0);
