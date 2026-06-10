@@ -1480,6 +1480,48 @@ void Game::update() {
         }
     }
 
+    // --- CROSS-SYSTEM FEEDBACK: ECONOMIC → SOCIAL ---
+    {
+        // GDP decline drives social deterioration
+        if (playerCountry.economy.growth_rate < 0) {
+            double decline_mag = std::abs(playerCountry.economy.growth_rate);
+            // Unemployment rises proportional to GDP decline (Okun's law feedback)
+            playerCountry.welfare.unemployment_rate += decline_mag * 0.3;
+            // Poverty worsens
+            playerCountry.welfare.poverty_rate += decline_mag * 0.2;
+            if (playerCountry.welfare.poverty_rate > 0.8) playerCountry.welfare.poverty_rate = 0.8;
+            // Mental health deteriorates
+            playerCountry.welfare.mental_health_index -= decline_mag * 0.1;
+            if (playerCountry.welfare.mental_health_index < 0.1) playerCountry.welfare.mental_health_index = 0.1;
+            // Suicide rate rises
+            playerCountry.welfare.suicide_rate += decline_mag * 0.00005;
+        } else if (playerCountry.economy.growth_rate > 0.03) {
+            // Growth boom: social improvement
+            double boom_mag = playerCountry.economy.growth_rate - 0.03;
+            playerCountry.welfare.unemployment_rate -= boom_mag * 0.2;
+            if (playerCountry.welfare.unemployment_rate < 0.02) playerCountry.welfare.unemployment_rate = 0.02;
+            playerCountry.welfare.poverty_rate -= boom_mag * 0.1;
+            if (playerCountry.welfare.poverty_rate < 0.05) playerCountry.welfare.poverty_rate = 0.05;
+            playerCountry.economy.tax_collection *= (1.0 + boom_mag * 0.5);
+            playerCountry.politics.popularity += boom_mag * 0.5;
+        }
+
+        // High inflation erodes living standards
+        if (playerCountry.economy.inflation > 0.1) {
+            double infl_excess = playerCountry.economy.inflation - 0.1;
+            playerCountry.welfare.poverty_rate += infl_excess * 0.15;
+            if (playerCountry.welfare.poverty_rate > 0.8) playerCountry.welfare.poverty_rate = 0.8;
+            playerCountry.politics.protest_intensity += infl_excess * 0.1;
+            playerCountry.politics.popularity -= infl_excess * 0.3;
+        }
+
+        // Brain drain accelerates during economic hardship
+        if (playerCountry.welfare.unemployment_rate > 0.15 || playerCountry.economy.in_recession) {
+            playerCountry.welfare.brain_drain += 0.005;
+            if (playerCountry.welfare.brain_drain > 0.3) playerCountry.welfare.brain_drain = 0.3;
+        }
+    }
+
     // --- FISCAL LINKAGE (Taxes) ---
     // Tax Collection is now derived from GDP.
     // Base Tax Rate: ~20% of GDP implied by initial values ($10M / $500M = 2%). Wait, initial is low ($10M tax on $500M GDP = 2%).
