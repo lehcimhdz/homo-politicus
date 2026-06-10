@@ -7992,6 +7992,7 @@ void Game::update() {
     if (playerCountry.politics.apologize_cooldown_turns > 0) playerCountry.politics.apologize_cooldown_turns--;
     if (playerCountry.politics.threaten_streak_count > 0) playerCountry.politics.threaten_streak_count--;
     EventLoader::tick(scriptedEvents, playerCountry, pendingDecisions, rng, turnCount);
+    achievements.recordHistory(playerCountry);
     achievements.evaluate(playerCountry, turnCount, endCondition, initialGdp);
     checkGameOver();
     if (!isRunning) {
