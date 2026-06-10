@@ -5,6 +5,9 @@
 #include <iomanip>
 #include "ui/UIBridge.hpp"
 #include "ui/Dashboard.hpp"
+#include "ui/MapView.hpp"
+
+enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 
 // Layout (1280x800):
 //   TopBar:    1280 x 60
@@ -97,6 +100,9 @@ int main(int argc, char** argv) {
 
     UIBridge bridge;
     Dashboard dashboard;
+    MapView mapView;
+    Tab currentTab = Tab::Dashboard;
+    sf::Clock frameClock;
     dashboard.recordHistory(bridge.country());
 
     if (headless) {
@@ -115,6 +121,11 @@ int main(int argc, char** argv) {
                 if (kp->code == sf::Keyboard::Key::Escape) window.close();
                 if (kp->code == sf::Keyboard::Key::N) { bridge.tick(); dashboard.recordHistory(bridge.country()); }
                 if (kp->code == sf::Keyboard::Key::R) { bridge.resetCountry(); dashboard.recordHistory(bridge.country()); }
+                if (kp->code == sf::Keyboard::Key::Num1) currentTab = Tab::Dashboard;
+                if (kp->code == sf::Keyboard::Key::Num2) currentTab = Tab::Map;
+                if (kp->code == sf::Keyboard::Key::Num3) currentTab = Tab::Action;
+                if (kp->code == sf::Keyboard::Key::Num4) currentTab = Tab::Decisions;
+                if (kp->code == sf::Keyboard::Key::Num5) currentTab = Tab::Achievements;
             }
         }
 
@@ -156,11 +167,30 @@ int main(int argc, char** argv) {
             }
         }
 
-        // === MainPanel: Dashboard 6 cards ===
+        // === MainPanel: tab activa ===
         window.draw(makePanel(200, 60, 830, 640));
+        float dt = frameClock.restart().asSeconds();
+        mapView.update(dt);
         if (fontOk) {
-            window.draw(makeText(font, "DASHBOARD", 18, kMuted, 220, 76));
-            dashboard.draw(window, font, bridge.country());
+            switch (currentTab) {
+                case Tab::Dashboard:
+                    window.draw(makeText(font, "DASHBOARD  [1]", 18, kAccent, 220, 76));
+                    dashboard.draw(window, font, bridge.country());
+                    break;
+                case Tab::Map:
+                    window.draw(makeText(font, "MAPA  [2]", 18, kAccent, 220, 76));
+                    mapView.draw(window, font, bridge.country());
+                    break;
+                case Tab::Action:
+                    window.draw(makeText(font, "ACCION  [3]  (Sprint 13)", 18, kAccent, 220, 76));
+                    break;
+                case Tab::Decisions:
+                    window.draw(makeText(font, "DECISIONES  [4]  (Sprint 14)", 18, kAccent, 220, 76));
+                    break;
+                case Tab::Achievements:
+                    window.draw(makeText(font, "LOGROS  [5]  (Sprint futuro)", 18, kAccent, 220, 76));
+                    break;
+            }
         }
 
         // === SidebarRight ===
