@@ -1,4 +1,6 @@
 #include "Advisor.hpp"
+#include "llm/LLMProvider.hpp"
+#include <sstream>
 
 class HaciendaMinister : public Advisor {
 public:
@@ -106,3 +108,20 @@ Advisor* findById(const std::string& id) {
 }
 
 } // namespace Advisors
+
+std::string Advisor::respondWithLLM(LLMProvider* llm, const Country& c, const std::string& question) const {
+    if (!llm || !llm->isAvailable()) return respond(c, question);
+    std::ostringstream sys;
+    sys << "Eres " << name_es() << " del gobierno. Responde en 2-3 oraciones, "
+        << "directo y especifico al estado actual del pais.";
+    std::ostringstream user;
+    user << "Estado: popularidad=" << (int)(c.politics.popularity * 100) << "%, "
+         << "GDP=$" << (long long)(c.economy.gdp / 1e6) << "M, "
+         << "inflacion=" << (int)(c.economy.inflation * 100) << "%, "
+         << "presion_militar=" << (int)(c.politics.military_pressure * 100) << "%, "
+         << "escandalos=" << c.politics.active_scandals;
+    if (!question.empty()) user << ". Pregunta: " << question;
+    std::string answer = llm->ask(sys.str(), user.str());
+    if (answer.empty()) return respond(c, question);
+    return answer;
+}
