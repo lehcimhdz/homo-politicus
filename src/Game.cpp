@@ -3003,6 +3003,37 @@ void Game::update() {
         std::cout << "[!] SUPPLY CHAIN STRESS: High strategic import dependency during price shock." << std::endl;
     }
 
+    // --- SANCTIONS REGIME DYNAMICS ---
+    // High probability triggers activation; tier escalates with persistence
+    if (!playerCountry.economy.sanctions_active && playerCountry.economy.international_sanctions_prob > 0.60) {
+        playerCountry.economy.sanctions_active = true;
+        playerCountry.economy.sanctions_tier = 1; // Start at targeted
+        std::cout << "[!!] SANCTIONS IMPOSED: International community enacts targeted sanctions (individuals/assets)." << std::endl;
+    }
+    if (playerCountry.economy.sanctions_active) {
+        // Escalation: sustained bad behavior raises tier
+        if (playerCountry.economy.international_sanctions_prob > 0.75 && playerCountry.economy.sanctions_tier < 2) {
+            playerCountry.economy.sanctions_tier = 2; // Sectoral
+            std::cout << "[!!] SANCTIONS ESCALATION: Sectoral sanctions imposed (finance, energy, trade)." << std::endl;
+        }
+        if (playerCountry.economy.international_sanctions_prob > 0.90 && playerCountry.economy.sanctions_tier < 3) {
+            playerCountry.economy.sanctions_tier = 3; // Comprehensive
+            std::cout << "[!!!] TOTAL SANCTIONS: Comprehensive economic embargo in effect." << std::endl;
+        }
+        // GDP impact by tier: 1=0.5%, 2=2%, 3=6%
+        double tier_impacts[] = {0.0, 0.005, 0.02, 0.06};
+        playerCountry.economy.sanctions_gdp_impact = tier_impacts[playerCountry.economy.sanctions_tier];
+        playerCountry.economy.gdp *= (1.0 - playerCountry.economy.sanctions_gdp_impact);
+        playerCountry.economy.growth_rate -= playerCountry.economy.sanctions_gdp_impact * 0.3;
+        // Sanctions relief: probability drops below threshold → de-escalate
+        if (playerCountry.economy.international_sanctions_prob < 0.30) {
+            playerCountry.economy.sanctions_active = false;
+            playerCountry.economy.sanctions_tier = 0;
+            playerCountry.economy.sanctions_gdp_impact = 0.0;
+            std::cout << "[+] SANCTIONS LIFTED: International community removes restrictions." << std::endl;
+        }
+    }
+
     // --- CALCULATE DYNAMIC EXCHANGE RATE STABILITY ---
     // Stability depends on: Institutions (Autonomy) + War Chest (Reserves) + Fundamentals (Trade)
     double base_stability = 0.4 + (playerCountry.economy.central_bank_autonomy * 0.4);

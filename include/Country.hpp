@@ -149,6 +149,9 @@ struct EconomicFinancialSystem {
     double medicine_import_dependency = 0.4;  // Pharmaceutical supply chain exposure
     double supply_chain_vulnerability = 0.3;  // Composite shock propagation risk
     double international_sanctions_prob = 0.0;
+    bool   sanctions_active = false;      // Currently under international sanctions
+    int    sanctions_tier = 0;            // 0=none 1=targeted(individuals) 2=sectoral 3=comprehensive
+    double sanctions_gdp_impact = 0.0;    // Annual GDP drag from active sanctions (fraction)
 
     // Tourism
     int annual_visitors = 500000;
