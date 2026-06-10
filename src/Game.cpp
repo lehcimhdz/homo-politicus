@@ -7785,10 +7785,46 @@ void Game::checkGameOver() {
             "Escándalo mayor en portada. ¿Cómo reaccionas?",
             {"cover_up", "resign_minister", "deny", "accept_responsibility"}});
     }
-    if (pol.congressional_pressure > 0.75 && !hasDecision("congress_crisis")) {
+    if (pol.congressional_pressure > 0.75 && !hasDecision("congress_crisis")
+        && !pol.impeachment_in_progress) {
         pendingDecisions.push_back({"congress_crisis",
             "El congreso amenaza con destituirte. ¿Qué haces?",
             {"call_referendum", "dissolve_congress", "negotiate_coalition", "resign"}});
+    }
+    if (!pol.impeachment_in_progress && pol.congressional_pressure > 0.7
+        && pol.popularity < 0.4) {
+        pol.impeachment_in_progress = true;
+        pol.impeachment_turns = 0;
+        pol.impeachment_votes = 0.0;
+        std::cout << "[!!!] ACUSACIÓN CONSTITUCIONAL presentada en el congreso." << std::endl;
+    }
+    if (pol.impeachment_in_progress) {
+        pol.impeachment_turns++;
+        double base_votes = (pol.opposition_seats / 100.0)
+                          + (1.0 - pol.coalition_cohesion) * 0.2
+                          + pol.active_scandals * 0.05
+                          + (0.5 - pol.popularity) * 0.4;
+        if (base_votes < 0.0) base_votes = 0.0;
+        pol.impeachment_votes = base_votes;
+        if (!hasDecision("impeachment_active")) {
+            pendingDecisions.push_back({"impeachment_active",
+                "Juicio político en marcha (turno " + std::to_string(pol.impeachment_turns)
+                + ", votos " + std::to_string((int)(pol.impeachment_votes * 100)) + "%). Acción:",
+                {"negotiate_votes", "threaten_dissolution", "accept_trial"}});
+        }
+        if (pol.impeachment_votes > 0.66) {
+            endCondition = EndCondition::IMPEACHMENT;
+            isRunning = false;
+            return;
+        }
+        if (pol.impeachment_votes < 0.33 || pol.impeachment_turns >= 5) {
+            std::cout << ">> IMPEACHMENT RECHAZADO: el congreso no reúne los votos." << std::endl;
+            pol.impeachment_in_progress = false;
+            pol.popularity += 0.1;
+            pol.congressional_pressure *= 0.3;
+            pol.impeachment_votes = 0.0;
+            pol.impeachment_turns = 0;
+        }
     }
     for (const auto& n : playerCountry.neighbors) {
         if (n.has_territorial_claim && n.diplomatic_relations < -0.5 && !hasDecision("neighbor_ultimatum")) {
@@ -8010,6 +8046,40 @@ void Game::resolveDecision(const std::string& choice) {
             endCondition = EndCondition::IMPEACHMENT;
             isRunning = false;
             std::cout << ">> RENUNCIA: sale antes de que lo echen." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "impeachment_active") {
+        std::uniform_real_distribution<double> roll(0.0, 1.0);
+        if (choice == "negotiate_votes") {
+            double cost = pol.lobbying_cost * 20.0;
+            if (playerCountry.economy.tax_collection >= cost) {
+                playerCountry.economy.tax_collection -= cost;
+                pol.impeachment_votes -= 0.15;
+                if (pol.impeachment_votes < 0.0) pol.impeachment_votes = 0.0;
+                pol.coalition_cohesion += 0.05;
+                std::cout << ">> NEGOCIA VOTOS: lobbying intenso, intención de impeachment cae." << std::endl;
+            } else {
+                std::cout << ">> Sin presupuesto para lobbying." << std::endl;
+                pendingDecisions.insert(pendingDecisions.begin(), d);
+            }
+        } else if (choice == "threaten_dissolution") {
+            if (roll(rng) < pol.regime_legitimacy) {
+                pol.impeachment_votes -= 0.2;
+                pol.auth_dem_axis += 0.05;
+                pol.authoritarian_actions_count++;
+                std::cout << ">> AMENAZA DE DISOLUCIÓN: congresistas se intimidan." << std::endl;
+            } else {
+                pol.impeachment_votes += 0.15;
+                pol.regime_legitimacy -= 0.1;
+                std::cout << ">> AMENAZA FRACASA: congreso se cierra contra ti." << std::endl;
+            }
+        } else if (choice == "accept_trial") {
+            pol.regime_legitimacy += 0.1;
+            pol.democratic_backsliding_index -= 0.05;
+            if (pol.democratic_backsliding_index < 0.0) pol.democratic_backsliding_index = 0.0;
+            std::cout << ">> ACEPTA JUICIO: confías en tu defensa y en las instituciones." << std::endl;
         } else {
             std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
             pendingDecisions.insert(pendingDecisions.begin(), d);

@@ -300,6 +300,9 @@ struct PoliticalInstitutionalSystem {
     double revolution_prob = 0.0;
     bool revolution_active = false;
     int revolution_duration = 0;
+    bool impeachment_in_progress = false;
+    int impeachment_turns = 0;
+    double impeachment_votes = 0.0;
     bool civil_war_active = false;
     int civil_war_duration = 0;
     double affective_polarization = 0.4;       // Hatred between partisan blocs (0–1)
