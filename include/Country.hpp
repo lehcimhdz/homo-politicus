@@ -470,11 +470,32 @@ struct InfrastructureFutureSystem {
 
     // Infrastructure
     double road_connectivity = 0.7;
+    double rail_connectivity = 0.4;            // Rail freight + passenger network (0–1)
+    double road_quality_index = 0.6;           // Pavement condition (0–1)
+    double logistics_performance = 0.6;        // World Bank LPI-style composite (0–1)
+
     double port_capacity = 0.6;
+    int    major_ports = 2;                    // Deep-water commercial ports
+    double port_efficiency = 0.6;              // Container turnaround (0–1)
+
     int airports = 5;
+    int    international_airports = 1;         // Airports with international routes
+    double aviation_safety_rating = 0.8;       // ICAO compliance (0–1)
+
     double internet_coverage = 0.8;
+    double broadband_penetration = 0.5;        // Fixed broadband per capita
+    double avg_internet_speed_mbps = 30.0;     // National average download
+    double digital_divide_rural = 0.3;         // Urban-rural access gap (0–1)
+
     double potable_water_access = 0.9;
+    double water_stress_index = 0.3;           // Demand vs freshwater supply (0–1)
+    double sanitation_coverage = 0.85;         // Access to adequate sanitation (0–1)
+    double water_infrastructure_age = 30.0;    // Average age of water systems (years)
+
     double maintenance_level = 0.6;
+    double infrastructure_depreciation_rate = 0.03; // Annual value lost to neglect
+    double deferred_maintenance_backlog = 0.0; // Cumulative unfunded repairs (USD)
+    double public_works_spending_gdp = 0.04;   // Annual infra investment (% GDP)
 
     // Energy
     double generation_capacity = 1.2; // relative to demand

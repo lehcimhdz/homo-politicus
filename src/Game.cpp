@@ -3333,6 +3333,40 @@ void Game::update() {
         }
     }
 
+    // --- INFRASTRUCTURE DYNAMICS ---
+    // Logistics performance: composite of road, rail, port, and air
+    playerCountry.infra.logistics_performance = playerCountry.infra.road_connectivity * 0.3
+                                              + playerCountry.infra.rail_connectivity * 0.2
+                                              + playerCountry.infra.port_efficiency * 0.25
+                                              + (double)playerCountry.infra.international_airports / 5.0 * 0.25;
+    if (playerCountry.infra.logistics_performance > 1.0) playerCountry.infra.logistics_performance = 1.0;
+    // Road quality degrades without maintenance
+    playerCountry.infra.road_quality_index += (playerCountry.infra.maintenance_level - 0.5) * 0.02;
+    if (playerCountry.infra.road_quality_index < 0.1) playerCountry.infra.road_quality_index = 0.1;
+    if (playerCountry.infra.road_quality_index > 1.0) playerCountry.infra.road_quality_index = 1.0;
+    // Port efficiency from capacity utilization and investment
+    playerCountry.infra.port_efficiency = playerCountry.infra.port_capacity * 0.6
+                                        + playerCountry.infra.maintenance_level * 0.4;
+    if (playerCountry.infra.port_efficiency > 1.0) playerCountry.infra.port_efficiency = 1.0;
+    // Digital divide narrows with internet investment
+    playerCountry.infra.digital_divide_rural = (1.0 - playerCountry.infra.internet_coverage) * 0.6
+                                             + (1.0 - playerCountry.infra.broadband_penetration) * 0.4;
+    if (playerCountry.infra.digital_divide_rural > 1.0) playerCountry.infra.digital_divide_rural = 1.0;
+    // Water stress: population density + climate vulnerability
+    playerCountry.infra.water_stress_index = playerCountry.welfare.population_density * 0.002
+                                           + playerCountry.infra.climate_vulnerability_index * 0.3
+                                           - playerCountry.infra.potable_water_access * 0.1;
+    if (playerCountry.infra.water_stress_index < 0.0) playerCountry.infra.water_stress_index = 0.0;
+    if (playerCountry.infra.water_stress_index > 1.0) playerCountry.infra.water_stress_index = 1.0;
+    // Maintenance level: driven by public works spending
+    playerCountry.infra.maintenance_level = playerCountry.infra.public_works_spending_gdp * 12.0;
+    if (playerCountry.infra.maintenance_level > 1.0) playerCountry.infra.maintenance_level = 1.0;
+    // Deferred maintenance backlog accumulates when spending is inadequate
+    double annual_maintenance_need = playerCountry.economy.gdp * playerCountry.infra.infrastructure_depreciation_rate;
+    double actual_maintenance = playerCountry.economy.gdp * playerCountry.infra.public_works_spending_gdp;
+    playerCountry.infra.deferred_maintenance_backlog += (annual_maintenance_need - actual_maintenance);
+    if (playerCountry.infra.deferred_maintenance_backlog < 0.0) playerCountry.infra.deferred_maintenance_backlog = 0.0;
+
     // --- SCIENCE, TECHNOLOGY & INNOVATION DYNAMICS ---
     // Total R&D intensity
     playerCountry.infra.total_rd_gdp = playerCountry.infra.st_investment_gdp + playerCountry.infra.private_rd_gdp;
