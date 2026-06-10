@@ -15,6 +15,7 @@ public:
 
     MainMenu();
     void setCallback(ActionCallback cb) { cb_ = std::move(cb); }
+    void setTitleFont(const sf::Font* f) { titleFont_ = f; }
     void onClick(sf::Vector2f mouse);
     void onMouseMove(sf::Vector2f mouse);
     void draw(sf::RenderWindow& win, const sf::Font& font) const;
@@ -25,6 +26,7 @@ private:
     std::vector<Button> buttons_;
     int hoveredIndex_ = -1;
     ActionCallback cb_;
+    const sf::Font* titleFont_ = nullptr;
 
     int indexAt(sf::Vector2f mouse) const;
 };

@@ -65,15 +65,17 @@ static sf::Text mkText(const sf::Font& font, const std::string& s, unsigned sz, 
 void MainMenu::draw(sf::RenderWindow& win, const sf::Font& font) const {
     win.draw(mkRect(0, 0, 1280, 800, kBg, sf::Color(0, 0, 0, 0), 0.f));
 
-    // Titulo grande centrado
-    sf::Text title(font, "HOMO POLITICUS", 84);
+    // Titulo grande centrado - Cinzel serif si esta disponible
+    const sf::Font& titleF = titleFont_ ? *titleFont_ : font;
+    sf::Text title(titleF, "HOMO POLITICUS", 84);
+    title.setStyle(sf::Text::Bold);
     auto tb = title.getLocalBounds();
     title.setOrigin({tb.size.x / 2.f, tb.size.y / 2.f});
     title.setPosition({640.f, 140.f});
     title.setFillColor(kTitle);
     win.draw(title);
 
-    sf::Text subtitle(font, "Lidera. Sobrevive. Decide.", 22);
+    sf::Text subtitle(titleF, "Lidera. Sobrevive. Decide.", 22);
     auto sb = subtitle.getLocalBounds();
     subtitle.setOrigin({sb.size.x / 2.f, sb.size.y / 2.f});
     subtitle.setPosition({640.f, 220.f});

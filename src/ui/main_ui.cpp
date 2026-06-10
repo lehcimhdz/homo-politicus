@@ -53,6 +53,19 @@ static bool loadFontFallback(sf::Font& font) {
     return false;
 }
 
+// Cinzel: serif romano elegante (Google Fonts OFL) para titulos presidenciales.
+// Si no carga, callers usan la fuente sans como fallback.
+static bool loadTitleFont(sf::Font& font) {
+    const char* candidates[] = {
+        "assets/fonts/Cinzel-Regular.ttf",
+        "/Users/michelcano/Documents/Repositorios/homo-politicus/assets/fonts/Cinzel-Regular.ttf",
+    };
+    for (const char* p : candidates) {
+        if (font.openFromFile(p)) return true;
+    }
+    return false;
+}
+
 static sf::RectangleShape makePanel(float x, float y, float w, float h, sf::Color fill = kPanel) {
     sf::RectangleShape r({w, h});
     r.setPosition({x, y});
@@ -112,6 +125,9 @@ int main(int argc, char** argv) {
 
     sf::Font font;
     bool fontOk = loadFontFallback(font);
+    sf::Font titleFont;
+    bool titleFontOk = loadTitleFont(titleFont);
+    const sf::Font& fTitle = titleFontOk ? titleFont : font;
 
     Localization::load(LOCALES_DIR, "es");
     UIBridge bridge;
@@ -121,6 +137,7 @@ int main(int argc, char** argv) {
     DecisionModal modal;
     AudioSystem audio;
     MainMenu menu;
+    menu.setTitleFont(titleFontOk ? &titleFont : nullptr);
     GameOverScreen gameOver;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
@@ -276,7 +293,13 @@ int main(int argc, char** argv) {
         window.draw(makePanel(0, 0, 1280, 60));
         if (fontOk) {
             const Country& c = bridge.country();
-            window.draw(makeText(font, "HOMO POLITICUS", 24, kAccent, 16, 16));
+            {
+                sf::Text titleHdr(fTitle, "HOMO POLITICUS", 24);
+                titleHdr.setFillColor(kAccent);
+                titleHdr.setStyle(sf::Text::Bold);
+                titleHdr.setPosition({16.f, 16.f});
+                window.draw(titleHdr);
+            }
             std::ostringstream turnStr;
             turnStr << tr("ui.turn_prefix", "Turno") << " " << bridge.turn();
             window.draw(makeText(font, turnStr.str(), 18, kMuted, 240, 22));
@@ -323,27 +346,42 @@ int main(int argc, char** argv) {
         mapView.update(dt);
         if (fontOk) {
             switch (currentTab) {
-                case Tab::Dashboard:
-                    window.draw(makeText(font, "DASHBOARD  [1]", 18, kAccent, 220, 76));
+                case Tab::Dashboard: {
+                    sf::Text hdr(fTitle, "DASHBOARD  [1]", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
                     dashboard.draw(window, font, bridge.country());
                     break;
-                case Tab::Map:
-                    window.draw(makeText(font, "MAPA  [2]", 18, kAccent, 220, 76));
+                }
+                case Tab::Map: {
+                    sf::Text hdr(fTitle, "MAPA  [2]", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
                     mapView.draw(window, font, bridge.country());
                     break;
-                case Tab::Action:
-                    window.draw(makeText(font, "ACCION  [3]", 18, kAccent, 220, 76));
+                }
+                case Tab::Action: {
+                    sf::Text hdr(fTitle, "ACCION  [3]", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
                     actionPanel.draw(window, font);
                     if (!lastActionFeedback.empty()) {
                         window.draw(makeText(font, lastActionFeedback, 13, kGood, 220, 96));
                     }
                     break;
-                case Tab::Decisions:
-                    window.draw(makeText(font, "DECISIONES  [4]  (Sprint 14)", 18, kAccent, 220, 76));
+                }
+                case Tab::Decisions: {
+                    sf::Text hdr(fTitle, "DECISIONES  [4]  (Sprint 14)", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
                     break;
-                case Tab::Achievements:
-                    window.draw(makeText(font, "LOGROS  [5]  (Sprint futuro)", 18, kAccent, 220, 76));
+                }
+                case Tab::Achievements: {
+                    sf::Text hdr(fTitle, "LOGROS  [5]  (Sprint futuro)", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
                     break;
+                }
             }
         }
 
