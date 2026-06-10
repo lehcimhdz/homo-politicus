@@ -3333,6 +3333,29 @@ void Game::update() {
         }
     }
 
+    // --- CORRUPTION DYNAMICS ---
+    // Derive administrative_corruption from petty + grand components
+    playerCountry.politics.administrative_corruption = playerCountry.politics.petty_corruption * 0.6
+                                                     + playerCountry.politics.grand_corruption * 0.4;
+    // Anti-corruption enforcement reduces both over time
+    if (playerCountry.politics.anticorruption_enforcement > 0.5) {
+        playerCountry.politics.petty_corruption -= 0.003;
+        playerCountry.politics.grand_corruption -= 0.002;
+    }
+    // Weak judiciary enables corruption growth
+    if (playerCountry.politics.judicial_independence < 0.4) {
+        playerCountry.politics.grand_corruption += 0.003;
+        playerCountry.politics.petty_corruption += 0.002;
+    }
+    if (playerCountry.politics.petty_corruption < 0.0) playerCountry.politics.petty_corruption = 0.0;
+    if (playerCountry.politics.petty_corruption > 1.0) playerCountry.politics.petty_corruption = 1.0;
+    if (playerCountry.politics.grand_corruption < 0.0) playerCountry.politics.grand_corruption = 0.0;
+    if (playerCountry.politics.grand_corruption > 1.0) playerCountry.politics.grand_corruption = 1.0;
+    // CPI: inverse of corruption, scaled to TI 0–100
+    playerCountry.politics.corruption_perception_index = (1.0 - playerCountry.politics.administrative_corruption) * 100.0;
+    if (playerCountry.politics.corruption_perception_index < 0.0) playerCountry.politics.corruption_perception_index = 0.0;
+    if (playerCountry.politics.corruption_perception_index > 100.0) playerCountry.politics.corruption_perception_index = 100.0;
+
     // --- DEMOCRATIC BACKSLIDING & EMERGENCY POWERS ---
     // Electoral manipulation and media control erode democracy over time
     playerCountry.politics.democratic_backsliding_index += playerCountry.politics.electoral_manipulation_capacity * 0.005

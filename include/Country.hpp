@@ -197,6 +197,10 @@ struct PoliticalInstitutionalSystem {
     double civilian_military_control = 0.8;   // Civilian oversight of armed forces (0–1)
     double coup_success_prob = 0.3;           // If attempted, probability of success
     double administrative_corruption = 0.2;
+    double corruption_perception_index = 60.0; // 0=highly corrupt, 100=very clean (TI scale)
+    double petty_corruption = 0.15;            // Bribery in daily public services (0–1)
+    double grand_corruption = 0.08;            // High-level embezzlement/state capture (0–1)
+    double anticorruption_enforcement = 0.4;   // Effectiveness of anti-corruption agencies (0–1)
 
     // Governance
     int marches = 0;
