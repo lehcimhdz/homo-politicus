@@ -1811,6 +1811,91 @@ void Game::processEvents() {
         std::cout << "   Deforestation rate: " << playerCountry.infra.deforestation_rate * 100 << "% per year." << std::endl;
         std::cout << "   (CO2 -, Biodiversity +, Climate Resilience +)" << std::endl;
     }
+    // --- NEIGHBOR INTERACTION COMMANDS ---
+    else if (command.substr(0, 17) == "improve_relations") {
+        // improve_relations <index 0-2>
+        int idx = -1;
+        if (command.size() > 18) idx = std::stoi(command.substr(18));
+        if (idx >= 0 && idx < (int)playerCountry.neighbors.size()) {
+            auto& n = playerCountry.neighbors[idx];
+            n.diplomatic_relations += 0.1;
+            if (n.diplomatic_relations > 1.0) n.diplomatic_relations = 1.0;
+            playerCountry.economy.gdp -= 5000000.0; // Diplomatic cost $5M
+            std::cout << ">> DIPLOMACY: Relations with " << n.name << " improved to "
+                      << (int)(n.diplomatic_relations * 100) << "%." << std::endl;
+        } else {
+            std::cout << ">> Usage: improve_relations <0-2> (0=Northland, 1=Easteria, 2=Southaven)" << std::endl;
+        }
+    }
+    else if (command.substr(0, 16) == "worsen_relations") {
+        int idx = -1;
+        if (command.size() > 17) idx = std::stoi(command.substr(17));
+        if (idx >= 0 && idx < (int)playerCountry.neighbors.size()) {
+            auto& n = playerCountry.neighbors[idx];
+            n.diplomatic_relations -= 0.15;
+            if (n.diplomatic_relations < -1.0) n.diplomatic_relations = -1.0;
+            std::cout << ">> HOSTILITY: Relations with " << n.name << " worsened to "
+                      << (int)(n.diplomatic_relations * 100) << "%." << std::endl;
+        } else {
+            std::cout << ">> Usage: worsen_relations <0-2>" << std::endl;
+        }
+    }
+    else if (command.substr(0, 10) == "trade_deal") {
+        int idx = -1;
+        if (command.size() > 11) idx = std::stoi(command.substr(11));
+        if (idx >= 0 && idx < (int)playerCountry.neighbors.size()) {
+            auto& n = playerCountry.neighbors[idx];
+            if (n.diplomatic_relations > 0.0) {
+                double boost = n.gdp * 0.02 * n.diplomatic_relations;
+                n.trade_volume += boost;
+                n.diplomatic_relations += 0.05;
+                if (n.diplomatic_relations > 1.0) n.diplomatic_relations = 1.0;
+                std::cout << ">> TRADE DEAL with " << n.name << ": +$" << boost / 1000000.0
+                          << "M bilateral trade." << std::endl;
+            } else {
+                std::cout << ">> Cannot sign trade deal with hostile nation " << n.name << "." << std::endl;
+            }
+        } else {
+            std::cout << ">> Usage: trade_deal <0-2>" << std::endl;
+        }
+    }
+    else if (command.substr(0, 8) == "threaten") {
+        int idx = -1;
+        if (command.size() > 9) idx = std::stoi(command.substr(9));
+        if (idx >= 0 && idx < (int)playerCountry.neighbors.size()) {
+            auto& n = playerCountry.neighbors[idx];
+            n.diplomatic_relations -= 0.2;
+            if (n.diplomatic_relations < -1.0) n.diplomatic_relations = -1.0;
+            // May deter aggression if we're strong
+            if (playerCountry.security.military_spending_gdp > 0.03) {
+                n.military_strength -= 0.02; // Deterrence effect
+                if (n.military_strength < 0.1) n.military_strength = 0.1;
+                std::cout << ">> THREAT: Military posturing against " << n.name
+                          << ". They back down slightly." << std::endl;
+            } else {
+                std::cout << ">> THREAT: " << n.name << " is unimpressed by our weak military." << std::endl;
+            }
+            playerCountry.security.diplomatic_prestige -= 0.03;
+        } else {
+            std::cout << ">> Usage: threaten <0-2>" << std::endl;
+        }
+    }
+    else if (command == "negotiate_peace_neighbor") {
+        bool any_war = false;
+        for (auto& n : playerCountry.neighbors) {
+            if (n.at_war) {
+                n.at_war = false;
+                n.diplomatic_relations = -0.4;
+                n.trade_volume = n.gdp * 0.03;
+                n.sanctions_against_us = false;
+                playerCountry.security.war_active = false;
+                playerCountry.security.diplomatic_prestige -= 0.05;
+                std::cout << ">> PEACE NEGOTIATION: Ceasefire with " << n.name << ". Relations remain tense." << std::endl;
+                any_war = true;
+            }
+        }
+        if (!any_war) std::cout << ">> No active wars with neighbors." << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
@@ -7507,8 +7592,29 @@ void Game::update() {
 
 void Game::render() {
     // Clear screen (hacky way for terminal)
-    // std::cout << "\033[2J\033[1;1H"; 
+    // std::cout << "\033[2J\033[1;1H";
 
     std::cout << "\nGame Tick Update:" << std::endl;
     playerCountry.printStatus();
+
+    // --- NEIGHBOR STATUS DISPLAY ---
+    std::cout << "--- Neighbors ---" << std::endl;
+    for (int i = 0; i < (int)playerCountry.neighbors.size(); i++) {
+        const auto& n = playerCountry.neighbors[i];
+        std::string rel_label = n.diplomatic_relations > 0.5 ? "ALLIED" :
+                                n.diplomatic_relations > 0.0 ? "NEUTRAL" :
+                                n.diplomatic_relations > -0.5 ? "TENSE" : "HOSTILE";
+        std::cout << "[" << i << "] " << n.name
+                  << " | GDP: $" << n.gdp / 1000000.0 << "M"
+                  << " | Relations: " << rel_label << " (" << (int)(n.diplomatic_relations * 100) << ")"
+                  << " | Trade: $" << n.trade_volume / 1000000.0 << "M"
+                  << " | Mil: " << (int)(n.military_strength * 100) << "%";
+        if (n.at_war) std::cout << " [AT WAR]";
+        if (n.has_territorial_claim) std::cout << " [CLAIM]";
+        if (n.sanctions_against_us) std::cout << " [SANCTIONS]";
+        if (n.in_crisis) std::cout << " [CRISIS]";
+        std::cout << std::endl;
+    }
+    std::cout << "Commands: improve_relations/worsen_relations/trade_deal/threaten <0-2>, negotiate_peace_neighbor" << std::endl;
+    std::cout << "----------------------" << std::endl;
 }
