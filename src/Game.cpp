@@ -1661,6 +1661,24 @@ void Game::processEvents() {
         std::cout << ">> TRANSPARENCY REFORM: Open government, public procurement, FOI laws enacted." << std::endl;
         std::cout << "   (CPI +, Investment Climate +, Prestige +, SWF Governance +)" << std::endl;
     }
+    // --- CAMPAIGN COMMAND ---
+    else if (command == "campaign_spend") {
+        if (!playerCountry.politics.campaign_active) {
+            std::cout << ">> No active campaign. Wait for campaign season." << std::endl;
+        } else {
+            double cost = 20000000.0; // $20M per spending round
+            if (playerCountry.economy.gdp < cost * 10) {
+                std::cout << ">> INSUFFICIENT FUNDS for campaign spending." << std::endl;
+            } else {
+                playerCountry.economy.gdp -= cost;
+                playerCountry.politics.campaign_spending += cost;
+                std::cout << ">> CAMPAIGN SPENDING: $20M invested. Total: $"
+                          << (int)(playerCountry.politics.campaign_spending / 1000000.0) << "M" << std::endl;
+                std::cout << "   Current poll margin: " << (playerCountry.politics.poll_margin >= 0 ? "+" : "")
+                          << (int)(playerCountry.politics.poll_margin * 100) << " points" << std::endl;
+            }
+        }
+    }
     // --- AUTHORITARIAN COMMANDS ---
     else if (command == "pack_court") {
         if (playerCountry.politics.court_packing_executed) {
@@ -7045,40 +7063,145 @@ void Game::update() {
     // Ceiling
     if (playerCountry.politics.popularity > 1.0) playerCountry.politics.popularity = 1.0;
 
-    // --- ELECTION LOGIC ---
+    // --- ADVANCED ELECTION SYSTEM ---
     turnCount++;
+
+    // Campaign activation: 2 turns before election
+    if (turnCount % 4 == 2 && !playerCountry.politics.campaign_active) {
+        playerCountry.politics.campaign_active = true;
+        playerCountry.politics.campaign_turns_remaining = 2;
+        playerCountry.politics.campaign_spending = 0.0;
+        playerCountry.politics.opponent_campaign_spending = 0.0;
+        // Generate opponent
+        playerCountry.politics.opponent_popularity = 0.3 + (1.0 - playerCountry.politics.popularity) * 0.3;
+        playerCountry.politics.opponent_ideology_economic = 1.0 - playerCountry.politics.economic_ideology; // Mirror
+        playerCountry.politics.opponent_campaign_spending = playerCountry.economy.gdp * 0.002; // Base funding
+        // Lobby backing for opposition
+        double lobby_backing = playerCountry.politics.industrial_power * 0.3
+                             + playerCountry.politics.financial_power * 0.3;
+        if (playerCountry.politics.popularity < 0.4) lobby_backing *= 1.5; // Lobbies bet on opposition
+        playerCountry.politics.opponent_campaign_spending += lobby_backing * 10000000.0;
+        std::cout << "\n=== CAMPAIGN SEASON BEGINS (Election in " << playerCountry.politics.campaign_turns_remaining
+                  << " turns) ===" << std::endl;
+        std::cout << "   Opponent popularity: " << (int)(playerCountry.politics.opponent_popularity * 100)
+                  << "% | Opponent funding: $" << (int)(playerCountry.politics.opponent_campaign_spending / 1000000.0)
+                  << "M" << std::endl;
+    }
+
+    // Campaign turn: polls, spending effects
+    if (playerCountry.politics.campaign_active && turnCount % 4 != 0) {
+        playerCountry.politics.campaign_turns_remaining--;
+
+        // Campaign spending effects (diminishing returns)
+        double player_spend_effect = std::log(1.0 + playerCountry.politics.campaign_spending / 10000000.0) * 0.02;
+        double opponent_spend_effect = std::log(1.0 + playerCountry.politics.opponent_campaign_spending / 10000000.0) * 0.02;
+
+        // Economy is the #1 election factor
+        double economy_factor = 0.0;
+        if (playerCountry.economy.growth_rate > 0.03) economy_factor = 0.05;
+        else if (playerCountry.economy.growth_rate < 0) economy_factor = -0.05;
+
+        // Ideology alignment with population
+        double ideology_factor = (0.5 - std::abs(playerCountry.politics.economic_ideology
+                                                 - playerCountry.politics.population_economic_pref)) * 0.1;
+
+        // Poll simulation
+        std::uniform_real_distribution<> poll_noise(-0.03, 0.03);
+        playerCountry.politics.poll_margin = playerCountry.politics.popularity
+                                           + playerCountry.politics.incumbent_advantage
+                                           + player_spend_effect
+                                           + economy_factor
+                                           + ideology_factor
+                                           - playerCountry.politics.opponent_popularity
+                                           - opponent_spend_effect
+                                           + poll_noise(rng);
+
+        std::cout << "[POLL] Current margin: " << (playerCountry.politics.poll_margin >= 0 ? "+" : "")
+                  << (int)(playerCountry.politics.poll_margin * 100) << " points"
+                  << " | Economy factor: " << (economy_factor >= 0 ? "+" : "")
+                  << (int)(economy_factor * 100) << "%" << std::endl;
+    }
+
+    // Election day
     if (turnCount % 4 == 0) {
-        std::cout << "\n=== ELECTION YEAR (Year " << turnCount << ") ===" << std::endl;
-        // Compute effective electoral strength: popularity + incumbency + manipulation
-        double effective_vote = playerCountry.politics.popularity
-                              + playerCountry.politics.incumbent_advantage
-                              + playerCountry.politics.electoral_manipulation_capacity * 0.5;
-        // Term limits: if active and 2+ terms served, cannot run
+        playerCountry.politics.campaign_active = false;
+        std::cout << "\n=== ELECTION DAY (Year " << turnCount << ") ===" << std::endl;
+
+        // Term limits check
         bool term_blocked = playerCountry.politics.term_limit_active
                          && playerCountry.politics.terms_served >= 2;
-        std::cout << "Current Popularity: " << playerCountry.politics.popularity * 100 << "%"
-                  << " | Effective Vote: " << (int)(effective_vote * 100) << "%"
+
+        // Final vote calculation
+        double economy_bonus = playerCountry.economy.growth_rate > 0 ? playerCountry.economy.growth_rate * 1.5 : playerCountry.economy.growth_rate * 2.0;
+        double scandal_penalty = playerCountry.politics.active_scandals * 0.03;
+        double campaign_bonus = std::log(1.0 + playerCountry.politics.campaign_spending / 10000000.0) * 0.03;
+        double ideology_bonus = (0.5 - std::abs(playerCountry.politics.economic_ideology - playerCountry.politics.population_economic_pref)) * 0.1;
+        double rigging_bonus = playerCountry.politics.election_rigged ? 0.15 : 0.0;
+
+        double effective_vote = playerCountry.politics.popularity
+                              + playerCountry.politics.incumbent_advantage
+                              + economy_bonus
+                              + campaign_bonus
+                              + ideology_bonus
+                              + rigging_bonus
+                              - scandal_penalty;
+
+        // Noise
+        std::uniform_real_distribution<> vote_noise(-0.03, 0.03);
+        effective_vote += vote_noise(rng);
+
+        double opponent_vote = playerCountry.politics.opponent_popularity
+                             + std::log(1.0 + playerCountry.politics.opponent_campaign_spending / 10000000.0) * 0.03;
+
+        double margin = effective_vote - opponent_vote;
+
+        std::cout << "Your vote: " << (int)(effective_vote * 100) << "%"
+                  << " | Opponent: " << (int)(opponent_vote * 100) << "%"
+                  << " | Margin: " << (margin >= 0 ? "+" : "") << (int)(margin * 100)
                   << " | Terms: " << playerCountry.politics.terms_served;
         if (term_blocked) std::cout << " [TERM-LIMITED]";
+        if (playerCountry.politics.election_rigged) std::cout << " [RIGGED]";
         std::cout << std::endl;
 
         if (term_blocked) {
-            std::cout << "TERM LIMIT: Constitutional term limits force transition of power." << std::endl;
-            std::cout << "Your legacy continues. A successor from your party takes office." << std::endl;
+            std::cout << "TERM LIMIT: Constitutional term limits force transition." << std::endl;
             playerCountry.politics.terms_served = 0;
-            playerCountry.politics.popularity *= 0.6; // Successor starts weaker
+            playerCountry.politics.popularity *= 0.6;
             playerCountry.politics.honeymoon_turns_remaining = 4;
-            playerCountry.politics.incumbent_advantage = 0.05; // New leader, less advantage
-        } else if (effective_vote > 0.50) {
-            std::cout << "VICTORY: The people love you! You have been re-elected for 4 more years." << std::endl;
+            playerCountry.politics.incumbent_advantage = 0.05;
+            playerCountry.politics.mandate_strength = 0.5;
+        } else if (margin > 0) {
+            playerCountry.politics.elections_won++;
             playerCountry.politics.terms_served++;
             playerCountry.politics.honeymoon_turns_remaining = 4;
-            playerCountry.politics.incumbent_advantage += 0.02; // Entrench slightly
+            playerCountry.politics.mandate_strength = std::min(1.0, margin * 2.0);
+            playerCountry.politics.incumbent_advantage += 0.02;
             if (playerCountry.politics.incumbent_advantage > 0.3) playerCountry.politics.incumbent_advantage = 0.3;
+
+            if (margin > 0.15) {
+                std::cout << "LANDSLIDE VICTORY! Strong mandate for bold reforms." << std::endl;
+                playerCountry.politics.congressional_support += 0.1;
+                if (playerCountry.politics.congressional_support > 1.0) playerCountry.politics.congressional_support = 1.0;
+            } else if (margin > 0.05) {
+                std::cout << "COMFORTABLE VICTORY. Solid mandate secured." << std::endl;
+            } else {
+                std::cout << "NARROW VICTORY. Thin margin means fragile mandate." << std::endl;
+                playerCountry.politics.mandate_strength = 0.3;
+            }
+            playerCountry.politics.election_rigged = false; // Reset for next cycle
         } else {
-            std::cout << "DEFEAT: You have lost the support of the people." << std::endl;
-            std::cout << "GAME OVER." << std::endl;
-            isRunning = false;
+            playerCountry.politics.elections_lost++;
+            if (playerCountry.politics.authoritarian_actions_count >= 3) {
+                // Authoritarian refuses to accept defeat
+                std::cout << "DEFEAT... but you refuse to concede. Constitutional crisis!" << std::endl;
+                playerCountry.politics.regime_legitimacy -= 0.2;
+                playerCountry.politics.protest_intensity += 0.3;
+                playerCountry.economy.international_sanctions_prob += 0.2;
+            } else {
+                std::cout << "DEFEAT: The people have chosen change. Peaceful transfer of power." << std::endl;
+                std::cout << "GAME OVER." << std::endl;
+                isRunning = false;
+            }
         }
     }
 }

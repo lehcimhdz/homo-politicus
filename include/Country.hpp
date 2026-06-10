@@ -257,6 +257,18 @@ struct PoliticalInstitutionalSystem {
     bool election_rigged = false;
     double regime_legitimacy = 1.0;        // 0-1, erodes with authoritarian moves
     int authoritarian_actions_count = 0;
+
+    // Advanced election system
+    bool campaign_active = false;
+    int campaign_turns_remaining = 0;
+    double opponent_popularity = 0.4;
+    double opponent_ideology_economic = 0.5;
+    double campaign_spending = 0.0;
+    double opponent_campaign_spending = 0.0;
+    double poll_margin = 0.0;
+    int elections_won = 0;
+    int elections_lost = 0;
+    double mandate_strength = 0.5;         // Strength of electoral mandate (0-1)
     bool   state_of_emergency_active = false;  // Emergency decree powers in effect
     int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
