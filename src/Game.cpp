@@ -3333,6 +3333,28 @@ void Game::update() {
         }
     }
 
+    // --- POLARIZATION DYNAMICS ---
+    // Derive composite polarization from sub-dimensions
+    // Poverty and inequality drive economic polarization
+    playerCountry.politics.economic_polarization = playerCountry.welfare.poverty_rate * 0.8
+                                                 + (1.0 - playerCountry.welfare.minority_protection) * 0.2;
+    if (playerCountry.politics.economic_polarization > 1.0) playerCountry.politics.economic_polarization = 1.0;
+    // Low media pluralism + high media control → echo chambers
+    playerCountry.politics.media_echo_chamber = playerCountry.security.media_control * 0.4
+                                              + (1.0 - playerCountry.security.press_freedom) * 0.3
+                                              + playerCountry.security.fake_news_success_prob * 0.3;
+    if (playerCountry.politics.media_echo_chamber > 1.0) playerCountry.politics.media_echo_chamber = 1.0;
+    // Affective polarization grows with protests and echo chambers, shrinks with education
+    playerCountry.politics.affective_polarization += playerCountry.politics.media_echo_chamber * 0.003
+                                                   + playerCountry.politics.protest_intensity * 0.005;
+    playerCountry.politics.affective_polarization -= playerCountry.welfare.educational_quality * 0.003;
+    if (playerCountry.politics.affective_polarization < 0.0) playerCountry.politics.affective_polarization = 0.0;
+    if (playerCountry.politics.affective_polarization > 1.0) playerCountry.politics.affective_polarization = 1.0;
+    // Composite index
+    playerCountry.politics.polarization_index = playerCountry.politics.affective_polarization * 0.40
+                                              + playerCountry.politics.economic_polarization * 0.35
+                                              + playerCountry.politics.media_echo_chamber * 0.25;
+
     // --- PROTEST DYNAMICS ---
     {
         int total_protests = playerCountry.politics.marches + playerCountry.politics.blockades

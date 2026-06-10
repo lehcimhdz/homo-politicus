@@ -210,6 +210,9 @@ struct PoliticalInstitutionalSystem {
     bool   protest_pro_government = false;     // Direction: pro-govt (true) or opposition-led (false)
     int    protest_duration_turns = 0;         // Consecutive turns of sustained mobilization
     double polarization_index = 0.3;
+    double affective_polarization = 0.4;       // Hatred between partisan blocs (0–1)
+    double economic_polarization = 0.3;        // Income/class divide (0–1)
+    double media_echo_chamber = 0.4;           // Information silo effect (0–1)
 
     // Legislative
     double congressional_support = 0.6;
