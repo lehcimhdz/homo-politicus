@@ -189,6 +189,9 @@ struct PoliticalInstitutionalSystem {
     double incumbent_advantage = 0.15;       // Electoral bonus from office resources
     double electoral_manipulation_capacity = 0.1; // Ability to tilt outcomes (0–1)
     double authoritarianism_prob = 0.1;
+    double democratic_backsliding_index = 0.1; // Cumulative erosion of democratic norms (0–1)
+    bool   state_of_emergency_active = false;  // Emergency decree powers in effect
+    int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
     double administrative_corruption = 0.2;
 

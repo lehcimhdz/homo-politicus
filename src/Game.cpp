@@ -3302,6 +3302,31 @@ void Game::update() {
         playerCountry.economy.gdp -= 10000000; // $10M annual cleanup cost
     }
     
+    // --- DEMOCRATIC BACKSLIDING & EMERGENCY POWERS ---
+    // Electoral manipulation and media control erode democracy over time
+    playerCountry.politics.democratic_backsliding_index += playerCountry.politics.electoral_manipulation_capacity * 0.005
+                                                        + playerCountry.security.media_control * 0.003;
+    // Judicial independence and press freedom resist backsliding
+    playerCountry.politics.democratic_backsliding_index -= playerCountry.politics.judicial_independence * 0.004
+                                                        + playerCountry.security.press_freedom * 0.002;
+    if (playerCountry.politics.democratic_backsliding_index < 0.0) playerCountry.politics.democratic_backsliding_index = 0.0;
+    if (playerCountry.politics.democratic_backsliding_index > 1.0) playerCountry.politics.democratic_backsliding_index = 1.0;
+    // High backsliding raises authoritarianism probability
+    playerCountry.politics.authoritarianism_prob = playerCountry.politics.democratic_backsliding_index * 0.5;
+    // Emergency powers: escalate backsliding faster and reduce judicial independence
+    if (playerCountry.politics.state_of_emergency_active) {
+        playerCountry.politics.emergency_turns_elapsed++;
+        playerCountry.politics.democratic_backsliding_index += 0.015;
+        playerCountry.politics.judicial_independence -= 0.01;
+        if (playerCountry.politics.judicial_independence < 0.1) playerCountry.politics.judicial_independence = 0.1;
+        // Prolonged emergency draws international condemnation
+        if (playerCountry.politics.emergency_turns_elapsed > 3) {
+            playerCountry.welfare.un_score -= 0.03;
+            playerCountry.economy.international_sanctions_prob += 0.01;
+            std::cout << "[!] PROLONGED EMERGENCY: International concern over indefinite emergency decree." << std::endl;
+        }
+    }
+
     // --- POPULARITY DYNAMICS ---
     // Honeymoon effect: fresh mandate gives a buffer that decays each turn
     if (playerCountry.politics.honeymoon_turns_remaining > 0) {
