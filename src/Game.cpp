@@ -16,6 +16,7 @@ Game::Game() : isRunning(true), nextTurn(false), turnCount(0), rng(std::random_d
     initialGdp = playerCountry.economy.gdp;
     scriptedEvents = EventLoader::builtin();
     registerCommands();
+    std::cout << "Comandos del tutorial: 'tutorial_start' / 'tutorial_skip' / 'tutorial_reset'" << std::endl;
 }
 
 void Game::registerCommands() {
@@ -71,6 +72,9 @@ void Game::registerCommands() {
         }
         std::cout << "=================================" << std::endl;
     };
+    commandHandlers["tutorial_start"] = [this]() { tutorial.start(); };
+    commandHandlers["tutorial_skip"]  = [this]() { tutorial.skip(); };
+    commandHandlers["tutorial_reset"] = [this]() { tutorial.reset(); };
     commandHandlers["language"] = []() {
         std::string lang;
         std::cin >> lang;
@@ -7994,6 +7998,7 @@ void Game::update() {
     EventLoader::tick(scriptedEvents, playerCountry, pendingDecisions, rng, turnCount);
     achievements.recordHistory(playerCountry);
     achievements.evaluate(playerCountry, turnCount, endCondition, initialGdp);
+    tutorial.onTurnEnd(playerCountry, turnCount);
     checkGameOver();
     if (!isRunning) {
         achievements.evaluate(playerCountry, turnCount, endCondition, initialGdp);
