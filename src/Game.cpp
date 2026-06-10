@@ -5537,6 +5537,51 @@ void Game::update() {
             std::cout << "[!!!!] CIVIL WAR (Turn " << playerCountry.politics.civil_war_duration
                       << "): Nation tearing itself apart. GDP: $" << (long long)playerCountry.economy.gdp << std::endl;
         }
+    // --- CROSS-SYSTEM FEEDBACK: POLITICAL → SECURITY ---
+    {
+        // Low popularity + high polarization → protest escalation and coup risk
+        if (playerCountry.politics.popularity < 0.3 && playerCountry.politics.polarization_index > 0.6) {
+            playerCountry.politics.protest_intensity += 0.02;
+            if (playerCountry.politics.protest_intensity > 1.0) playerCountry.politics.protest_intensity = 1.0;
+            playerCountry.politics.coup_d_etat_prob += 0.005;
+        }
+
+        // Democratic backsliding erodes institutions
+        if (playerCountry.politics.democratic_backsliding_index > 0.3) {
+            double backslide = playerCountry.politics.democratic_backsliding_index;
+            playerCountry.security.press_freedom -= backslide * 0.02;
+            if (playerCountry.security.press_freedom < 0.05) playerCountry.security.press_freedom = 0.05;
+            playerCountry.politics.judicial_independence -= backslide * 0.01;
+            if (playerCountry.politics.judicial_independence < 0.1) playerCountry.politics.judicial_independence = 0.1;
+            // International community notices
+            playerCountry.economy.international_sanctions_prob += backslide * 0.01;
+        }
+
+        // State of emergency: short-term stability but long-term erosion
+        if (playerCountry.politics.state_of_emergency_active) {
+            playerCountry.politics.emergency_turns_elapsed++;
+            // Suppresses protests temporarily
+            playerCountry.politics.protest_intensity *= 0.9;
+            // But erodes civil liberties
+            playerCountry.welfare.freedom_of_expression -= 0.02;
+            if (playerCountry.welfare.freedom_of_expression < 0.1) playerCountry.welfare.freedom_of_expression = 0.1;
+            playerCountry.politics.democratic_backsliding_index += 0.01;
+            // International pressure builds
+            if (playerCountry.politics.emergency_turns_elapsed > 3) {
+                playerCountry.economy.international_sanctions_prob += 0.03;
+                playerCountry.security.diplomatic_prestige -= 0.02;
+            }
+        }
+
+        // High corruption → institutional decay
+        if (playerCountry.politics.administrative_corruption > 0.5) {
+            playerCountry.politics.trust_in_justice -= 0.01;
+            if (playerCountry.politics.trust_in_justice < 0.1) playerCountry.politics.trust_in_justice = 0.1;
+            playerCountry.politics.impunity += 0.005;
+            if (playerCountry.politics.impunity > 0.95) playerCountry.politics.impunity = 0.95;
+        }
+    }
+
     } else {
         // Revolution risk assessment
         playerCountry.politics.revolution_risk = (playerCountry.politics.protest_intensity > 0.8
