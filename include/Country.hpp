@@ -324,6 +324,12 @@ struct PowerSecuritySystem {
     bool   own_nuclear_capability = false;     // Possesses nuclear weapons
 
     double invasion_prob = 0.01;
+    bool war_active = false;
+    int war_duration = 0;
+    double war_casualties = 0.0;
+    double war_cost = 0.0;
+    bool invasion_repelled = false;
+
     int    hostile_neighbors = 0;              // Neighboring states with territorial claims
     double territorial_dispute_intensity = 0.1; // Severity of active disputes (0–1)
     double alliance_protection = 0.5;          // Military alliance coverage (0–1)

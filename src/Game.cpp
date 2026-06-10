@@ -4115,6 +4115,86 @@ void Game::update() {
                                          + playerCountry.security.territorial_dispute_intensity * 0.05
                                          - playerCountry.security.alliance_protection * 0.03;
     if (playerCountry.security.invasion_prob < 0.001) playerCountry.security.invasion_prob = 0.001;
+
+    // --- WAR / INVASION EVENT ---
+    if (playerCountry.security.war_active) {
+        playerCountry.security.war_duration++;
+
+        // Military strength: morale * equipment
+        double defense_strength = playerCountry.security.troop_morale * 0.5
+                                + playerCountry.security.equipment_modernization * 0.3
+                                + playerCountry.security.alliance_protection * 0.2;
+
+        // Casualties each turn of war
+        double turn_casualties = (1.0 - defense_strength) * 2000.0;
+        playerCountry.security.war_casualties += turn_casualties;
+        playerCountry.welfare.death_rate += turn_casualties / (double)playerCountry.welfare.population;
+
+        // Massive economic drain
+        double war_gdp_cost = playerCountry.economy.gdp * 0.06;
+        playerCountry.economy.gdp -= war_gdp_cost;
+        playerCountry.security.war_cost += war_gdp_cost;
+        playerCountry.economy.international_reserves -= war_gdp_cost * 0.5;
+        playerCountry.economy.debt_to_gdp_ratio += 0.03;
+
+        // Conscription: unemployment drops but productivity crashes
+        playerCountry.welfare.unemployment_rate -= 0.02;
+        if (playerCountry.welfare.unemployment_rate < 0.01)
+            playerCountry.welfare.unemployment_rate = 0.01;
+
+        // Rally-around-the-flag (initial turns) vs war fatigue (later)
+        if (playerCountry.security.war_duration <= 2) {
+            playerCountry.politics.popularity += 0.03; // Patriotic surge
+        } else {
+            playerCountry.politics.popularity -= 0.04; // War fatigue
+        }
+
+        // Refugee crisis from war
+        playerCountry.security.mass_migration_prob += 0.05;
+
+        // Can we repel? Check each turn
+        if (defense_strength > 0.6 && playerCountry.security.war_duration >= 2) {
+            if (dist(rng) < defense_strength * 0.3) {
+                playerCountry.security.war_active = false;
+                playerCountry.security.invasion_repelled = true;
+                playerCountry.security.diplomatic_prestige += 0.15;
+                playerCountry.politics.popularity += 0.10; // Victory boost
+                std::cout << "[!!!] INVASION REPELLED! Victory after " << playerCountry.security.war_duration
+                          << " turns. Casualties: " << (int)playerCountry.security.war_casualties
+                          << ". Cost: $" << (long long)playerCountry.security.war_cost << std::endl;
+            }
+        }
+
+        // Prolonged war → GAME OVER risk
+        if (playerCountry.security.war_active && playerCountry.security.war_duration > 8) {
+            if (dist(rng) < 0.3) {
+                std::cout << "[!!!!!] TOTAL DEFEAT: The country has been overrun after "
+                          << playerCountry.security.war_duration << " turns of war." << std::endl;
+                std::cout << "GAME OVER." << std::endl;
+                exit(0);
+            }
+        }
+
+        if (playerCountry.security.war_active) {
+            std::cout << "[!!!!] WAR (Turn " << playerCountry.security.war_duration
+                      << "): Casualties: " << (int)playerCountry.security.war_casualties
+                      << ". Cost: $" << (long long)playerCountry.security.war_cost
+                      << ". Defense strength: " << (int)(defense_strength * 100) << "%" << std::endl;
+        }
+    } else {
+        // Stochastic invasion trigger
+        if (dist(rng) < playerCountry.security.invasion_prob) {
+            playerCountry.security.war_active = true;
+            playerCountry.security.war_duration = 0;
+            playerCountry.security.war_casualties = 0.0;
+            playerCountry.security.war_cost = 0.0;
+            playerCountry.security.invasion_repelled = false;
+            std::cout << "[!!!!] INVASION: A hostile neighbor has launched a military attack!" << std::endl;
+            std::cout << "       Mobilizing defense forces. Alliance protection: "
+                      << (int)(playerCountry.security.alliance_protection * 100) << "%" << std::endl;
+        }
+    }
+
     // Soft power: education + heritage + diplomacy
     playerCountry.security.soft_power_index = playerCountry.welfare.educational_quality * 0.3
                                             + playerCountry.economy.heritage_preservation * 0.2
