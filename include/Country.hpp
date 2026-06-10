@@ -254,9 +254,21 @@ struct PoliticalInstitutionalSystem {
 
     // Judiciary
     double judicial_independence = 0.8;
+    double court_packing_risk = 0.1;           // Probability of executive court manipulation
+    double judicial_budget_adequacy = 0.7;     // Court funding vs caseload needs (0–1)
+
     double sentencing_speed = 0.5;
+    int    case_backlog = 50000;               // Pending unresolved cases
+    double pretrial_detention_rate = 0.35;     // Fraction of prisoners awaiting trial
+    double average_case_duration_years = 3.0;  // Mean time from charge to verdict
+
     double ruling_against_state_prob = 0.2;
+    bool   constitutional_review_active = true; // Courts can strike down legislation
+    double state_compliance_rate = 0.7;        // Rate at which state complies with adverse rulings
+
     double trust_in_justice = 0.6;
+    double elite_trust_in_justice = 0.7;       // Business/wealthy perception
+    double poor_trust_in_justice = 0.3;        // Lower-income population perception
 
     // Prosecutor's Office
     int prosecutors = 500;

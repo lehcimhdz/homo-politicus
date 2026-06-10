@@ -3333,6 +3333,38 @@ void Game::update() {
         }
     }
 
+    // --- JUDICIAL SYSTEM DYNAMICS ---
+    // Court packing risk rises with democratic backsliding and low independence
+    playerCountry.politics.court_packing_risk = playerCountry.politics.democratic_backsliding_index * 0.3
+                                              + playerCountry.politics.electoral_manipulation_capacity * 0.2;
+    if (playerCountry.politics.court_packing_risk > 0.8) playerCountry.politics.court_packing_risk = 0.8;
+    // Budget adequacy drives sentencing speed
+    playerCountry.politics.sentencing_speed = playerCountry.politics.judicial_budget_adequacy * 0.6
+                                            + (1.0 - (double)playerCountry.politics.case_backlog / 200000.0) * 0.4;
+    if (playerCountry.politics.sentencing_speed < 0.1) playerCountry.politics.sentencing_speed = 0.1;
+    if (playerCountry.politics.sentencing_speed > 1.0) playerCountry.politics.sentencing_speed = 1.0;
+    // Case backlog grows with low speed, shrinks with prosecutors and budget
+    playerCountry.politics.case_backlog += (int)(playerCountry.politics.case_files * 0.3);
+    playerCountry.politics.case_backlog -= (int)(playerCountry.politics.prosecutors * playerCountry.politics.sentencing_speed * 2.0);
+    if (playerCountry.politics.case_backlog < 0) playerCountry.politics.case_backlog = 0;
+    // Pretrial detention worsens with backlog
+    playerCountry.politics.pretrial_detention_rate = 0.15 + (double)playerCountry.politics.case_backlog / 300000.0;
+    if (playerCountry.politics.pretrial_detention_rate > 0.8) playerCountry.politics.pretrial_detention_rate = 0.8;
+    // Average case duration in years
+    playerCountry.politics.average_case_duration_years = 1.0 + (1.0 - playerCountry.politics.sentencing_speed) * 6.0;
+    // State compliance: independent courts that rule against state need compliance
+    playerCountry.politics.state_compliance_rate = playerCountry.politics.judicial_independence * 0.7
+                                                 + playerCountry.security.press_freedom * 0.2;
+    if (playerCountry.politics.state_compliance_rate > 1.0) playerCountry.politics.state_compliance_rate = 1.0;
+    // Trust decomposition: poor trust shaped by pretrial detention and impunity
+    playerCountry.politics.poor_trust_in_justice = playerCountry.politics.trust_in_justice * 0.6
+                                                 - playerCountry.politics.pretrial_detention_rate * 0.3
+                                                 - playerCountry.politics.impunity * 0.2;
+    if (playerCountry.politics.poor_trust_in_justice < 0.0) playerCountry.politics.poor_trust_in_justice = 0.0;
+    playerCountry.politics.elite_trust_in_justice = playerCountry.politics.trust_in_justice * 0.8
+                                                  + playerCountry.politics.state_compliance_rate * 0.2;
+    if (playerCountry.politics.elite_trust_in_justice > 1.0) playerCountry.politics.elite_trust_in_justice = 1.0;
+
     // --- REGIONAL DYNAMICS ---
     // Fiscal transfer inadequacy + budget disparity erode regional loyalty
     playerCountry.politics.fiscal_transfer_adequacy = 0.5 + (1.0 - playerCountry.politics.federal_budget_disparity) * 0.3
