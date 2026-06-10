@@ -9,12 +9,7 @@
 #include "Country.hpp"
 #include "EventManager.hpp"
 #include "EndCondition.hpp"
-
-struct PendingDecision {
-    std::string id;
-    std::string prompt;
-    std::vector<std::string> options;
-};
+#include "DecisionSystem.hpp"
 
 // The Game class acts as the "Central Brain".
 // It manages the game loop, updates variables, and handles player input.

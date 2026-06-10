@@ -1,6 +1,6 @@
 CXX = clang++
 CXXFLAGS = -std=c++17 -Wall -Iinclude
-SRC = src/main.cpp src/Game.cpp src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp
+SRC = src/main.cpp src/Game.cpp src/Country.cpp src/EventManager.cpp src/Persistence.cpp src/GameOverChecker.cpp src/DecisionSystem.cpp
 TARGET = HomoPoliticus
 
 all: $(TARGET)

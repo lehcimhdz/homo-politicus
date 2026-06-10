@@ -7847,8 +7847,7 @@ void Game::checkGameOver() {
     std::uniform_real_distribution<double> roll(0.0, 1.0);
 
     auto hasDecision = [&](const std::string& id) {
-        for (const auto& d : pendingDecisions) if (d.id == id) return true;
-        return false;
+        return DecisionSystem::hasDecision(pendingDecisions, id);
     };
     if (pol.military_pressure > 0.7 && !hasDecision("coup_threat") && !hasDecision("coup_attempt_imminent")) {
         pendingDecisions.push_back({"coup_threat",
