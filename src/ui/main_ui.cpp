@@ -15,6 +15,7 @@
 #include "ui/TutorialOverlay.hpp"
 #include "ui/ParticleEmitter.hpp"
 #include "ui/LeaderPortrait.hpp"
+#include "ui/MandateTimeline.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -183,6 +184,8 @@ int main(int argc, char** argv) {
     menu.setTitleFont(titleFontOk ? &titleFont : nullptr);
     GameOverScreen gameOver;
     ParticleEmitter particles;
+    MandateTimeline timeline;
+    timeline.addEvent(0, "Asuncion", sf::Color(80, 160, 240));
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     AppState appState = AppState::Menu;
@@ -250,6 +253,15 @@ int main(int argc, char** argv) {
         }
         if (bridge.turn() % 4 == 0 && cc.politics.popularity > 0.5) {
             particles.emit(ParticleEmitter::Preset::Confetti, 615.f, 220.f, 50);
+        }
+        // Registrar eventos clave en el timeline.
+        if (bridge.turn() % 4 == 0 && bridge.turn() > 0) {
+            timeline.addEvent(bridge.turn(), "Eleccion", sf::Color(80, 200, 120));
+        }
+        if (dPop < -0.05) {
+            timeline.addEvent(bridge.turn(), "Caida pop.", sf::Color(220, 80, 80));
+        } else if (dPop > 0.05) {
+            timeline.addEvent(bridge.turn(), "Repunte", sf::Color(80, 200, 120));
         }
     };
     std::string lastActionFeedback;
@@ -334,6 +346,7 @@ int main(int argc, char** argv) {
                         {"purge_military", "negotiate_military", "cede_power", "resist"}});
                     audio.play("decision_appears");
                     particles.emit(ParticleEmitter::Preset::RedSpark, 640.f, 400.f, 40);
+                    timeline.addEvent(bridge.turn(), "Decision", sf::Color(80, 160, 240));
                 }
                 if (kp->code == sf::Keyboard::Key::G) {
                     gameOver.show(EndCondition::COUP_SUCCESS, bridge.country(),
@@ -523,11 +536,11 @@ int main(int argc, char** argv) {
             window.draw(makeText(font, "(Sprint 14)", 12, kMuted, 1046, 498));
         }
 
-        // === BottomBar ===
+        // === BottomBar: Mandate Timeline ===
         window.draw(makePanel(0, 700, 1280, 100, currentPalette.topbar));
         if (fontOk) {
-            window.draw(makeText(font, "LOG DE TURNO", 14, kMuted, 16, 712));
-            window.draw(makeText(font, "(Sprint 11 conectara feedback al area de log)", 14, kMuted, 16, 736));
+            window.draw(makeText(font, "TIMELINE DEL MANDATO", 12, kMuted, 16, 706));
+            timeline.draw(window, font, 16.f, 718.f, 1248.f, 76.f, bridge.turn(), 60);
         }
 
         // Particulas (encima del MainPanel pero debajo de modal/tutorial).
