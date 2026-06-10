@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <vector>
 #include "Country.hpp"
 #include "ui/CountrySilhouette.hpp"
 
@@ -31,6 +32,15 @@ private:
     float homeRadius_ = 80.f;
     float neighRadius_ = 55.f;
     CountrySilhouette homeSilhouette_;
+
+    // Population dots: posiciones precomputadas dentro de la silueta
+    // (raw coords, no de pantalla), con micro-movimiento.
+    struct PopDot {
+        sf::Vector2f base;
+        float phase;
+    };
+    mutable std::vector<PopDot> popDots_;
+    void ensurePopDots(int count) const;
 };
 
 #endif

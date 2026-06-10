@@ -21,9 +21,33 @@ bool MapView::loadSilhouette(const std::string& name) {
         "/Users/michelcano/Documents/Repositorios/homo-politicus/assets/silhouettes/" + name + ".svg",
     };
     for (const auto& p : candidates) {
-        if (homeSilhouette_.loadFromFile(p)) return true;
+        if (homeSilhouette_.loadFromFile(p)) {
+            popDots_.clear();
+            return true;
+        }
     }
     return false;
+}
+
+void MapView::ensurePopDots(int count) const {
+    if ((int)popDots_.size() == count) return;
+    popDots_.clear();
+    if (!homeSilhouette_.loaded() || count <= 0) return;
+    // Generar puntos rechazo: sampleados en bbox, aceptados si caen en el poligono.
+    unsigned rng = 0xBEEFCAFE;
+    auto rand01 = [&]() {
+        rng = rng * 1664525u + 1013904223u;
+        return (float)(rng & 0xFFFFFF) / (float)0xFFFFFF;
+    };
+    auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
+    int attempts = 0;
+    while ((int)popDots_.size() < count && attempts < count * 30) {
+        ++attempts;
+        float x = bbox.position.x + rand01() * bbox.size.x;
+        float y = bbox.position.y + rand01() * bbox.size.y;
+        if (!homeSilhouette_.containsScreen({x, y}, homePos_.x, homePos_.y, homeRadius_)) continue;
+        popDots_.push_back({{x, y}, rand01() * 6.28318f});
+    }
 }
 
 void MapView::update(float dt) { t_ += dt; }
@@ -119,6 +143,18 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
                 cell.setOutlineThickness(0.5f);
                 win.draw(cell);
             }
+        }
+        // Population dots: cantidad escalada por urbanizacion, micro-movimiento.
+        int dotCount = 60 + (int)(c.welfare.urban_population_ratio * 180);
+        ensurePopDots(dotCount);
+        for (const auto& d : popDots_) {
+            float ox = std::sin(t_ * 1.3f + d.phase) * 1.2f;
+            float oy = std::cos(t_ * 1.1f + d.phase * 1.7f) * 1.2f;
+            sf::CircleShape dot(1.6f);
+            dot.setOrigin({1.6f, 1.6f});
+            dot.setPosition({d.base.x + ox, d.base.y + oy});
+            dot.setFillColor(sf::Color(245, 240, 220, 200));
+            win.draw(dot);
         }
     } else {
         win.draw(circleShape(homePos_, homeRadius_, homeFill, kBorder));
