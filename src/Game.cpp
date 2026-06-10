@@ -7583,11 +7583,15 @@ void Game::update() {
                 playerCountry.economy.international_sanctions_prob += 0.2;
             } else {
                 std::cout << "DEFEAT: The people have chosen change. Peaceful transfer of power." << std::endl;
-                std::cout << "GAME OVER." << std::endl;
+                if (endCondition == EndCondition::NONE) endCondition = EndCondition::ELECTION_LOSS;
                 isRunning = false;
             }
         }
     }
+
+    popularitySum += playerCountry.politics.popularity;
+    checkGameOver();
+    if (!isRunning) renderEndScreen();
 }
 
 void Game::render() {
@@ -7616,5 +7620,85 @@ void Game::render() {
         std::cout << std::endl;
     }
     std::cout << "Commands: improve_relations/worsen_relations/trade_deal/threaten <0-2>, negotiate_peace_neighbor" << std::endl;
+    std::cout << "Help: type 'help' for command groups or 'status_brief' for a 5-line summary." << std::endl;
+    if (!pendingDecisions.empty()) {
+        const auto& d = pendingDecisions.front();
+        std::cout << "\n*** DECISION REQUIRED: " << d.prompt << " ***" << std::endl;
+        std::cout << "Options: ";
+        for (size_t i = 0; i < d.options.size(); ++i) {
+            std::cout << d.options[i];
+            if (i + 1 < d.options.size()) std::cout << " | ";
+        }
+        std::cout << std::endl;
+    }
     std::cout << "----------------------" << std::endl;
+}
+
+void Game::checkGameOver() {
+    auto& pol = playerCountry.politics;
+    auto& sec = playerCountry.security;
+    std::uniform_real_distribution<double> roll(0.0, 1.0);
+
+    if (sec.nuclear_strike && sec.nuclear_casualties > 1000000.0) {
+        endCondition = EndCondition::NUCLEAR_ANNIHILATION;
+        isRunning = false;
+        return;
+    }
+    if (pol.military_pressure >= 0.85 && roll(rng) < pol.coup_success_prob) {
+        endCondition = EndCondition::COUP_SUCCESS;
+        isRunning = false;
+        return;
+    }
+    if (pol.popular_pressure >= 0.9 && pol.revolution_prob > 0.5) {
+        endCondition = EndCondition::REVOLUTION;
+        isRunning = false;
+        return;
+    }
+    if (pol.congressional_pressure >= 0.85 && pol.popularity < 0.3) {
+        endCondition = EndCondition::IMPEACHMENT;
+        isRunning = false;
+        return;
+    }
+    if (pol.judicial_pressure >= 0.85 && pol.active_scandals > 2) {
+        endCondition = EndCondition::LAWFARE_REMOVAL;
+        isRunning = false;
+        return;
+    }
+    if (pol.international_pressure >= 0.9 && pol.popularity < 0.2) {
+        endCondition = EndCondition::EXILE;
+        isRunning = false;
+        return;
+    }
+    if (pol.active_scandals >= 4 && pol.popularity < 0.1 && roll(rng) < 0.02) {
+        endCondition = EndCondition::ASSASSINATION;
+        isRunning = false;
+        return;
+    }
+}
+
+void Game::renderEndScreen() {
+    std::cout << "\n=================== GAME OVER ===================" << std::endl;
+    std::string label;
+    switch (endCondition) {
+        case EndCondition::COUP_SUCCESS:        label = "GOLPE MILITAR EXITOSO"; break;
+        case EndCondition::IMPEACHMENT:         label = "DESTITUCIÓN POR EL CONGRESO"; break;
+        case EndCondition::REVOLUTION:          label = "REVOLUCIÓN POPULAR"; break;
+        case EndCondition::LAWFARE_REMOVAL:     label = "INHABILITACIÓN JUDICIAL (lawfare)"; break;
+        case EndCondition::ELECTION_LOSS:       label = "DERROTA ELECTORAL"; break;
+        case EndCondition::EXILE:               label = "EXILIO BAJO PRESIÓN INTERNACIONAL"; break;
+        case EndCondition::ASSASSINATION:       label = "MAGNICIDIO"; break;
+        case EndCondition::NUCLEAR_ANNIHILATION:label = "ANIQUILACIÓN NUCLEAR"; break;
+        case EndCondition::TERM_COMPLETED:      label = "MANDATO COMPLETADO"; break;
+        default:                                label = "FIN"; break;
+    }
+    std::cout << "Condición: " << label << std::endl;
+    std::cout << "Turnos en el poder: " << turnCount << std::endl;
+    double avg = turnCount > 0 ? popularitySum / turnCount : playerCountry.politics.popularity;
+    std::cout << "Popularidad media: " << (int)(avg * 100) << "%" << std::endl;
+    std::cout << "Escándalos activos al final: " << playerCountry.politics.active_scandals << std::endl;
+    std::cout << "Acciones autoritarias: " << playerCountry.politics.authoritarian_actions_count << std::endl;
+    std::cout << "Legitimidad del régimen: " << (int)(playerCountry.politics.regime_legitimacy * 100) << "%" << std::endl;
+    std::cout << "Backsliding democrático: " << (int)(playerCountry.politics.democratic_backsliding_index * 100) << "%" << std::endl;
+    std::cout << "Guerras vividas (turnos): " << playerCountry.security.war_duration << std::endl;
+    std::cout << "==================================================" << std::endl;
 }
