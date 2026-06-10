@@ -3755,6 +3755,54 @@ void Game::update() {
         }
     }
 
+    // --- FLOOD EVENT ---
+    if (playerCountry.infra.flood_active) {
+        playerCountry.infra.flood_duration--;
+        double flood_dmg_rate = 0.02 * (1.0 - playerCountry.infra.maintenance_level);
+
+        // Infrastructure heavily damaged
+        playerCountry.infra.road_connectivity -= flood_dmg_rate;
+        if (playerCountry.infra.road_connectivity < 0.1) playerCountry.infra.road_connectivity = 0.1;
+        playerCountry.infra.port_capacity -= flood_dmg_rate * 0.5;
+        if (playerCountry.infra.port_capacity < 0.05) playerCountry.infra.port_capacity = 0.05;
+
+        // Disease outbreak risk
+        playerCountry.welfare.epidemic_prob += 0.05;
+        if (playerCountry.welfare.epidemic_prob > 0.5) playerCountry.welfare.epidemic_prob = 0.5;
+
+        // Agricultural loss
+        playerCountry.infra.crop_loss_pct += 0.1;
+        if (playerCountry.infra.crop_loss_pct > 0.8) playerCountry.infra.crop_loss_pct = 0.8;
+
+        // Displacement and GDP hit
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.015;
+        playerCountry.welfare.urban_population_ratio += 0.003; // Displacement
+        playerCountry.politics.popularity -= 0.015;
+
+        // Accumulate damage cost
+        double turn_cost = playerCountry.economy.gdp * 0.01;
+        playerCountry.infra.flood_damage += turn_cost;
+        playerCountry.economy.international_reserves -= turn_cost;
+
+        std::cout << "[!!] FLOOD (Turn " << (playerCountry.infra.flood_duration + 1)
+                  << " remaining): Infrastructure damage ongoing. Cost: $"
+                  << (long long)playerCountry.infra.flood_damage << std::endl;
+
+        if (playerCountry.infra.flood_duration <= 0) {
+            playerCountry.infra.flood_active = false;
+            std::cout << "[INFO] FLOODWATERS RECEDE: Cleanup begins. Disease risk elevated." << std::endl;
+        }
+    } else {
+        if (dist(rng) < playerCountry.infra.flood_prob) {
+            playerCountry.infra.flood_active = true;
+            std::uniform_int_distribution<int> dur_dist(1, 3);
+            playerCountry.infra.flood_duration = dur_dist(rng);
+            playerCountry.infra.flood_damage = 0.0;
+            std::cout << "[!!] MAJOR FLOOD: Rivers overflowing. Duration: "
+                      << playerCountry.infra.flood_duration << " turns." << std::endl;
+        }
+    }
+
     // --- TORNADO EVENT ---
     // Rare, localized, single-turn event
     if (dist(rng) < playerCountry.infra.tornado_prob) {
