@@ -230,6 +230,9 @@ struct PoliticalInstitutionalSystem {
     double regulatory_capture_index = 0.3;     // Degree industry controls its regulator (0–1)
     double revolving_door_intensity = 0.4;     // Frequency of regulator-industry personnel flow (0–1)
     int pending_bills = 5;
+    int    bills_passed_this_turn = 0;         // Legislative throughput
+    double legislative_efficiency = 0.5;       // Bills passed / bills introduced ratio
+    int    constitutional_reforms_pending = 0; // High-threshold reforms in queue
 
     // Governors
     double regional_loyalty = 0.7;

@@ -3333,6 +3333,26 @@ void Game::update() {
         }
     }
 
+    // --- LEGISLATIVE PIPELINE ---
+    // Bills passed depends on support, law blockade, and pending queue
+    double pass_rate = playerCountry.politics.congressional_support * (1.0 - playerCountry.politics.law_blockade_prob);
+    playerCountry.politics.bills_passed_this_turn = (int)(playerCountry.politics.pending_bills * pass_rate);
+    if (playerCountry.politics.bills_passed_this_turn < 0) playerCountry.politics.bills_passed_this_turn = 0;
+    playerCountry.politics.pending_bills -= playerCountry.politics.bills_passed_this_turn;
+    playerCountry.politics.pending_bills += 2; // New bills introduced each turn
+    if (playerCountry.politics.pending_bills < 0) playerCountry.politics.pending_bills = 0;
+    // Legislative efficiency: smoothed ratio
+    if (playerCountry.politics.pending_bills + playerCountry.politics.bills_passed_this_turn > 0)
+        playerCountry.politics.legislative_efficiency = (double)playerCountry.politics.bills_passed_this_turn
+            / (playerCountry.politics.pending_bills + playerCountry.politics.bills_passed_this_turn);
+    // Constitutional reforms: need supermajority (>0.66 support) and high judicial independence
+    if (playerCountry.politics.constitutional_reforms_pending > 0
+        && playerCountry.politics.congressional_support > 0.66
+        && playerCountry.politics.judicial_independence > 0.6) {
+        playerCountry.politics.constitutional_reforms_pending--;
+        std::cout << "[+] CONSTITUTIONAL REFORM: Reform passed with supermajority." << std::endl;
+    }
+
     // --- LOBBYING & REGULATORY CAPTURE ---
     // Regulatory capture grows with revolving door and high lobby power; shrinks with anticorruption
     double total_lobby_power = (playerCountry.politics.industrial_power + playerCountry.politics.financial_power
