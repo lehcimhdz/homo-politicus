@@ -194,6 +194,7 @@ int main(int argc, char** argv) {
                 if (appState == AppState::Menu) menu.onMouseMove(pos);
                 else if (modal.visible()) modal.onMouseMove(pos);
                 else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
+                else if (currentTab == Tab::Dashboard) dashboard.onMouseMove(pos);
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {
@@ -202,6 +203,13 @@ int main(int argc, char** argv) {
                     else if (appState == AppState::Menu) menu.onClick(pos);
                     else if (tutorialUI.visible()) tutorialUI.onClick(pos);
                     else if (modal.visible()) modal.onClick(pos);
+                    else if (pos.x >= 1015 && pos.x <= 1125 && pos.y >= 12 && pos.y <= 48) {
+                        // Click en el boton SIGUIENTE
+                        bridge.tick();
+                        dashboard.recordHistory(bridge.country());
+                        popularitySumDemo += bridge.country().politics.popularity;
+                        audio.play("turn_advance");
+                    }
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
             }
@@ -282,7 +290,16 @@ int main(int argc, char** argv) {
             infStr << "Inflacion: " << std::fixed << std::setprecision(1) << (c.economy.inflation * 100) << "%";
             window.draw(makeText(font, infStr.str(), 18, kText, 760, 22));
 
-            window.draw(makeText(font, "ESC N R D M=mute 1-5=tabs", 12, kMuted, 1060, 24));
+            // Boton visible de Next turn (solo visual, la tecla N es la real)
+            sf::RectangleShape nextBtn({110.f, 36.f});
+            nextBtn.setPosition({1015.f, 12.f});
+            nextBtn.setFillColor(sf::Color(50, 100, 160));
+            nextBtn.setOutlineColor(kAccent);
+            nextBtn.setOutlineThickness(2.f);
+            window.draw(nextBtn);
+            window.draw(makeText(font, "[N] SIGUIENTE", 14, sf::Color(255,255,255), 1025, 21));
+
+            window.draw(makeText(font, "1-5 tabs  D=decision  G=gameover  M=mute  L=lang", 11, kMuted, 1130, 22));
         }
 
         // === SidebarLeft ===

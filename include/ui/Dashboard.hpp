@@ -12,6 +12,9 @@ class Dashboard {
 public:
     Dashboard();
     void recordHistory(const Country& c);    // Llamar cada tick
+    void onMouseMove(sf::Vector2f mouse);     // Actualiza card hovered
+    int hoveredCard() const { return hoveredCard_; }
+    std::string hoveredDetail(const Country& c) const;
     void draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const;
 
 private:
@@ -19,6 +22,7 @@ private:
     std::vector<double> popHist;
     std::vector<double> gdpHist;
     std::vector<double> inflHist;
+    int hoveredCard_ = -1;
 
     void drawCard(sf::RenderWindow& win, const sf::Font& font,
                   float x, float y, float w, float h,

@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 #include <algorithm>
+#include <cmath>
 
 static const sf::Color kPanel  = sf::Color(32, 36, 48);
 static const sf::Color kBorder = sf::Color(60, 65, 80);
@@ -30,6 +31,40 @@ void Dashboard::recordHistory(const Country& c) {
     pushClamped(popHist, c.politics.popularity);
     pushClamped(gdpHist, c.economy.gdp);
     pushClamped(inflHist, c.economy.inflation);
+}
+
+void Dashboard::onMouseMove(sf::Vector2f mouse) {
+    hoveredCard_ = -1;
+    const float baseX = 218.f;
+    const float baseY = 100.f;
+    for (int i = 0; i < 6; ++i) {
+        int col = i % 3;
+        int row = i / 3;
+        float x = baseX + col * (kCardW + kGap);
+        float y = baseY + row * (kCardH + kGap);
+        if (mouse.x >= x && mouse.x <= x + kCardW &&
+            mouse.y >= y && mouse.y <= y + kCardH) {
+            hoveredCard_ = i;
+            return;
+        }
+    }
+}
+
+std::string Dashboard::hoveredDetail(const Country& c) const {
+    switch (hoveredCard_) {
+        case 0: return "Popularidad: factor critico. Bajo 30% = riesgo de impeachment. >70% = mandato fuerte.";
+        case 1: return "GDP crece con productividad, comercio, inversion. Inflacion erosiona el poder de compra.";
+        case 2: return "5 fuentes de presion. Si alguna supera 0.85, puede disparar game over.";
+        case 3: return "Escandalos activos: cubrir, chivo expiatorio, contra-narrativa o disculparse.";
+        case 4: return "Salud agregada de los 5 sistemas. Equilibrio garantiza estabilidad de largo plazo.";
+        case 5: {
+            std::string s = "Vecinos: " + std::to_string(c.neighbors.size()) + ". ";
+            for (const auto& n : c.neighbors)
+                if (n.at_war) return "Vecinos en guerra: " + n.name + "!";
+            return s + "Click para detalles bilaterales (proximamente).";
+        }
+        default: return "";
+    }
 }
 
 static sf::Text makeText(const sf::Font& font, const std::string& s, unsigned size, sf::Color color, float x, float y) {
@@ -91,13 +126,23 @@ static void drawBar(sf::RenderWindow& win, float x, float y, float w, float h, d
 void Dashboard::drawCard(sf::RenderWindow& win, const sf::Font& font,
                          float x, float y, float w, float h,
                          const std::string& title) const {
+    // Detectar si esta card es la hovered
+    const float baseX = 218.f, baseY = 100.f;
+    int idx = -1;
+    for (int i = 0; i < 6; ++i) {
+        int col = i % 3, row = i / 3;
+        float cx = baseX + col * (kCardW + kGap);
+        float cy = baseY + row * (kCardH + kGap);
+        if (std::abs(x - cx) < 1.f && std::abs(y - cy) < 1.f) { idx = i; break; }
+    }
+    bool isHovered = (idx == hoveredCard_);
     sf::RectangleShape r({w, h});
     r.setPosition({x, y});
-    r.setFillColor(kPanel);
-    r.setOutlineColor(kBorder);
-    r.setOutlineThickness(1.f);
+    r.setFillColor(isHovered ? sf::Color(40, 50, 70) : kPanel);
+    r.setOutlineColor(isHovered ? kAccent : kBorder);
+    r.setOutlineThickness(isHovered ? 2.f : 1.f);
     win.draw(r);
-    win.draw(makeText(font, title, 14, kMuted, x + 12, y + 10));
+    win.draw(makeText(font, title, 14, isHovered ? kAccent : kMuted, x + 12, y + 10));
 }
 
 void Dashboard::drawPopularityCard(sf::RenderWindow& win, const sf::Font& font, float x, float y, const Country& c) const {
@@ -221,4 +266,18 @@ void Dashboard::draw(sf::RenderWindow& win, const sf::Font& font, const Country&
     drawScandalsCard  (win, font, baseX + 0 * (kCardW + kGap), baseY + 1 * (kCardH + kGap), c);
     drawSystemsCard   (win, font, baseX + 1 * (kCardW + kGap), baseY + 1 * (kCardH + kGap), c);
     drawNeighborsCard (win, font, baseX + 2 * (kCardW + kGap), baseY + 1 * (kCardH + kGap), c);
+
+    // Tooltip al hover sobre una card
+    if (hoveredCard_ >= 0) {
+        std::string detail = hoveredDetail(c);
+        if (!detail.empty()) {
+            sf::RectangleShape tip({800.f, 32.f});
+            tip.setPosition({218.f, 668.f});
+            tip.setFillColor(sf::Color(20, 22, 30, 240));
+            tip.setOutlineColor(kAccent);
+            tip.setOutlineThickness(1.f);
+            win.draw(tip);
+            win.draw(makeText(font, detail, 13, kText, 230.f, 676.f));
+        }
+    }
 }
