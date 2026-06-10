@@ -138,6 +138,72 @@ void Game::registerCommands() {
         std::cout << "   (Popularity ++, Pension Sustainability --)" << std::endl;
         playerCountry.politics.popularity += 0.03;
     };
+    commandHandlers["torture+"] = [this]() {
+        playerCountry.welfare.torture_index += 0.1;
+        if (playerCountry.welfare.torture_index > 1.0) playerCountry.welfare.torture_index = 1.0;
+        std::cout << ">> SECRET ORDER: Enhanced Interrogation techniques authorized." << std::endl;
+        playerCountry.security.attack_detection_prob += 0.15;
+        if (playerCountry.security.attack_detection_prob > 1.0) playerCountry.security.attack_detection_prob = 1.0;
+        playerCountry.welfare.radicalism_prob += 0.05;
+        playerCountry.welfare.un_score -= 0.15;
+        if (playerCountry.welfare.un_score < 0.0) playerCountry.welfare.un_score = 0.0;
+    };
+    commandHandlers["torture-"] = [this]() {
+        playerCountry.welfare.torture_index -= 0.1;
+        if (playerCountry.welfare.torture_index < 0.0) playerCountry.welfare.torture_index = 0.0;
+        std::cout << ">> REFORM: Banning torture and closing secret prisons." << std::endl;
+        playerCountry.security.attack_detection_prob -= 0.10;
+        if (playerCountry.security.attack_detection_prob < 0.0) playerCountry.security.attack_detection_prob = 0.0;
+        playerCountry.welfare.radicalism_prob -= 0.03;
+        playerCountry.welfare.un_score += 0.10;
+        if (playerCountry.welfare.un_score > 1.0) playerCountry.welfare.un_score = 1.0;
+    };
+    commandHandlers["disappear+"] = [this]() {
+        playerCountry.welfare.forced_disappearances += 0.2;
+        if (playerCountry.welfare.forced_disappearances > 1.0) playerCountry.welfare.forced_disappearances = 1.0;
+        std::cout << ">> SECRET OPERATION: Night and Fog decree signed." << std::endl;
+        playerCountry.politics.mobilizations = 0;
+        playerCountry.welfare.general_strike_prob *= 0.5;
+        playerCountry.welfare.radicalism_prob += 0.08;
+        playerCountry.welfare.un_score -= 0.20;
+        if (playerCountry.welfare.un_score < 0.0) playerCountry.welfare.un_score = 0.0;
+        playerCountry.politics.popularity -= 0.10;
+    };
+    commandHandlers["disappear-"] = [this]() {
+        playerCountry.welfare.forced_disappearances -= 0.2;
+        if (playerCountry.welfare.forced_disappearances < 0.0) playerCountry.welfare.forced_disappearances = 0.0;
+        std::cout << ">> JUSTICE: Truth Commission established." << std::endl;
+        playerCountry.politics.mobilizations += 2;
+        playerCountry.welfare.radicalism_prob -= 0.05;
+        if (playerCountry.welfare.radicalism_prob < 0.0) playerCountry.welfare.radicalism_prob = 0.0;
+        playerCountry.welfare.un_score += 0.15;
+        if (playerCountry.welfare.un_score > 1.0) playerCountry.welfare.un_score = 1.0;
+        playerCountry.politics.popularity += 0.05;
+    };
+    commandHandlers["press+"] = [this]() {
+        playerCountry.welfare.freedom_of_expression += 0.1;
+        if (playerCountry.welfare.freedom_of_expression > 1.0) playerCountry.welfare.freedom_of_expression = 1.0;
+        std::cout << ">> POLICY: Censorship lifted. Press is free." << std::endl;
+        playerCountry.infra.innovation_index += 0.05;
+        playerCountry.politics.administrative_corruption -= 0.05;
+        if (playerCountry.politics.administrative_corruption < 0.0) playerCountry.politics.administrative_corruption = 0.0;
+        std::uniform_real_distribution<> dist(0.0, 1.0);
+        if (dist(rng) < 0.4) {
+            std::cout << "[!] SCANDAL: Free press exposes government corruption!" << std::endl;
+            playerCountry.politics.popularity -= 0.08;
+            playerCountry.politics.polarization_index += 0.03;
+        }
+    };
+    commandHandlers["press-"] = [this]() {
+        playerCountry.welfare.freedom_of_expression -= 0.1;
+        if (playerCountry.welfare.freedom_of_expression < 0.0) playerCountry.welfare.freedom_of_expression = 0.0;
+        std::cout << ">> POLICY: Media access restricted." << std::endl;
+        playerCountry.politics.popularity += 0.02;
+        playerCountry.infra.innovation_index -= 0.08;
+        if (playerCountry.infra.innovation_index < 0.0) playerCountry.infra.innovation_index = 0.0;
+        playerCountry.politics.administrative_corruption += 0.05;
+        playerCountry.welfare.radicalism_prob += 0.02;
+    };
     commandHandlers["worship+"] = [this]() {
         playerCountry.welfare.freedom_of_worship += 0.1;
         if (playerCountry.welfare.freedom_of_worship > 1.0) playerCountry.welfare.freedom_of_worship = 1.0;
@@ -349,107 +415,6 @@ void Game::processEvents() {
     }
     
     // --- HUMAN RIGHTS COMMANDS ---
-    else if (command == "torture+") {
-        playerCountry.welfare.torture_index += 0.1;
-        if (playerCountry.welfare.torture_index > 1.0) playerCountry.welfare.torture_index = 1.0;
-        
-        std::cout << ">> SECRET ORDER: Enhanced Interrogation techniques authorized." << std::endl;
-        std::cout << "   (Intel ++, Radicalism +, UN Score -, Rights -)" << std::endl;
-        
-        // The Dark Trade-off
-        playerCountry.security.attack_detection_prob += 0.15; // Useful info extracted
-        if (playerCountry.security.attack_detection_prob > 1.0) playerCountry.security.attack_detection_prob = 1.0;
-        
-        playerCountry.welfare.radicalism_prob += 0.05; // Revenge/Martyrdom
-        playerCountry.welfare.un_score -= 0.15; // International Condemnation
-    }
-    else if (command == "torture-") {
-        playerCountry.welfare.torture_index -= 0.1;
-        if (playerCountry.welfare.torture_index < 0.0) playerCountry.welfare.torture_index = 0.0;
-        
-        std::cout << ">> REFORM: Banning torture and closing secret prisons." << std::endl;
-        std::cout << "   (Intel --, Radicalism -, UN Score ++)" << std::endl;
-        
-        // Restoring Dignity
-        playerCountry.security.attack_detection_prob -= 0.10; // Harder to get info?
-        if (playerCountry.security.attack_detection_prob < 0.0) playerCountry.security.attack_detection_prob = 0.0;
-        
-        playerCountry.welfare.radicalism_prob -= 0.03; // Healing society
-        playerCountry.welfare.un_score += 0.10; // International Praise
-    }
-    
-    // --- FORCED DISAPPEARANCES (Dirty War) ---
-    else if (command == "disappear+") {
-        playerCountry.welfare.forced_disappearances += 0.2;
-        if (playerCountry.welfare.forced_disappearances > 1.0) playerCountry.welfare.forced_disappearances = 1.0;
-
-        std::cout << ">> SECRET OPERATION: ' Night and Fog ' decree signed." << std::endl;
-        std::cout << "   (Protests --, Fear ++, UN Score ---, Hate +++)" << std::endl;
-
-        // The Logic of Terror
-        // 1. Fear paralyzes the streets
-        playerCountry.politics.mobilizations = 0; // Immediate silence
-        playerCountry.welfare.general_strike_prob *= 0.5; 
-        
-        // 2. The cost is deep hatred
-        playerCountry.welfare.radicalism_prob += 0.08; 
-        playerCountry.welfare.un_score -= 0.20; // Pariah state
-        playerCountry.politics.popularity -= 0.10; // People are terrified, not happy
-    }
-    else if (command == "disappear-") {
-        playerCountry.welfare.forced_disappearances -= 0.2;
-        if (playerCountry.welfare.forced_disappearances < 0.0) playerCountry.welfare.forced_disappearances = 0.0;
-
-        std::cout << ">> JUSTICE: Truth Commission established to find the missing." << std::endl;
-        std::cout << "   (Justice ++, Protests ++, UN Score ++)" << std::endl;
-
-        // The Cost of Truth
-        // 1. Justice emboldens people to speak out
-        playerCountry.politics.mobilizations += 2; // "Never Again!" marches
-        
-        // 2. Healing
-        playerCountry.welfare.radicalism_prob -= 0.05; 
-        playerCountry.welfare.un_score += 0.15;
-        playerCountry.politics.popularity += 0.05; 
-    }
-
-    // --- FREEDOM OF EXPRESSION (The Fourth Estate) ---
-    else if (command == "press+") {
-        playerCountry.welfare.freedom_of_expression += 0.1;
-        if (playerCountry.welfare.freedom_of_expression > 1.0) playerCountry.welfare.freedom_of_expression = 1.0;
-        
-        std::cout << ">> POLICY: Censorship lifted. Press is free." << std::endl;
-        std::cout << "   (Innovation ++, Corruption --, Stability -)" << std::endl;
-        
-        // Benefits of Truth
-        playerCountry.infra.innovation_index += 0.05; // Ideas flow freely
-        playerCountry.politics.administrative_corruption -= 0.05; // Watchdog effect
-        
-        // The Pain of Truth
-        // Scandals are revealed!
-        std::uniform_real_distribution<> dist(0.0, 1.0);
-        if (dist(rng) < 0.4) {
-            std::cout << "[!] SCANDAL: Free press exposes government corruption!" << std::endl;
-            playerCountry.politics.popularity -= 0.08;
-            playerCountry.politics.polarization_index += 0.03;
-        }
-    }
-    else if (command == "press-") {
-        playerCountry.welfare.freedom_of_expression -= 0.1;
-        if (playerCountry.welfare.freedom_of_expression < 0.0) playerCountry.welfare.freedom_of_expression = 0.0;
-        
-        std::cout << ">> POLICY: Media access restricted. Internet filtered." << std::endl;
-        std::cout << "   (Control ++, Innovation --, Corruption ++)" << std::endl;
-        
-        // Benefits of Silence
-        // Leader controls the narrative.
-        playerCountry.politics.popularity += 0.02; // "Everything is fine"
-        
-        // Costs of Silence
-        playerCountry.infra.innovation_index -= 0.08; // Stagnation
-        playerCountry.politics.administrative_corruption += 0.05; // Impunity
-        playerCountry.welfare.radicalism_prob += 0.02; // Anger builds in dark corners
-    }
     // --- MINORITY RIGHTS (The Diversity Paradox) ---
     else if (command == "minority+") {
         playerCountry.welfare.minority_protection += 0.1;
