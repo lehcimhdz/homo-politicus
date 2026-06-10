@@ -1111,6 +1111,67 @@ void Game::processEvents() {
             std::cout << "   (Security +, Morale -, Casualties +, Human Rights -)" << std::endl;
         }
     }
+    // --- ESPIONAGE COMMANDS ---
+    else if (command == "spy_budget+") {
+        double cost = playerCountry.economy.gdp * 0.002;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.security.espionage_budget += cost;
+        playerCountry.security.humint_capability += 0.05;
+        if (playerCountry.security.humint_capability > 1.0) playerCountry.security.humint_capability = 1.0;
+        playerCountry.security.sigint_capability += 0.03;
+        if (playerCountry.security.sigint_capability > 1.0) playerCountry.security.sigint_capability = 1.0;
+        playerCountry.security.attack_detection_prob += 0.02;
+        std::cout << ">> ESPIONAGE BUDGET INCREASED. Intelligence capabilities enhanced." << std::endl;
+        std::cout << "   HUMINT: " << (int)(playerCountry.security.humint_capability * 100)
+                  << "%, SIGINT: " << (int)(playerCountry.security.sigint_capability * 100) << "%" << std::endl;
+    }
+    else if (command == "cyber_op") {
+        if (playerCountry.security.sigint_capability < 0.3) {
+            std::cout << ">> FAILED: SIGINT capability too low for cyber operations." << std::endl;
+        } else {
+            double success_prob = playerCountry.security.sigint_capability * 0.5
+                                + playerCountry.infra.cyber_defense_maturity * 0.3;
+            std::uniform_real_distribution<> dist01(0.0, 1.0);
+            if (dist01(rng) < success_prob) {
+                playerCountry.security.diplomatic_prestige += 0.02; // Secret success
+                playerCountry.security.attack_detection_prob += 0.03;
+                std::cout << ">> CYBER OPERATION SUCCESS: Target systems compromised. Intel gained." << std::endl;
+            } else {
+                playerCountry.security.document_leak_prob += 0.05; // Exposure risk
+                playerCountry.security.diplomatic_prestige -= 0.05;
+                playerCountry.economy.international_sanctions_prob += 0.03;
+                std::cout << ">> CYBER OPERATION EXPOSED: Attribution detected. Diplomatic fallout!" << std::endl;
+            }
+        }
+    }
+    else if (command == "surveillance+") {
+        playerCountry.security.mass_surveillance_active = true;
+        playerCountry.security.cyber_surveillance += 0.1;
+        if (playerCountry.security.cyber_surveillance > 1.0) playerCountry.security.cyber_surveillance = 1.0;
+        playerCountry.security.social_media_monitoring += 0.1;
+        if (playerCountry.security.social_media_monitoring > 1.0) playerCountry.security.social_media_monitoring = 1.0;
+        playerCountry.security.terrorism_detection_prob += 0.05;
+        playerCountry.security.attack_detection_prob += 0.03;
+        // Liberty costs
+        playerCountry.security.press_freedom -= 0.05;
+        if (playerCountry.security.press_freedom < 0.1) playerCountry.security.press_freedom = 0.1;
+        playerCountry.welfare.freedom_of_expression -= 0.05;
+        if (playerCountry.welfare.freedom_of_expression < 0.1) playerCountry.welfare.freedom_of_expression = 0.1;
+        playerCountry.politics.democratic_backsliding_index += 0.02;
+        std::cout << ">> MASS SURVEILLANCE ACTIVATED: Detection up, Liberty down." << std::endl;
+        std::cout << "   (Terror Detection +, Press Freedom -, Democracy -)" << std::endl;
+    }
+    else if (command == "surveillance-") {
+        playerCountry.security.mass_surveillance_active = false;
+        playerCountry.security.cyber_surveillance -= 0.1;
+        if (playerCountry.security.cyber_surveillance < 0.0) playerCountry.security.cyber_surveillance = 0.0;
+        playerCountry.security.terrorism_detection_prob -= 0.03;
+        playerCountry.security.press_freedom += 0.03;
+        playerCountry.welfare.freedom_of_expression += 0.03;
+        playerCountry.politics.democratic_backsliding_index -= 0.01;
+        if (playerCountry.politics.democratic_backsliding_index < 0.0) playerCountry.politics.democratic_backsliding_index = 0.0;
+        std::cout << ">> SURVEILLANCE REDUCED: Civil liberties restored. Detection capability down." << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
