@@ -6,9 +6,11 @@
 namespace Persistence {
 
 bool save(const Country& c, int turnCount, double popularitySum,
-          EndCondition endCondition, const std::string& path) {
+          EndCondition endCondition, const std::string& path,
+          const std::string& achievements_line) {
     std::ofstream f(path);
     if (!f) return false;
+    if (!achievements_line.empty()) f << "achievements=" << achievements_line << "\n";
     const auto& pol = c.politics;
     const auto& eco = c.economy;
     const auto& sec = c.security;
@@ -45,7 +47,8 @@ bool save(const Country& c, int turnCount, double popularitySum,
 }
 
 bool load(Country& c, int& turnCount, double& popularitySum,
-          EndCondition& endCondition, const std::string& path) {
+          EndCondition& endCondition, const std::string& path,
+          std::string* achievements_line_out) {
     std::ifstream f(path);
     if (!f) return false;
     std::unordered_map<std::string, std::string> kv;
@@ -90,6 +93,10 @@ bool load(Country& c, int& turnCount, double& popularitySum,
     pol.democratic_backsliding_index = getD("democratic_backsliding_index", pol.democratic_backsliding_index);
     pol.authoritarian_actions_count = getI("authoritarian_actions_count", pol.authoritarian_actions_count);
     pol.auth_dem_axis = getD("auth_dem_axis", pol.auth_dem_axis);
+    if (achievements_line_out) {
+        auto it = kv.find("achievements");
+        if (it != kv.end()) *achievements_line_out = it->second;
+    }
     return true;
 }
 

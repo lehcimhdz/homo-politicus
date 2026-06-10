@@ -10,6 +10,7 @@
 
 Game::Game() : isRunning(true), nextTurn(false), turnCount(0), rng(std::random_device{}()) {
     std::cout << "Initializing Game..." << std::endl;
+    initialGdp = playerCountry.economy.gdp;
     registerCommands();
 }
 
@@ -53,6 +54,19 @@ void Game::registerCommands() {
                       << " — " << pendingDecisions[i].prompt << std::endl;
         }
         std::cout << "=================================" << std::endl;
+    };
+    commandHandlers["achievements"] = [this]() {
+        auto list = achievements.unlockedList();
+        if (list.empty()) {
+            std::cout << ">> Sin logros desbloqueados aun. Catalogo: " << AchievementTracker::catalog().size() << " logros disponibles." << std::endl;
+            return;
+        }
+        std::cout << "\n=== LOGROS DESBLOQUEADOS (" << list.size() << "/" << AchievementTracker::catalog().size() << ") ===" << std::endl;
+        for (const auto& def : AchievementTracker::catalog()) {
+            if (achievements.isUnlocked(def.id))
+                std::cout << "  [X] " << def.id << " - " << def.name_es << std::endl;
+        }
+        std::cout << "============================================" << std::endl;
     };
     commandHandlers["skip_decision"] = [this]() {
         if (pendingDecisions.empty()) { std::cout << ">> No hay decisión que saltar." << std::endl; return; }
@@ -2155,6 +2169,7 @@ void Game::processEvents() {
             turnCount = 0;
             popularitySum = 0.0;
             endCondition = EndCondition::NONE;
+            initialGdp = playerCountry.economy.gdp;
         } else {
             std::cout << ">> SCENARIO: no se pudo cargar " << path << std::endl;
         }
@@ -7839,8 +7854,12 @@ void Game::update() {
     popularitySum += playerCountry.politics.popularity;
     if (playerCountry.politics.apologize_cooldown_turns > 0) playerCountry.politics.apologize_cooldown_turns--;
     if (playerCountry.politics.threaten_streak_count > 0) playerCountry.politics.threaten_streak_count--;
+    achievements.evaluate(playerCountry, turnCount, endCondition, initialGdp);
     checkGameOver();
-    if (!isRunning) renderEndScreen();
+    if (!isRunning) {
+        achievements.evaluate(playerCountry, turnCount, endCondition, initialGdp);
+        renderEndScreen();
+    }
 }
 
 void Game::render() {
@@ -8264,15 +8283,18 @@ void Game::resolveDecision(const std::string& choice) {
 }
 
 void Game::saveGame(const std::string& path) {
-    if (Persistence::save(playerCountry, turnCount, popularitySum, endCondition, path))
+    if (Persistence::save(playerCountry, turnCount, popularitySum, endCondition, path, achievements.serialize()))
         std::cout << ">> SAVE: estado guardado en " << path << std::endl;
     else
         std::cout << ">> SAVE: no se puede escribir " << path << std::endl;
 }
 
 void Game::loadGame(const std::string& path) {
-    if (Persistence::load(playerCountry, turnCount, popularitySum, endCondition, path))
+    std::string ach_line;
+    if (Persistence::load(playerCountry, turnCount, popularitySum, endCondition, path, &ach_line)) {
+        achievements.deserialize(ach_line);
         std::cout << ">> LOAD: estado restaurado desde " << path << std::endl;
-    else
+    } else {
         std::cout << ">> LOAD: no existe " << path << std::endl;
+    }
 }
