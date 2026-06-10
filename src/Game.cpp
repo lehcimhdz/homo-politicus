@@ -3488,6 +3488,71 @@ void Game::update() {
         }
     }
 
+    // --- FAMINE / FOOD CONTAMINATION EVENT ---
+    if (playerCountry.welfare.famine_active) {
+        playerCountry.welfare.famine_duration--;
+        double sev = playerCountry.welfare.famine_severity;
+
+        // Death rate spikes
+        playerCountry.welfare.death_rate += sev * 0.005;
+
+        // Health system overwhelmed
+        playerCountry.welfare.health_coverage -= sev * 0.02;
+        if (playerCountry.welfare.health_coverage < 0.05)
+            playerCountry.welfare.health_coverage = 0.05;
+
+        // Massive popularity hit
+        playerCountry.politics.popularity -= 0.04 * sev;
+
+        // Protest escalation
+        playerCountry.politics.protest_intensity += 0.05 * sev;
+
+        // Mass emigration
+        playerCountry.security.emigration_push_index += 0.03 * sev;
+        if (playerCountry.security.emigration_push_index > 1.0)
+            playerCountry.security.emigration_push_index = 1.0;
+
+        // International aid dependency (reduces reserves drain)
+        if (playerCountry.security.diplomatic_prestige > 0.5)
+            playerCountry.economy.international_reserves += 5000000.0; // Aid
+        else
+            playerCountry.economy.international_reserves -= 10000000.0; // Must buy food
+
+        std::cout << "[!!!] FAMINE (Turn " << (playerCountry.welfare.famine_duration + 1)
+                  << " remaining): Severity " << (int)(sev * 100) << "%. People are starving." << std::endl;
+
+        if (playerCountry.welfare.famine_duration <= 0) {
+            playerCountry.welfare.famine_active = false;
+            playerCountry.welfare.famine_severity = 0.0;
+            std::cout << "[INFO] FAMINE SUBSIDES: Food supply stabilizing." << std::endl;
+        }
+    } else {
+        // Famine triggered by: drought crop loss > 60% OR food contamination event
+        bool famine_trigger = false;
+        if (playerCountry.infra.drought_active && playerCountry.infra.crop_loss_pct > 0.6) {
+            famine_trigger = true;
+        }
+        if (dist(rng) < playerCountry.welfare.food_contamination_prob * 0.3) {
+            famine_trigger = true;
+            std::cout << "[!!] FOOD CONTAMINATION: Major contamination event in food supply chain!" << std::endl;
+        }
+        if (famine_trigger) {
+            playerCountry.welfare.famine_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 5);
+            playerCountry.welfare.famine_duration = dur_dist(rng);
+            std::uniform_real_distribution<double> sev_dist(0.3, 0.9);
+            playerCountry.welfare.famine_severity = sev_dist(rng);
+            // If drought-triggered, severity scales with crop loss
+            if (playerCountry.infra.drought_active) {
+                playerCountry.welfare.famine_severity = std::max(playerCountry.welfare.famine_severity,
+                                                                  playerCountry.infra.crop_loss_pct);
+            }
+            std::cout << "[!!!] FAMINE BEGINS: Food crisis! Severity: "
+                      << (int)(playerCountry.welfare.famine_severity * 100)
+                      << "%. Duration: " << playerCountry.welfare.famine_duration << " turns." << std::endl;
+        }
+    }
+
     // --- COUP RISK DYNAMICS ---
     // Coup probability driven by: low civilian control, low popularity, military insubordination, history
     playerCountry.politics.coup_d_etat_prob = (1.0 - playerCountry.politics.civilian_military_control) * 0.03

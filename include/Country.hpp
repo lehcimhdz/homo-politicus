@@ -22,6 +22,9 @@ struct WelfareSocietySystem {
     double pandemic_prob = 0.02; // Realistic: ~2% annual chance (Every 50-100 years)
     double epidemic_prob = 0.1;
     double food_contamination_prob = 0.05;
+    bool famine_active = false;
+    int famine_duration = 0;
+    double famine_severity = 0.0;
     double obesity_rate = 0.2;
     double health_coverage = 0.7;
     double food_radiation_prob = 0.0;
