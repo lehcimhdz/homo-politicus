@@ -8,19 +8,7 @@
 #include <functional>
 #include "Country.hpp"
 #include "EventManager.hpp"
-
-enum class EndCondition {
-    NONE,
-    COUP_SUCCESS,
-    IMPEACHMENT,
-    REVOLUTION,
-    LAWFARE_REMOVAL,
-    ELECTION_LOSS,
-    EXILE,
-    ASSASSINATION,
-    NUCLEAR_ANNIHILATION,
-    TERM_COMPLETED
-};
+#include "EndCondition.hpp"
 
 struct PendingDecision {
     std::string id;

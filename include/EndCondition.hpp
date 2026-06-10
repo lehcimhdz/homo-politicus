@@ -1,0 +1,17 @@
+#ifndef END_CONDITION_HPP
+#define END_CONDITION_HPP
+
+enum class EndCondition {
+    NONE,
+    COUP_SUCCESS,
+    IMPEACHMENT,
+    REVOLUTION,
+    LAWFARE_REMOVAL,
+    ELECTION_LOSS,
+    EXILE,
+    ASSASSINATION,
+    NUCLEAR_ANNIHILATION,
+    TERM_COMPLETED
+};
+
+#endif
