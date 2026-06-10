@@ -3333,6 +3333,19 @@ void Game::update() {
         }
     }
 
+    // --- LOBBYING & REGULATORY CAPTURE ---
+    // Regulatory capture grows with revolving door and high lobby power; shrinks with anticorruption
+    double total_lobby_power = (playerCountry.politics.industrial_power + playerCountry.politics.financial_power
+                              + playerCountry.politics.agricultural_power + playerCountry.politics.tech_power) / 4.0;
+    playerCountry.politics.regulatory_capture_index += playerCountry.politics.revolving_door_intensity * 0.005
+                                                    + total_lobby_power * 0.003;
+    playerCountry.politics.regulatory_capture_index -= playerCountry.politics.anticorruption_enforcement * 0.004;
+    if (playerCountry.politics.regulatory_capture_index < 0.0) playerCountry.politics.regulatory_capture_index = 0.0;
+    if (playerCountry.politics.regulatory_capture_index > 1.0) playerCountry.politics.regulatory_capture_index = 1.0;
+    // High capture reduces effective tax collection (regulatory loopholes)
+    if (playerCountry.politics.regulatory_capture_index > 0.5)
+        playerCountry.economy.tax_collection *= (1.0 - (playerCountry.politics.regulatory_capture_index - 0.5) * 0.06);
+
     // --- PARTY SYSTEM DYNAMICS ---
     // Effective parties from fragmentation index: frag 0.2=~2 parties, 0.8=~6+
     playerCountry.politics.effective_parties = 2 + (int)(playerCountry.politics.party_fragmentation * 5.0);

@@ -227,6 +227,8 @@ struct PoliticalInstitutionalSystem {
     bool   two_party_dominance = false;        // Two-party duopoly in effect
     double coalition_formation_cost = 0.3;     // Resources/concessions needed to build majority (0–1)
     double lobbying_cost = 50000.0;
+    double regulatory_capture_index = 0.3;     // Degree industry controls its regulator (0–1)
+    double revolving_door_intensity = 0.4;     // Frequency of regulator-industry personnel flow (0–1)
     int pending_bills = 5;
 
     // Governors
