@@ -90,6 +90,8 @@ struct WelfareSocietySystem {
     // Religion
     double clerical_political_influence = 0.3;
     double interreligious_tension = 0.1;
+    bool religious_crisis_active = false;
+    int religious_crisis_duration = 0;
     double radicalism_prob = 0.05;
     double freedom_of_worship = 0.9;
 

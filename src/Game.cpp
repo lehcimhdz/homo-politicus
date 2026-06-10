@@ -3598,6 +3598,60 @@ void Game::update() {
         }
     }
 
+    // --- RELIGIOUS CRISIS ---
+    if (playerCountry.welfare.religious_crisis_active) {
+        playerCountry.welfare.religious_crisis_duration--;
+
+        // Sectarian violence
+        playerCountry.security.homicide_rate += 2.0; // +2 per 100k
+        playerCountry.welfare.death_rate += 0.001;
+
+        // Polarization and protests
+        playerCountry.politics.polarization_index += 0.03;
+        if (playerCountry.politics.polarization_index > 1.0)
+            playerCountry.politics.polarization_index = 1.0;
+        playerCountry.politics.protest_intensity += 0.04;
+
+        // Tourism collapses (safety)
+        playerCountry.economy.annual_visitors *= 0.75;
+        playerCountry.economy.travel_warning_level = std::max(playerCountry.economy.travel_warning_level, 2);
+
+        // Minority protection erodes
+        playerCountry.welfare.minority_protection -= 0.03;
+        if (playerCountry.welfare.minority_protection < 0.0)
+            playerCountry.welfare.minority_protection = 0.0;
+
+        // Terror attack risk if radicalism high
+        if (playerCountry.welfare.radicalism_prob > 0.3 && dist(rng) < playerCountry.welfare.radicalism_prob * 0.5) {
+            int terror_casualties = 10 + (int)(dist(rng) * 100);
+            playerCountry.welfare.death_rate += (double)terror_casualties / (double)playerCountry.welfare.population;
+            playerCountry.politics.popularity -= 0.05;
+            std::cout << "[!!!!] TERRORIST ATTACK: Radical group strikes! " << terror_casualties
+                      << " casualties." << std::endl;
+        }
+
+        playerCountry.politics.popularity -= 0.02;
+
+        std::cout << "[!!] RELIGIOUS CRISIS (Turn " << (playerCountry.welfare.religious_crisis_duration + 1)
+                  << " remaining): Sectarian violence ongoing. Tension: "
+                  << (int)(playerCountry.welfare.interreligious_tension * 100) << "%" << std::endl;
+
+        if (playerCountry.welfare.religious_crisis_duration <= 0) {
+            playerCountry.welfare.religious_crisis_active = false;
+            std::cout << "[INFO] RELIGIOUS CRISIS EASES: Interfaith dialogue calming tensions." << std::endl;
+        }
+    } else {
+        if (playerCountry.welfare.interreligious_tension > 0.7
+            && dist(rng) < playerCountry.welfare.radicalism_prob) {
+            playerCountry.welfare.religious_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 4);
+            playerCountry.welfare.religious_crisis_duration = dur_dist(rng);
+            std::cout << "[!!] RELIGIOUS CRISIS: Sectarian tensions erupt into violence! "
+                      << "Interreligious tension: " << (int)(playerCountry.welfare.interreligious_tension * 100)
+                      << "%" << std::endl;
+        }
+    }
+
     // --- HUMAN RIGHTS CRISIS ---
     if (playerCountry.welfare.human_rights_crisis) {
         playerCountry.welfare.hr_crisis_duration--;
