@@ -172,6 +172,8 @@ struct EconomicFinancialSystem {
     double cultural_commodification = 0.2;   // Risk of tourism eroding authentic culture (0–1)
     double heritage_funding_gdp = 0.001;     // Public spending on preservation (% GDP)
     double foreign_travel_alert_prob = 0.0;
+    int    travel_warning_level = 0;          // 0=Normal 1=Exercise caution 2=Reconsider 3=Do not travel
+    double reputational_tourism_damage = 0.0; // Cumulative tourist drop from past alerts (0–1)
 };
 
 // 3. Political and Institutional System

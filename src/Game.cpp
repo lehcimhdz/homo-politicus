@@ -2827,6 +2827,26 @@ void Game::update() {
     playerCountry.economy.average_tourist_spending = playerCountry.economy.spending_luxury * playerCountry.economy.luxury_tourism_share
                                                    + 1000.0 * mid_share
                                                    + playerCountry.economy.spending_budget * 0.3;
+    // Travel warning level: driven by safety, conflict, and sanctions
+    double alert_score = (1.0 - playerCountry.economy.tourist_safety)
+                       + playerCountry.security.conflict_with_groups * 0.5
+                       + (playerCountry.economy.sanctions_active ? 0.3 : 0.0);
+    if (alert_score > 0.8) playerCountry.economy.travel_warning_level = 3;
+    else if (alert_score > 0.5) playerCountry.economy.travel_warning_level = 2;
+    else if (alert_score > 0.25) playerCountry.economy.travel_warning_level = 1;
+    else playerCountry.economy.travel_warning_level = 0;
+    // Warning level accumulates reputational damage — tourists remember bad press
+    if (playerCountry.economy.travel_warning_level >= 2) {
+        playerCountry.economy.reputational_tourism_damage += 0.02 * playerCountry.economy.travel_warning_level;
+        if (playerCountry.economy.reputational_tourism_damage > 1.0) playerCountry.economy.reputational_tourism_damage = 1.0;
+    } else {
+        playerCountry.economy.reputational_tourism_damage -= 0.01; // Slow recovery
+        if (playerCountry.economy.reputational_tourism_damage < 0.0) playerCountry.economy.reputational_tourism_damage = 0.0;
+    }
+    // Reputational damage directly reduces international visitors
+    playerCountry.economy.visitors_international = (int)(playerCountry.economy.visitors_international
+                                                       * (1.0 - playerCountry.economy.reputational_tourism_damage * 0.3));
+
     // Heritage & UNESCO boost luxury tourism share and attract more international visitors
     double heritage_tourism_bonus = 1.0 + playerCountry.economy.unesco_sites * 0.03
                                        + playerCountry.economy.heritage_preservation * 0.1;
