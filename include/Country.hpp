@@ -298,6 +298,8 @@ struct PoliticalInstitutionalSystem {
     double polarization_index = 0.3;
     bool revolution_risk = false;
     double revolution_prob = 0.0;
+    bool revolution_active = false;
+    int revolution_duration = 0;
     bool civil_war_active = false;
     int civil_war_duration = 0;
     double affective_polarization = 0.4;       // Hatred between partisan blocs (0–1)

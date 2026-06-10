@@ -7798,6 +7798,28 @@ void Game::checkGameOver() {
             break;
         }
     }
+    if (!pol.revolution_active && pol.revolution_prob > 0.6 && pol.popularity < 0.25) {
+        pol.revolution_active = true;
+        pol.revolution_duration = 0;
+        std::cout << "[!!!] REVOLUCIÓN EN LAS CALLES: el régimen pierde el control." << std::endl;
+    }
+    if (pol.revolution_active) {
+        pol.revolution_duration++;
+        playerCountry.economy.gdp *= 0.97;
+        pol.popularity -= 0.05;
+        if (pol.popularity < 0.0) pol.popularity = 0.0;
+        playerCountry.infra.maintenance_level -= 0.05;
+        if (!hasDecision("active_revolution")) {
+            pendingDecisions.push_back({"active_revolution",
+                "Revolución en curso (turno " + std::to_string(pol.revolution_duration) + "). ¿Tu decisión?",
+                {"concessions", "crackdown", "step_down"}});
+        }
+        if (pol.revolution_duration >= 5) {
+            endCondition = EndCondition::REVOLUTION;
+            isRunning = false;
+            return;
+        }
+    }
     if (sec.nuclear_attack_prob > 0.3 && !hasDecision("nuclear_threat")) {
         pendingDecisions.push_back({"nuclear_threat",
             "Riesgo de ataque nuclear inminente. ¿Tu decisión?",
@@ -8009,6 +8031,44 @@ void Game::resolveDecision(const std::string& choice) {
             sec.diplomatic_prestige += 0.05;
             sec.invasion_prob *= 0.7;
             std::cout << ">> MEDIACIÓN: la comunidad internacional interviene." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "active_revolution") {
+        std::uniform_real_distribution<double> roll(0.0, 1.0);
+        if (choice == "concessions") {
+            pol.revolution_prob *= 0.5;
+            pol.popularity += 0.05;
+            pol.economic_ideology -= 0.05;
+            pol.popular_pressure *= 0.6;
+            std::cout << ">> CONCESIONES: el régimen gira hacia el pueblo, la calle se enfría." << std::endl;
+            if (pol.revolution_prob < 0.3) {
+                pol.revolution_active = false;
+                pol.revolution_duration = 0;
+                std::cout << ">> La revolución se desactiva." << std::endl;
+            }
+        } else if (choice == "crackdown") {
+            if (roll(rng) < sec.humint_capability + 0.2) {
+                pol.revolution_prob *= 0.4;
+                pol.popular_pressure *= 0.5;
+                pol.regime_legitimacy -= 0.1;
+                std::cout << ">> REPRESIÓN: protestas dispersadas, pero el régimen se mancha." << std::endl;
+                if (pol.revolution_prob < 0.3) {
+                    pol.revolution_active = false;
+                    pol.revolution_duration = 0;
+                }
+            } else {
+                pol.international_pressure += 0.3;
+                pol.revolution_prob += 0.2;
+                pol.regime_legitimacy -= 0.3;
+                sec.war_casualties += 2000.0;
+                std::cout << ">> MASACRE: la represión falla. El mundo condena y la calle se inflama." << std::endl;
+            }
+        } else if (choice == "step_down") {
+            endCondition = EndCondition::REVOLUTION;
+            isRunning = false;
+            std::cout << ">> RENUNCIA: cedes ante la revolución para evitar masacre." << std::endl;
         } else {
             std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
             pendingDecisions.insert(pendingDecisions.begin(), d);
