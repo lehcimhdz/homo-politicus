@@ -4476,10 +4476,19 @@ void Game::update() {
 
     // --- COUP RISK DYNAMICS ---
     // Coup probability driven by: low civilian control, low popularity, military insubordination, history
+    // IDEOLOGY: Military prefers right-authoritarian. Strong left shift increases coup risk.
+    double ideology_mil_tension = 0.0;
+    if (playerCountry.politics.economic_ideology < 0.3) {
+        ideology_mil_tension += (0.3 - playerCountry.politics.economic_ideology) * 0.05;
+    }
+    if (playerCountry.politics.auth_dem_axis < 0.3 && playerCountry.security.politicized_officer_corps > 0.3) {
+        ideology_mil_tension += (0.3 - playerCountry.politics.auth_dem_axis) * 0.03;
+    }
     playerCountry.politics.coup_d_etat_prob = (1.0 - playerCountry.politics.civilian_military_control) * 0.03
                                             + playerCountry.security.military_insubordination_prob * 0.15
                                             + playerCountry.politics.coup_attempts_history * 0.005
-                                            + (playerCountry.politics.popularity < 0.25 ? 0.02 : 0.0);
+                                            + (playerCountry.politics.popularity < 0.25 ? 0.02 : 0.0)
+                                            + ideology_mil_tension;
     if (playerCountry.politics.coup_d_etat_prob > 0.5) playerCountry.politics.coup_d_etat_prob = 0.5;
     // Coup success probability: higher with weak institutions
     playerCountry.politics.coup_success_prob = (1.0 - playerCountry.politics.judicial_independence) * 0.4
@@ -5442,6 +5451,31 @@ void Game::update() {
                                               + (1.0 - playerCountry.welfare.mental_health_index) * 0.005;
 
     // --- GEOPOLITICS & INTERNATIONAL RELATIONS ---
+    // IDEOLOGY → INTERNATIONAL ALIGNMENT
+    // Left-leaning → China alignment drift, Right-leaning → US alignment drift
+    if (playerCountry.politics.economic_ideology < 0.35) {
+        playerCountry.security.china_alignment += 0.005;
+        if (playerCountry.security.china_alignment > 1.0) playerCountry.security.china_alignment = 1.0;
+        playerCountry.security.us_alignment -= 0.003;
+        if (playerCountry.security.us_alignment < 0.0) playerCountry.security.us_alignment = 0.0;
+    } else if (playerCountry.politics.economic_ideology > 0.65) {
+        playerCountry.security.us_alignment += 0.005;
+        if (playerCountry.security.us_alignment > 1.0) playerCountry.security.us_alignment = 1.0;
+        playerCountry.security.china_alignment -= 0.003;
+        if (playerCountry.security.china_alignment < 0.0) playerCountry.security.china_alignment = 0.0;
+    }
+    // Authoritarian shift → diplomatic prestige erodes, sanctions risk increases
+    if (playerCountry.politics.auth_dem_axis > 0.7) {
+        playerCountry.security.diplomatic_prestige -= 0.005;
+        if (playerCountry.security.diplomatic_prestige < 0.05) playerCountry.security.diplomatic_prestige = 0.05;
+        playerCountry.economy.international_sanctions_prob += 0.005;
+    }
+    // Strong left ideology → capital flight risk and FDI caution
+    if (playerCountry.politics.economic_ideology < 0.25) {
+        playerCountry.infra.capital_flight_risk += 0.005;
+        playerCountry.infra.fdi_inflow_gdp -= 0.001;
+        if (playerCountry.infra.fdi_inflow_gdp < 0.0) playerCountry.infra.fdi_inflow_gdp = 0.0;
+    }
     // Non-alignment: inverse of how much you lean towards either bloc
     playerCountry.security.non_aligned_index = 1.0 - (playerCountry.security.us_alignment + playerCountry.security.china_alignment) / 2.0;
     if (playerCountry.security.non_aligned_index < 0.0) playerCountry.security.non_aligned_index = 0.0;
