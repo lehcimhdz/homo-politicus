@@ -3333,6 +3333,40 @@ void Game::update() {
         }
     }
 
+    // --- INTELLIGENCE DYNAMICS ---
+    // HUMINT scales with espionage budget and informant network
+    playerCountry.security.humint_capability = playerCountry.security.informant_network * 0.5
+                                             + (playerCountry.security.espionage_budget / 2000000.0) * 0.3;
+    if (playerCountry.security.humint_capability > 1.0) playerCountry.security.humint_capability = 1.0;
+    // SIGINT scales with tech + cyber capability
+    playerCountry.security.sigint_capability = playerCountry.security.cyber_surveillance * 0.5
+                                             + playerCountry.infra.innovation_index * 0.3;
+    if (playerCountry.security.sigint_capability > 1.0) playerCountry.security.sigint_capability = 1.0;
+    // Informant penetration of NSGs: scales with network * budget
+    playerCountry.security.informant_penetration_nsg = playerCountry.security.informant_network * 0.4
+                                                     + playerCountry.security.humint_capability * 0.3;
+    if (playerCountry.security.informant_penetration_nsg > 0.9) playerCountry.security.informant_penetration_nsg = 0.9;
+    // Attack detection: composite of all intelligence capabilities
+    playerCountry.security.attack_detection_prob = playerCountry.security.humint_capability * 0.3
+                                                 + playerCountry.security.sigint_capability * 0.3
+                                                 + playerCountry.security.foreign_intelligence_sharing * 0.2
+                                                 + playerCountry.security.informant_reliability * 0.2;
+    if (playerCountry.security.attack_detection_prob > 0.95) playerCountry.security.attack_detection_prob = 0.95;
+    // Terrorism detection
+    playerCountry.security.terrorism_detection_prob = playerCountry.security.attack_detection_prob * 0.9
+                                                   + playerCountry.security.informant_penetration_nsg * 0.1;
+    // Cyber attack detection
+    playerCountry.security.cyberattack_detection_prob = playerCountry.security.sigint_capability * 0.5
+                                                      + playerCountry.security.cyber_surveillance * 0.3;
+    if (playerCountry.security.cyberattack_detection_prob > 0.95) playerCountry.security.cyberattack_detection_prob = 0.95;
+    // Early warning time scales inversely with detection quality
+    playerCountry.security.early_warning_time_hours = 12.0 + playerCountry.security.attack_detection_prob * 60.0;
+    // Mass surveillance: active if cyber_surveillance high and no press freedom check
+    if (playerCountry.security.cyber_surveillance > 0.6 && playerCountry.security.press_freedom < 0.5)
+        playerCountry.security.mass_surveillance_active = true;
+    else
+        playerCountry.security.mass_surveillance_active = false;
+
     // --- SECURITY & VIOLENCE DYNAMICS ---
     // Non-state groups composition: total = guerrillas + criminal orgs + militia
     playerCountry.security.non_state_groups = playerCountry.security.guerrilla_groups

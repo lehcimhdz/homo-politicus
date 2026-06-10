@@ -349,10 +349,27 @@ struct PowerSecuritySystem {
 
     // Intelligence
     double espionage_budget = 500000.0;
+    double humint_capability = 0.4;            // Human intelligence networks (0–1)
+    double sigint_capability = 0.3;            // Signals/electronic intelligence (0–1)
+    double foreign_intelligence_sharing = 0.5; // Five-Eyes-type alliances (0–1)
+
     double informant_network = 0.4;
+    double informant_penetration_nsg = 0.3;    // Informants inside armed groups (0–1)
+    double informant_reliability = 0.6;        // Quality of informant intel (0–1)
+
     double document_leak_prob = 0.1;
+    double whistleblower_protection = 0.4;     // Legal protection for whistleblowers (0–1)
+    double leak_foreign_intelligence_share = 0.3; // Fraction of leaks foreign-backed
+
     double cyber_surveillance = 0.3;
+    bool   mass_surveillance_active = false;   // Bulk collection in operation
+    double social_media_monitoring = 0.4;      // Monitoring of public platforms (0–1)
+    double facial_recognition_deployment = 0.2; // Public space facial recognition (0–1)
+
     double attack_detection_prob = 0.6;
+    double terrorism_detection_prob = 0.5;     // Specific to terrorist plots
+    double cyberattack_detection_prob = 0.4;   // State/non-state cyber intrusions
+    double early_warning_time_hours = 48.0;    // Average advance warning
 
     // Defense
     double troop_morale = 0.8;
