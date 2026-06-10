@@ -6767,6 +6767,86 @@ void Game::update() {
         }
     }
 
+    // --- INTERNAL PRESSURE SYSTEM ---
+    {
+        // Congressional pressure: f(opposition, scandals, low popularity)
+        playerCountry.politics.congressional_pressure =
+            (1.0 - playerCountry.politics.congressional_support) * 0.4
+            + playerCountry.politics.active_scandals * 0.1
+            + (1.0 - playerCountry.politics.popularity) * 0.3
+            + (playerCountry.politics.legislative_crisis_active ? 0.2 : 0.0);
+        if (playerCountry.politics.congressional_pressure > 1.0) playerCountry.politics.congressional_pressure = 1.0;
+
+        // Judicial pressure: f(investigations, rulings, scandal severity)
+        playerCountry.politics.judicial_pressure =
+            playerCountry.politics.ruling_against_state_prob * 0.3
+            + (playerCountry.politics.scandal_corruption_severity + playerCountry.politics.scandal_financial_severity) * 0.3
+            + playerCountry.politics.anticorruption_enforcement * (1.0 - playerCountry.politics.impunity) * 0.2;
+        if (playerCountry.politics.judicial_pressure > 1.0) playerCountry.politics.judicial_pressure = 1.0;
+
+        // Military pressure: f(ideology mismatch, budget, morale)
+        playerCountry.politics.military_pressure =
+            (playerCountry.security.military_insubordination_prob) * 0.3
+            + (playerCountry.security.military_spending_gdp < 0.015 ? 0.2 : 0.0)
+            + (1.0 - playerCountry.security.troop_morale) * 0.2
+            + (playerCountry.politics.economic_ideology < 0.3 ? 0.15 : 0.0);
+        if (playerCountry.politics.military_pressure > 1.0) playerCountry.politics.military_pressure = 1.0;
+
+        // Popular pressure: f(protests, polarization, economic crisis)
+        playerCountry.politics.popular_pressure =
+            playerCountry.politics.protest_intensity * 0.4
+            + playerCountry.politics.polarization_index * 0.2
+            + (playerCountry.economy.in_recession ? 0.15 : 0.0)
+            + (playerCountry.welfare.poverty_rate > 0.4 ? 0.15 : 0.0);
+        if (playerCountry.politics.popular_pressure > 1.0) playerCountry.politics.popular_pressure = 1.0;
+
+        // International pressure: f(sanctions, human rights, backsliding)
+        playerCountry.politics.international_pressure =
+            playerCountry.economy.international_sanctions_prob * 0.3
+            + playerCountry.welfare.torture_index * 0.2
+            + playerCountry.politics.democratic_backsliding_index * 0.3
+            + (1.0 - playerCountry.welfare.un_score) * 0.2;
+        if (playerCountry.politics.international_pressure > 1.0) playerCountry.politics.international_pressure = 1.0;
+
+        // Total pressure composite
+        playerCountry.politics.total_pressure =
+            playerCountry.politics.congressional_pressure * 0.25
+            + playerCountry.politics.judicial_pressure * 0.15
+            + playerCountry.politics.military_pressure * 0.25
+            + playerCountry.politics.popular_pressure * 0.20
+            + playerCountry.politics.international_pressure * 0.15;
+
+        // Display warnings at thresholds
+        if (playerCountry.politics.total_pressure > 0.7) {
+            std::cout << "[!!!] PRESSURE CRITICAL: Total " << (int)(playerCountry.politics.total_pressure * 100)
+                      << "% | Congress: " << (int)(playerCountry.politics.congressional_pressure * 100)
+                      << "% | Military: " << (int)(playerCountry.politics.military_pressure * 100)
+                      << "% | People: " << (int)(playerCountry.politics.popular_pressure * 100)
+                      << "% | Intl: " << (int)(playerCountry.politics.international_pressure * 100) << "%" << std::endl;
+        } else if (playerCountry.politics.total_pressure > 0.5) {
+            std::cout << "[!!] PRESSURE RISING: " << (int)(playerCountry.politics.total_pressure * 100) << "%" << std::endl;
+        }
+
+        // FORCED RESIGNATION: When total pressure exceeds threshold
+        if (playerCountry.politics.total_pressure > 0.9) {
+            std::uniform_real_distribution<double> dist(0.0, 1.0);
+            if (dist(rng) < (playerCountry.politics.total_pressure - 0.8)) {
+                // Determine mechanism of removal
+                if (playerCountry.politics.military_pressure > 0.8) {
+                    std::cout << "[!!!!!] MILITARY ULTIMATUM: Armed forces demand resignation. Regime falls." << std::endl;
+                } else if (playerCountry.politics.congressional_pressure > 0.8) {
+                    std::cout << "[!!!!!] CONGRESSIONAL REMOVAL: Legislature forces resignation." << std::endl;
+                } else if (playerCountry.politics.popular_pressure > 0.9) {
+                    std::cout << "[!!!!!] POPULAR UPRISING: Millions in the streets force resignation." << std::endl;
+                } else {
+                    std::cout << "[!!!!!] FORCED RESIGNATION: Unsustainable pressure from all sides." << std::endl;
+                }
+                std::cout << "GAME OVER." << std::endl;
+                exit(0);
+            }
+        }
+    }
+
     // --- IDEOLOGY ALIGNMENT SCORING ---
     {
         // Population preferences drift based on economic conditions

@@ -241,6 +241,14 @@ struct PoliticalInstitutionalSystem {
     double cover_up_probability = 0.5;         // Ability to suppress scandals
     double media_exposure_intensity = 0.0;     // How much media is covering scandals
     int scandal_fatigue_turns = 0;             // Diminishing impact over time
+
+    // Internal pressure system
+    double congressional_pressure = 0.0;   // 0-1, impeachment threshold at 0.8
+    double judicial_pressure = 0.0;        // 0-1, legal jeopardy
+    double military_pressure = 0.0;        // 0-1, coup threshold at 0.8
+    double popular_pressure = 0.0;         // 0-1, revolution threshold at 0.9
+    double international_pressure = 0.0;   // 0-1, intervention threshold at 0.9
+    double total_pressure = 0.0;           // Weighted composite
     bool   state_of_emergency_active = false;  // Emergency decree powers in effect
     int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
