@@ -56,6 +56,89 @@ void Game::registerCommands() {
         }
         std::cout << "=================================" << std::endl;
     };
+    commandHandlers["wage-"] = [this]() {
+        playerCountry.welfare.minimum_wage *= 0.90;
+        std::cout << ">> DECREE: Cutting Minimum Wage to $" << playerCountry.welfare.minimum_wage << std::endl;
+        std::cout << "   (Competitiveness +, Poverty ++, Popularity --)" << std::endl;
+        playerCountry.politics.popularity -= 0.06;
+    };
+    commandHandlers["retire+"] = [this]() {
+        playerCountry.welfare.retirement_age += 1.0;
+        std::cout << ">> REFORM: Raising Retirement Age to " << playerCountry.welfare.retirement_age << " years." << std::endl;
+        std::cout << "   (Pension Sustainability ++, Popularity ---)" << std::endl;
+        playerCountry.politics.popularity -= 0.05;
+        std::uniform_int_distribution<> dist(0, 99);
+        if (dist(rng) < 30) {
+            std::cout << "[!] PROTESTS: Seniors take the streets!" << std::endl;
+            playerCountry.welfare.general_strike_prob += 0.05;
+        }
+    };
+    commandHandlers["retire-"] = [this]() {
+        playerCountry.welfare.retirement_age -= 1.0;
+        std::cout << ">> REFORM: Lowering Retirement Age to " << playerCountry.welfare.retirement_age << " years." << std::endl;
+        std::cout << "   (Popularity ++, Pension Sustainability --)" << std::endl;
+        playerCountry.politics.popularity += 0.03;
+    };
+    commandHandlers["worship+"] = [this]() {
+        playerCountry.welfare.freedom_of_worship += 0.1;
+        if (playerCountry.welfare.freedom_of_worship > 1.0) playerCountry.welfare.freedom_of_worship = 1.0;
+        std::cout << ">> POLICY: Religious Freedom increased to " << playerCountry.welfare.freedom_of_worship << std::endl;
+        playerCountry.welfare.clerical_political_influence -= 0.05;
+        if (playerCountry.welfare.clerical_political_influence < 0.0) playerCountry.welfare.clerical_political_influence = 0.0;
+        playerCountry.welfare.interreligious_tension += 0.05;
+    };
+    commandHandlers["worship-"] = [this]() {
+        playerCountry.welfare.freedom_of_worship -= 0.1;
+        if (playerCountry.welfare.freedom_of_worship < 0.0) playerCountry.welfare.freedom_of_worship = 0.0;
+        std::cout << ">> POLICY: Religious Freedom decreased to " << playerCountry.welfare.freedom_of_worship << std::endl;
+        playerCountry.welfare.clerical_political_influence += 0.05;
+        playerCountry.welfare.radicalism_prob += 0.02;
+    };
+    commandHandlers["autonomy+"] = [this]() {
+        playerCountry.economy.central_bank_autonomy += 0.05;
+        if (playerCountry.economy.central_bank_autonomy > 1.0) playerCountry.economy.central_bank_autonomy = 1.0;
+        std::cout << ">> MONETARY: Central Bank Autonomy raised to " << playerCountry.economy.central_bank_autonomy << std::endl;
+    };
+    commandHandlers["autonomy-"] = [this]() {
+        playerCountry.economy.central_bank_autonomy -= 0.05;
+        if (playerCountry.economy.central_bank_autonomy < 0.0) playerCountry.economy.central_bank_autonomy = 0.0;
+        std::cout << ">> MONETARY: Central Bank Autonomy reduced to " << playerCountry.economy.central_bank_autonomy << std::endl;
+        std::cout << "   (Capital flight risk +, inflation risk +)" << std::endl;
+    };
+    commandHandlers["interest+"] = [this]() {
+        playerCountry.economy.interest_rate += 0.01;
+        std::cout << ">> MONETARY: Interest Rate raised. Inflation tamed, growth slowed." << std::endl;
+    };
+    commandHandlers["interest-"] = [this]() {
+        playerCountry.economy.interest_rate -= 0.01;
+        if (playerCountry.economy.interest_rate < 0.0) playerCountry.economy.interest_rate = 0.0;
+        std::cout << ">> MONETARY: Interest Rate lowered. Borrowing is cheap!" << std::endl;
+    };
+    commandHandlers["minority+"] = [this]() {
+        playerCountry.welfare.minority_protection += 0.1;
+        if (playerCountry.welfare.minority_protection > 1.0) playerCountry.welfare.minority_protection = 1.0;
+        playerCountry.welfare.un_score += 0.05;
+        if (playerCountry.welfare.un_score > 1.0) playerCountry.welfare.un_score = 1.0;
+        std::cout << ">> RIGHTS: Minority Protection increased to " << playerCountry.welfare.minority_protection << std::endl;
+    };
+    commandHandlers["minority-"] = [this]() {
+        playerCountry.welfare.minority_protection -= 0.1;
+        if (playerCountry.welfare.minority_protection < 0.0) playerCountry.welfare.minority_protection = 0.0;
+        playerCountry.welfare.un_score -= 0.05;
+        if (playerCountry.welfare.un_score < 0.0) playerCountry.welfare.un_score = 0.0;
+        playerCountry.welfare.interreligious_tension += 0.05;
+        std::cout << ">> RIGHTS: Minority Protection reduced to " << playerCountry.welfare.minority_protection << std::endl;
+    };
+    commandHandlers["diplomacy+"] = [this]() {
+        playerCountry.security.diplomatic_prestige += 0.05;
+        if (playerCountry.security.diplomatic_prestige > 1.0) playerCountry.security.diplomatic_prestige = 1.0;
+        std::cout << ">> DIPLOMACY: Prestige raised to " << playerCountry.security.diplomatic_prestige << std::endl;
+    };
+    commandHandlers["diplomacy-"] = [this]() {
+        playerCountry.security.diplomatic_prestige -= 0.05;
+        if (playerCountry.security.diplomatic_prestige < 0.0) playerCountry.security.diplomatic_prestige = 0.0;
+        std::cout << ">> DIPLOMACY: Prestige reduced to " << playerCountry.security.diplomatic_prestige << std::endl;
+    };
     commandHandlers["achievements"] = [this]() {
         auto list = achievements.unlockedList();
         if (list.empty()) {
