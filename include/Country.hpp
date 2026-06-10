@@ -407,6 +407,8 @@ struct PowerSecuritySystem {
     double informant_reliability = 0.6;        // Quality of informant intel (0–1)
 
     double document_leak_prob = 0.1;
+    bool intel_crisis_active = false;
+    int intel_crisis_duration = 0;
     double whistleblower_protection = 0.4;     // Legal protection for whistleblowers (0–1)
     double leak_foreign_intelligence_share = 0.3; // Fraction of leaks foreign-backed
 

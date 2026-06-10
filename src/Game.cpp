@@ -4463,6 +4463,50 @@ void Game::update() {
     else
         playerCountry.security.mass_surveillance_active = false;
 
+    // --- INTELLIGENCE CRISIS (Espionage Scandal) ---
+    if (playerCountry.security.intel_crisis_active) {
+        playerCountry.security.intel_crisis_duration--;
+
+        // Spy network compromised
+        playerCountry.security.informant_network -= 0.05;
+        if (playerCountry.security.informant_network < 0.0)
+            playerCountry.security.informant_network = 0.0;
+        playerCountry.security.informant_reliability -= 0.03;
+        if (playerCountry.security.informant_reliability < 0.1)
+            playerCountry.security.informant_reliability = 0.1;
+
+        // Foreign relations strained
+        playerCountry.security.diplomatic_prestige -= 0.03;
+        if (playerCountry.security.diplomatic_prestige < 0.0)
+            playerCountry.security.diplomatic_prestige = 0.0;
+        playerCountry.security.foreign_intelligence_sharing -= 0.05;
+        if (playerCountry.security.foreign_intelligence_sharing < 0.0)
+            playerCountry.security.foreign_intelligence_sharing = 0.0;
+
+        // Domestic scandal
+        playerCountry.politics.popularity -= 0.02;
+        playerCountry.politics.trust_in_justice -= 0.02;
+
+        // Sanctions risk
+        playerCountry.economy.international_sanctions_prob += 0.02;
+
+        std::cout << "[!!!] INTELLIGENCE CRISIS (Turn " << (playerCountry.security.intel_crisis_duration + 1)
+                  << " remaining): Spy networks exposed. Intelligence sharing frozen." << std::endl;
+
+        if (playerCountry.security.intel_crisis_duration <= 0) {
+            playerCountry.security.intel_crisis_active = false;
+            std::cout << "[INFO] INTELLIGENCE CRISIS RESOLVED: Agencies restructuring." << std::endl;
+        }
+    } else {
+        if (dist(rng) < playerCountry.security.document_leak_prob) {
+            playerCountry.security.intel_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 3);
+            playerCountry.security.intel_crisis_duration = dur_dist(rng);
+            std::cout << "[!!!] ESPIONAGE SCANDAL: Classified documents leaked! Intelligence operations compromised."
+                      << std::endl;
+        }
+    }
+
     // --- SECURITY & VIOLENCE DYNAMICS ---
     // Non-state groups composition: total = guerrillas + criminal orgs + militia
     playerCountry.security.non_state_groups = playerCountry.security.guerrilla_groups
