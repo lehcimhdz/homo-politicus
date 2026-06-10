@@ -391,6 +391,7 @@ int main(int argc, char** argv) {
         // === MainPanel: tab activa ===
         window.draw(makePanel(200, 60, 830, 640, currentPalette.panel));
         mapView.update(dt);
+        dashboard.update(dt, bridge.country());
         if (fontOk) {
             switch (currentTab) {
                 case Tab::Dashboard: {

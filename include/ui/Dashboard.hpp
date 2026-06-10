@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include "Country.hpp"
+#include "ui/CircularGauge.hpp"
 
 // Dashboard: grid 2x3 de cards mostrando metricas clave.
 // Area destinada: x=200..1030 (830 px), y=60..700 (640 px).
@@ -13,6 +14,7 @@ public:
     Dashboard();
     void recordHistory(const Country& c);    // Llamar cada tick
     void onMouseMove(sf::Vector2f mouse);     // Actualiza card hovered
+    void update(float dt, const Country& c);  // Anima gauges
     int hoveredCard() const { return hoveredCard_; }
     std::string hoveredDetail(const Country& c) const;
     void draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const;
@@ -23,6 +25,7 @@ private:
     std::vector<double> gdpHist;
     std::vector<double> inflHist;
     int hoveredCard_ = -1;
+    CircularGauge popGauge_;
 
     void drawCard(sf::RenderWindow& win, const sf::Font& font,
                   float x, float y, float w, float h,

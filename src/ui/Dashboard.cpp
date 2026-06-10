@@ -33,6 +33,11 @@ void Dashboard::recordHistory(const Country& c) {
     pushClamped(inflHist, c.economy.inflation);
 }
 
+void Dashboard::update(float dt, const Country& c) {
+    popGauge_.setTarget((float)c.politics.popularity);
+    popGauge_.update(dt);
+}
+
 void Dashboard::onMouseMove(sf::Vector2f mouse) {
     hoveredCard_ = -1;
     const float baseX = 218.f;
@@ -147,10 +152,24 @@ void Dashboard::drawCard(sf::RenderWindow& win, const sf::Font& font,
 
 void Dashboard::drawPopularityCard(sf::RenderWindow& win, const sf::Font& font, float x, float y, const Country& c) const {
     drawCard(win, font, x, y, kCardW, kCardH, "POPULARIDAD");
+    // Gauge circular CK3-style (sustituye barra horizontal).
+    float cx = x + 70.f;
+    float cy = y + 100.f;
+    popGauge_.draw(win, font, cx, cy, 52.f, 38.f, fmtPct(c.politics.popularity), 18);
+    // Trend e info textual al lado.
     auto col = popColor(c.politics.popularity);
-    win.draw(makeText(font, fmtPct(c.politics.popularity), 48, col, x + 12, y + 30));
-    drawBar(win, x + 12, y + 96, kCardW - 24, 10, c.politics.popularity, col);
-    drawSparkline(win, x + 12, y + 120, kCardW - 24, 60, popHist, kAccent, 0.0, 1.0);
+    win.draw(makeText(font, "Aprobacion", 12, kMuted, x + 140, y + 60));
+    std::ostringstream tr;
+    tr << "Tendencia: " << std::showpos << std::fixed << std::setprecision(1)
+       << (c.politics.popularity_trend * 100) << "%";
+    win.draw(makeText(font, tr.str(), 12,
+                      c.politics.popularity_trend >= 0 ? kGood : kBad,
+                      x + 140, y + 82));
+    win.draw(makeText(font, "Piso de crisis", 11, kMuted, x + 140, y + 106));
+    std::ostringstream fl;
+    fl << std::fixed << std::setprecision(0) << (c.politics.crisis_approval_floor * 100) << "%";
+    win.draw(makeText(font, fl.str(), 12, col, x + 140, y + 122));
+    drawSparkline(win, x + 12, y + 156, kCardW - 24, 38, popHist, kAccent, 0.0, 1.0);
 }
 
 void Dashboard::drawEconomyCard(sf::RenderWindow& win, const sf::Font& font, float x, float y, const Country& c) const {
