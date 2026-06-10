@@ -62,6 +62,37 @@ Country::Country() {
     double total_debt = economy.gdp * economy.debt_to_gdp_ratio;
     economy.debt_interest = total_debt * GetInterestRate(economy.credit_rating);
     
+    // Initialize 3 neighbor countries
+    NeighborCountry north;
+    north.name = "Northland";
+    north.gdp = 400000000.0;
+    north.military_strength = 0.6;
+    north.diplomatic_relations = 0.4;
+    north.trade_volume = 80000000.0;
+    north.ideology = 0.6;
+    north.has_territorial_claim = false;
+    neighbors.push_back(north);
+
+    NeighborCountry east;
+    east.name = "Easteria";
+    east.gdp = 200000000.0;
+    east.military_strength = 0.3;
+    east.diplomatic_relations = 0.1;
+    east.trade_volume = 30000000.0;
+    east.ideology = 0.3;
+    east.has_territorial_claim = true;
+    neighbors.push_back(east);
+
+    NeighborCountry south;
+    south.name = "Southaven";
+    south.gdp = 150000000.0;
+    south.military_strength = 0.2;
+    south.diplomatic_relations = 0.6;
+    south.trade_volume = 40000000.0;
+    south.ideology = 0.5;
+    south.in_crisis = false;
+    neighbors.push_back(south);
+
     std::cout << "A new country has been founded!" << std::endl;
 }
 

@@ -2,6 +2,7 @@
 #define COUNTRY_HPP
 
 #include <string>
+#include <vector>
 
 // Credit Rating Enum
 enum class CreditRating {
@@ -714,6 +715,22 @@ struct InfrastructureFutureSystem {
     double autonomous_weapons_restraint = 0.7; // Compliance with lethal AI norms (0–1)
 };
 
+// Neighbor Country (simplified external actor)
+struct NeighborCountry {
+    std::string name;
+    double gdp = 300000000.0;
+    double military_strength = 0.5;        // 0-1
+    double diplomatic_relations = 0.3;     // -1 hostile to +1 allied
+    double trade_volume = 50000000.0;      // Bilateral trade USD
+    double ideology = 0.5;                 // 0=left, 1=right
+    bool at_war = false;
+    bool has_territorial_claim = false;
+    double refugee_generation = 0.0;       // Refugees flowing from this neighbor
+    bool sanctions_against_us = false;
+    double economic_growth = 0.02;         // Neighbor's growth rate
+    bool in_crisis = false;                // Neighbor experiencing internal crisis
+};
+
 class Country {
 public:
     Country();
@@ -725,6 +742,9 @@ public:
     PoliticalInstitutionalSystem politics;
     PowerSecuritySystem security;
     InfrastructureFutureSystem infra;
+
+    // Neighbors
+    std::vector<NeighborCountry> neighbors;
 
     void printStatus();
 };
