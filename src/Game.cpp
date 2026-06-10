@@ -4396,6 +4396,60 @@ void Game::update() {
         if (playerCountry.security.journalist_safety < 0.1) playerCountry.security.journalist_safety = 0.1;
     }
 
+    // --- MEDIA / PROPAGANDA CRISIS ---
+    if (playerCountry.security.media_crisis_active) {
+        playerCountry.security.media_crisis_duration--;
+
+        // Disinformation spiral
+        playerCountry.politics.polarization_index += 0.04;
+        if (playerCountry.politics.polarization_index > 1.0)
+            playerCountry.politics.polarization_index = 1.0;
+        playerCountry.politics.affective_polarization += 0.03;
+        playerCountry.politics.media_echo_chamber += 0.03;
+
+        // International press condemnation
+        playerCountry.security.press_freedom -= 0.03;
+        if (playerCountry.security.press_freedom < 0.05)
+            playerCountry.security.press_freedom = 0.05;
+        playerCountry.security.diplomatic_prestige -= 0.02;
+
+        // Public trust collapse
+        playerCountry.politics.protest_intensity += 0.02;
+        playerCountry.welfare.un_score -= 0.02;
+
+        // Media literacy degrades
+        playerCountry.security.media_literacy -= 0.02;
+        if (playerCountry.security.media_literacy < 0.1)
+            playerCountry.security.media_literacy = 0.1;
+
+        playerCountry.politics.popularity -= 0.01;
+
+        std::cout << "[!!] MEDIA CRISIS (Turn " << (playerCountry.security.media_crisis_duration + 1)
+                  << " remaining): Disinformation spiral. Polarization: "
+                  << (int)(playerCountry.politics.polarization_index * 100) << "%" << std::endl;
+
+        if (playerCountry.security.media_crisis_duration <= 0) {
+            playerCountry.security.media_crisis_active = false;
+            std::cout << "[INFO] MEDIA CRISIS SUBSIDES: Fact-checkers regaining ground." << std::endl;
+        }
+    } else {
+        if (playerCountry.security.press_freedom < 0.3
+            && dist(rng) < playerCountry.security.fake_news_success_prob) {
+            playerCountry.security.media_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(2, 3);
+            playerCountry.security.media_crisis_duration = dur_dist(rng);
+
+            // Foreign disinfo involvement
+            if (playerCountry.security.foreign_disinfo_operations > 0.3) {
+                std::cout << "[!!!] MEDIA CRISIS: Foreign-backed disinformation campaign destabilizing public discourse!"
+                          << std::endl;
+            } else {
+                std::cout << "[!!] MEDIA CRISIS: Domestic propaganda spiral — public trust in media collapsing!"
+                          << std::endl;
+            }
+        }
+    }
+
     // --- DEFENSE & MILITARY DYNAMICS ---
     // Troop morale driven by veteran benefits, combat stress, and pay (personnel budget)
     playerCountry.security.troop_morale = 0.5 + playerCountry.security.veteran_benefit_adequacy * 0.2

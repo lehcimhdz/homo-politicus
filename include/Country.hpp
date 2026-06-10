@@ -468,6 +468,8 @@ struct PowerSecuritySystem {
     double fact_checking_ecosystem = 0.4;      // Independent fact-checking strength (0–1)
 
     double press_freedom = 0.8;
+    bool media_crisis_active = false;
+    int media_crisis_duration = 0;
     double journalist_safety = 0.8;            // Physical safety of reporters (0–1)
     double legal_harassment_index = 0.2;       // SLAPP suits against press (0–1)
     double self_censorship_rate = 0.15;        // Fraction of journalists self-censoring
