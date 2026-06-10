@@ -3755,6 +3755,40 @@ void Game::update() {
         }
     }
 
+    // --- TORNADO EVENT ---
+    // Rare, localized, single-turn event
+    if (dist(rng) < playerCountry.infra.tornado_prob) {
+        std::uniform_real_distribution<double> sev_dist(0.2, 0.8);
+        double severity = sev_dist(rng);
+
+        // Localized infrastructure damage
+        playerCountry.infra.road_connectivity -= severity * 0.03;
+        if (playerCountry.infra.road_connectivity < 0.1) playerCountry.infra.road_connectivity = 0.1;
+
+        // Concentrated casualties
+        double vulnerability = 1.0 - playerCountry.infra.maintenance_level;
+        playerCountry.infra.tornado_casualties = severity * vulnerability * 200.0;
+        playerCountry.welfare.death_rate += playerCountry.infra.tornado_casualties / (double)playerCountry.welfare.population;
+
+        // Damage cost (smaller than hurricane)
+        playerCountry.infra.tornado_damage = playerCountry.economy.gdp * severity * 0.005;
+        playerCountry.economy.international_reserves -= playerCountry.infra.tornado_damage;
+
+        // Emergency response quality determines popularity impact
+        if (playerCountry.welfare.health_coverage > 0.7 && playerCountry.infra.maintenance_level > 0.6) {
+            playerCountry.politics.popularity += 0.005; // Good response
+            std::cout << "[!] TORNADO: EF" << (int)(severity * 5) << " tornado strikes! Casualties: "
+                      << (int)playerCountry.infra.tornado_casualties
+                      << ". Emergency response effective." << std::endl;
+        } else {
+            playerCountry.politics.popularity -= 0.02 * severity;
+            std::cout << "[!] TORNADO: EF" << (int)(severity * 5) << " tornado strikes! Casualties: "
+                      << (int)playerCountry.infra.tornado_casualties
+                      << ". Damage: $" << (long long)playerCountry.infra.tornado_damage
+                      << ". Poor emergency response." << std::endl;
+        }
+    }
+
     // --- DROUGHT EVENT ---
     if (playerCountry.infra.drought_active) {
         playerCountry.infra.drought_duration--;

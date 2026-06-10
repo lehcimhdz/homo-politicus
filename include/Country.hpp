@@ -459,6 +459,9 @@ struct InfrastructureFutureSystem {
     double storm_casualties = 0.0;
 
     double tornado_prob = 0.01;
+    bool tornado_event = false;
+    double tornado_damage = 0.0;
+    double tornado_casualties = 0.0;
     double flood_prob = 0.15;                  // River/coastal flood probability
     double climate_vulnerability_index = 0.3;  // Composite climate shock exposure (0–1)
     double climate_adaptation_investment = 0.005; // % GDP in climate adaptation
