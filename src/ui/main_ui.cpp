@@ -238,6 +238,14 @@ int main(int argc, char** argv) {
         turnShake = 0.15f;
         dashboard.triggerTurnGlow();
     };
+    // Cinematic transitions:
+    Tab previousTab = currentTab;
+    float tabTransition = 0.f;   // 0..0.25s
+    bool prevModalVisible = false;
+    float modalOpenAnim = 0.f;   // 0..0.20s
+    float modalCloseAnim = 0.f;  // 0..0.25s (despues de cerrar, flash)
+    bool prevGameOverVisible = false;
+    float gameOverFade = 0.f;    // 0..1 (fades a rojo)
     auto doTick = [&]() {
         double prevPop = bridge.country().politics.popularity;
         double prevGDP = bridge.country().economy.gdp;
@@ -383,6 +391,30 @@ int main(int argc, char** argv) {
         if (turnSweep > 0.f) { turnSweep -= dt; if (turnSweep < 0.f) turnSweep = 0.f; }
         if (turnShake > 0.f) { turnShake -= dt; if (turnShake < 0.f) turnShake = 0.f; }
         particles.update(dt);
+        // Cinematic transitions: detectar cambios.
+        if (currentTab != previousTab) {
+            tabTransition = 0.25f;
+            previousTab = currentTab;
+        }
+        if (tabTransition > 0.f) { tabTransition -= dt; if (tabTransition < 0.f) tabTransition = 0.f; }
+        {
+            bool mv = modal.visible();
+            if (mv && !prevModalVisible) {
+                modalOpenAnim = 0.20f;
+            } else if (!mv && prevModalVisible) {
+                modalCloseAnim = 0.25f;
+            }
+            prevModalVisible = mv;
+            if (modalOpenAnim  > 0.f) { modalOpenAnim  -= dt; if (modalOpenAnim  < 0.f) modalOpenAnim  = 0.f; }
+            if (modalCloseAnim > 0.f) { modalCloseAnim -= dt; if (modalCloseAnim < 0.f) modalCloseAnim = 0.f; }
+        }
+        {
+            bool gv = gameOver.visible();
+            if (gv && !prevGameOverVisible) gameOverFade = 0.f;
+            if (gv) gameOverFade = std::min(1.f, gameOverFade + dt * 1.5f);
+            else    gameOverFade = std::max(0.f, gameOverFade - dt * 1.5f);
+            prevGameOverVisible = gv;
+        }
         // Seleccionar ambient segun estado del pais.
         {
             const Country& cc = bridge.country();
@@ -599,6 +631,26 @@ int main(int argc, char** argv) {
         // Particulas (encima del MainPanel pero debajo de modal/tutorial).
         particles.draw(window);
 
+        // Tab transition: veil sobre MainPanel se desvanece.
+        if (tabTransition > 0.f) {
+            float t = tabTransition / 0.25f;  // 1 -> 0
+            uint8_t alpha = (uint8_t)(160 * t);
+            sf::RectangleShape veil({830.f, 640.f});
+            veil.setPosition({200.f, 60.f});
+            veil.setFillColor(sf::Color(20, 22, 30, alpha));
+            window.draw(veil);
+        }
+
+        // Modal close flash dorado (despues de cerrar el modal).
+        if (modalCloseAnim > 0.f) {
+            float t = modalCloseAnim / 0.25f; // 1 -> 0
+            uint8_t alpha = (uint8_t)(120 * t);
+            sf::RectangleShape veil({1280.f, 800.f});
+            veil.setPosition({0.f, 0.f});
+            veil.setFillColor(sf::Color(240, 200, 90, alpha));
+            window.draw(veil);
+        }
+
         // Sweep effect: linea blanca cruza el MainPanel horizontalmente en 300ms.
         if (turnSweep > 0.f) {
             float progress = 1.f - (turnSweep / 0.3f);
@@ -612,6 +664,19 @@ int main(int argc, char** argv) {
 
         // Modal overlay (siempre al final para estar encima)
         if (fontOk) modal.draw(window, font);
+        // Modal zoom-in: en los primeros 200ms del modal, mostrar veil de zoom.
+        if (modalOpenAnim > 0.f && modal.visible()) {
+            float t = modalOpenAnim / 0.20f; // 1 -> 0
+            // Borde dorado pulsante expandiendose desde el centro.
+            float side = 1280.f * (1.f - t);
+            sf::RectangleShape ring({side, 800.f * (1.f - t)});
+            ring.setOrigin({side * 0.5f, 800.f * (1.f - t) * 0.5f});
+            ring.setPosition({640.f, 400.f});
+            ring.setFillColor(sf::Color(0, 0, 0, 0));
+            ring.setOutlineColor(sf::Color(240, 200, 90, (uint8_t)(180 * t)));
+            ring.setOutlineThickness(4.f);
+            window.draw(ring);
+        }
 
         // Tutorial overlay (encima del modal pero debajo del game over)
         if (fontOk) tutorialUI.draw(window, font);
@@ -619,6 +684,13 @@ int main(int argc, char** argv) {
         // Game over screen (encima de TODO)
         gameOver.update(dt);
         if (fontOk) gameOver.draw(window, font);
+        // Game over fade rojo: el veil rojo crece con gameOverFade.
+        if (gameOverFade > 0.001f) {
+            sf::RectangleShape veil({1280.f, 800.f});
+            veil.setPosition({0.f, 0.f});
+            veil.setFillColor(sf::Color(120, 20, 20, (uint8_t)(80 * gameOverFade)));
+            window.draw(veil);
+        }
 
         window.display();
     }
