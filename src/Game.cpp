@@ -1424,7 +1424,62 @@ void Game::update() {
     
     // Apply Growth to GDP
     playerCountry.economy.gdp += playerCountry.economy.gdp * playerCountry.economy.growth_rate;
-    
+
+    // --- RECESSION STATE ---
+    if (playerCountry.economy.growth_rate < 0) {
+        playerCountry.economy.recession_quarters++;
+        if (playerCountry.economy.recession_quarters >= 2 && !playerCountry.economy.in_recession) {
+            // Formal recession declaration (2+ consecutive negative turns)
+            playerCountry.economy.in_recession = true;
+            playerCountry.economy.pre_recession_gdp = playerCountry.economy.gdp / (1.0 + playerCountry.economy.growth_rate);
+            playerCountry.economy.recession_depth = 0.0;
+            std::cout << "[!!!] RECESSION DECLARED: Economy contracting for " << playerCountry.economy.recession_quarters
+                      << " consecutive turns." << std::endl;
+        }
+        if (playerCountry.economy.in_recession) {
+            playerCountry.economy.recession_depth += std::abs(playerCountry.economy.growth_rate);
+
+            // Credit rating pressure
+            // (handled by existing credit rating logic, but add extra pressure)
+            playerCountry.economy.debt_to_gdp_ratio += 0.005; // Deficit spending
+
+            // Capital flight
+            playerCountry.economy.international_reserves -= playerCountry.economy.international_reserves * 0.02;
+
+            // Unemployment spikes
+            playerCountry.welfare.unemployment_rate += 0.01;
+            if (playerCountry.welfare.unemployment_rate > 0.30)
+                playerCountry.welfare.unemployment_rate = 0.30;
+
+            // Pension system stress
+            playerCountry.welfare.pension_sustainability -= 0.02;
+            if (playerCountry.welfare.pension_sustainability < 0.0)
+                playerCountry.welfare.pension_sustainability = 0.0;
+
+            // Popularity tanks
+            playerCountry.politics.popularity -= 0.03;
+
+            std::cout << "[!!!] RECESSION (Quarter " << playerCountry.economy.recession_quarters
+                      << "): Depth " << (int)(playerCountry.economy.recession_depth * 100)
+                      << "%. Unemployment: " << (int)(playerCountry.welfare.unemployment_rate * 100)
+                      << "%" << std::endl;
+        }
+    } else {
+        if (playerCountry.economy.in_recession) {
+            // Need 2 consecutive positive turns to exit recession
+            if (playerCountry.economy.recession_quarters <= -1) {
+                playerCountry.economy.in_recession = false;
+                playerCountry.economy.recession_quarters = 0;
+                playerCountry.economy.recession_depth = 0.0;
+                std::cout << "[INFO] RECESSION OVER: Economy officially in recovery." << std::endl;
+            } else {
+                playerCountry.economy.recession_quarters = -1; // First positive turn
+            }
+        } else {
+            playerCountry.economy.recession_quarters = 0;
+        }
+    }
+
     // --- FISCAL LINKAGE (Taxes) ---
     // Tax Collection is now derived from GDP.
     // Base Tax Rate: ~20% of GDP implied by initial values ($10M / $500M = 2%). Wait, initial is low ($10M tax on $500M GDP = 2%).

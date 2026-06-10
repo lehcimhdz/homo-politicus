@@ -100,6 +100,10 @@ struct EconomicFinancialSystem {
     double tax_collection = 10000000.0;
     double inflation = 0.03;
     double growth_rate = 0.02;
+    bool in_recession = false;
+    int recession_quarters = 0;        // Consecutive negative-growth turns
+    double recession_depth = 0.0;      // Cumulative GDP decline since start
+    double pre_recession_gdp = 0.0;
     double international_reserves = 50000000.0;
 
     // Central Bank
