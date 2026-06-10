@@ -96,6 +96,8 @@ struct WelfareSocietySystem {
     // Human Rights
     double torture_index = 0.0;
     double forced_disappearances = 0.0;
+    bool human_rights_crisis = false;
+    int hr_crisis_duration = 0;
     double freedom_of_expression = 0.8;
     double minority_protection = 0.7;
     double un_score = 0.8;

@@ -3598,6 +3598,58 @@ void Game::update() {
         }
     }
 
+    // --- HUMAN RIGHTS CRISIS ---
+    if (playerCountry.welfare.human_rights_crisis) {
+        playerCountry.welfare.hr_crisis_duration--;
+
+        // UN investigation: score plummets
+        playerCountry.welfare.un_score -= 0.05;
+        if (playerCountry.welfare.un_score < 0.0) playerCountry.welfare.un_score = 0.0;
+
+        // Sanctions risk
+        playerCountry.economy.international_sanctions_prob += 0.03;
+
+        // Tourism warning
+        playerCountry.economy.travel_warning_level = std::max(playerCountry.economy.travel_warning_level, 2);
+        playerCountry.economy.annual_visitors *= 0.85;
+
+        // FDI withdrawal
+        playerCountry.economy.international_reserves -= 3000000.0;
+
+        // Diplomatic prestige tanks
+        playerCountry.security.diplomatic_prestige -= 0.04;
+        if (playerCountry.security.diplomatic_prestige < 0.0)
+            playerCountry.security.diplomatic_prestige = 0.0;
+
+        // Domestic protest
+        playerCountry.politics.protest_intensity += 0.03;
+        playerCountry.politics.popularity -= 0.02;
+
+        // Press freedom under pressure
+        playerCountry.welfare.freedom_of_expression -= 0.02;
+        if (playerCountry.welfare.freedom_of_expression < 0.05)
+            playerCountry.welfare.freedom_of_expression = 0.05;
+
+        std::cout << "[!!!] HUMAN RIGHTS CRISIS (Turn " << (playerCountry.welfare.hr_crisis_duration + 1)
+                  << " remaining): UN investigation ongoing. Sanctions risk: "
+                  << (int)(playerCountry.economy.international_sanctions_prob * 100) << "%" << std::endl;
+
+        if (playerCountry.welfare.hr_crisis_duration <= 0) {
+            playerCountry.welfare.human_rights_crisis = false;
+            std::cout << "[INFO] HUMAN RIGHTS CRISIS EASES: International scrutiny subsiding." << std::endl;
+        }
+    } else {
+        bool hr_trigger = (playerCountry.welfare.torture_index > 0.5
+                          || playerCountry.welfare.forced_disappearances > 100);
+        if (hr_trigger && dist(rng) < 0.15) {
+            playerCountry.welfare.human_rights_crisis = true;
+            std::uniform_int_distribution<int> dur_dist(2, 4);
+            playerCountry.welfare.hr_crisis_duration = dur_dist(rng);
+            std::cout << "[!!!] HUMAN RIGHTS CRISIS: International community condemns systematic abuses! "
+                      << "UN Special Rapporteur dispatched." << std::endl;
+        }
+    }
+
     // --- MASS CASUALTY EVENT (Industrial/Transport Disaster) ---
     // Single-turn shock: reset flag each turn
     playerCountry.welfare.mass_casualty_event = false;
