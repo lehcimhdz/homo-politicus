@@ -2805,8 +2805,18 @@ void Game::update() {
                          * (1.0 + fta_export_bonus);
 
     // (b) Tourism — invisible exports: foreign visitors spending domestic FX
+    // Tourist safety derives from underlying risk vectors
+    playerCountry.economy.tourist_crime_rate = (1.0 - playerCountry.economy.tourist_safety) * 0.08
+                                             + playerCountry.security.homicide_rate * 0.001;
+    playerCountry.economy.kidnapping_tourism_risk = playerCountry.economy.tourist_crime_rate * 0.05
+                                                  + playerCountry.security.conflict_with_groups * 0.02;
+    playerCountry.economy.health_risk_tourists = (1.0 - playerCountry.welfare.health_coverage) * 0.03;
+    // Risks erode international arrivals — tourists avoid dangerous destinations
+    double risk_dampening = 1.0 - (playerCountry.economy.tourist_crime_rate + playerCountry.economy.kidnapping_tourism_risk) * 2.0;
+    if (risk_dampening < 0.5) risk_dampening = 0.5;
+
     // Visa restrictiveness dampens international arrivals; domestic unaffected
-    double visa_dampening = 1.0 - playerCountry.economy.visa_restrictiveness * 0.4;
+    double visa_dampening = (1.0 - playerCountry.economy.visa_restrictiveness * 0.4) * risk_dampening;
     playerCountry.economy.visitors_international = (int)(playerCountry.economy.visitors_international * visa_dampening);
     if (playerCountry.economy.visitors_international < 0) playerCountry.economy.visitors_international = 0;
     playerCountry.economy.annual_visitors = playerCountry.economy.visitors_international

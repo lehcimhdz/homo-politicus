@@ -164,6 +164,9 @@ struct EconomicFinancialSystem {
     double spending_budget = 200.0;       // Avg spend: backpackers/budget (USD)
     double luxury_tourism_share = 0.1;    // Fraction of visitors in luxury tier
     double tourist_safety = 0.8;
+    double tourist_crime_rate = 0.02;         // Crimes targeting tourists (per visitor)
+    double kidnapping_tourism_risk = 0.001;   // Kidnapping/extortion probability per trip
+    double health_risk_tourists = 0.01;       // Disease/medical emergency rate per visitor
     double heritage_preservation = 0.7;
     double foreign_travel_alert_prob = 0.0;
 };
