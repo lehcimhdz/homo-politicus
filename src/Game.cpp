@@ -4146,6 +4146,54 @@ void Game::update() {
     playerCountry.infra.deferred_maintenance_backlog += (annual_maintenance_need - actual_maintenance);
     if (playerCountry.infra.deferred_maintenance_backlog < 0.0) playerCountry.infra.deferred_maintenance_backlog = 0.0;
 
+    // --- CROSS-SYSTEM FEEDBACK: INFRASTRUCTURE → ECONOMIC ---
+    {
+        // Blackouts devastate economy
+        if (playerCountry.infra.blackout_active) {
+            playerCountry.economy.gdp *= (1.0 - 0.01 * playerCountry.infra.blackout_duration);
+            playerCountry.welfare.unemployment_rate += 0.005;
+        }
+
+        // Poor logistics raises trade costs → worsens trade balance
+        if (playerCountry.infra.logistics_performance < 0.4) {
+            double logistics_penalty = (0.4 - playerCountry.infra.logistics_performance) * 0.02;
+            playerCountry.economy.trade_balance -= playerCountry.economy.gdp * logistics_penalty;
+            playerCountry.economy.non_tariff_barriers += 0.01; // De facto barrier from poor infra
+            if (playerCountry.economy.non_tariff_barriers > 0.8) playerCountry.economy.non_tariff_barriers = 0.8;
+        }
+
+        // High renewables reduce fossil import dependency → energy independence
+        if (playerCountry.infra.renewables_percentage > 0.5) {
+            double green_bonus = (playerCountry.infra.renewables_percentage - 0.5) * 0.1;
+            playerCountry.economy.energy_import_dependency -= green_bonus;
+            if (playerCountry.economy.energy_import_dependency < 0.05) playerCountry.economy.energy_import_dependency = 0.05;
+            // Lower energy costs boost competitiveness
+            playerCountry.economy.growth_rate += green_bonus * 0.05;
+        }
+
+        // Deferred maintenance → cascading infrastructure failures
+        double backlog_ratio = playerCountry.infra.deferred_maintenance_backlog / (playerCountry.economy.gdp * 0.1 + 1.0);
+        if (backlog_ratio > 0.3) {
+            // Infrastructure deterioration accelerates
+            playerCountry.infra.road_connectivity -= 0.01;
+            if (playerCountry.infra.road_connectivity < 0.2) playerCountry.infra.road_connectivity = 0.2;
+            playerCountry.infra.port_capacity -= 0.005;
+            if (playerCountry.infra.port_capacity < 0.2) playerCountry.infra.port_capacity = 0.2;
+            // Increases blackout probability
+            playerCountry.infra.blackout_prob += 0.01;
+            if (playerCountry.infra.blackout_prob > 0.3) playerCountry.infra.blackout_prob = 0.3;
+            // GDP drag from crumbling infrastructure
+            playerCountry.economy.growth_rate -= backlog_ratio * 0.01;
+        }
+
+        // Internet coverage boosts innovation and service economy
+        if (playerCountry.infra.internet_coverage > 0.9 && playerCountry.infra.broadband_penetration > 0.7) {
+            playerCountry.infra.innovation_index += 0.005;
+            if (playerCountry.infra.innovation_index > 1.0) playerCountry.infra.innovation_index = 1.0;
+            playerCountry.economy.growth_rate += 0.002;
+        }
+    }
+
     // --- SCIENCE, TECHNOLOGY & INNOVATION DYNAMICS ---
     // Total R&D intensity
     playerCountry.infra.total_rd_gdp = playerCountry.infra.st_investment_gdp + playerCountry.infra.private_rd_gdp;
