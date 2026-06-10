@@ -9,7 +9,9 @@
 #include "ui/ActionPanel.hpp"
 #include "ui/DecisionModal.hpp"
 #include "ui/AudioSystem.hpp"
+#include "ui/MainMenu.hpp"
 
+enum class AppState { Menu, Playing };
 enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 
 // Layout (1280x800):
@@ -107,6 +109,27 @@ int main(int argc, char** argv) {
     ActionPanel actionPanel;
     DecisionModal modal;
     AudioSystem audio;
+    MainMenu menu;
+    AppState appState = AppState::Menu;
+    menu.setCallback([&](MainMenu::Action a) {
+        audio.play("button_click");
+        switch (a) {
+            case MainMenu::Action::NewGame:
+                bridge.resetCountry();
+                dashboard.recordHistory(bridge.country());
+                appState = AppState::Playing;
+                break;
+            case MainMenu::Action::Continue:
+                bridge.resetCountry();
+                dashboard.recordHistory(bridge.country());
+                appState = AppState::Playing;
+                break;
+            case MainMenu::Action::Quit:
+                window.close();
+                break;
+            default: break;
+        }
+    });
     Tab currentTab = Tab::Dashboard;
     sf::Clock frameClock;
     std::string lastActionFeedback;
@@ -140,18 +163,23 @@ int main(int argc, char** argv) {
             if (event->is<sf::Event::Closed>()) window.close();
             if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
                 sf::Vector2f pos((float)mm->position.x, (float)mm->position.y);
-                if (modal.visible()) modal.onMouseMove(pos);
+                if (appState == AppState::Menu) menu.onMouseMove(pos);
+                else if (modal.visible()) modal.onMouseMove(pos);
                 else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {
                     sf::Vector2f pos((float)mb->position.x, (float)mb->position.y);
-                    if (modal.visible()) modal.onClick(pos);
+                    if (appState == AppState::Menu) menu.onClick(pos);
+                    else if (modal.visible()) modal.onClick(pos);
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                 }
             }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
-                if (kp->code == sf::Keyboard::Key::Escape) window.close();
+                if (kp->code == sf::Keyboard::Key::Escape) {
+                    if (appState == AppState::Playing) appState = AppState::Menu;
+                    else window.close();
+                }
                 if (kp->code == sf::Keyboard::Key::N) {
                     bridge.tick(); dashboard.recordHistory(bridge.country());
                     audio.play("turn_advance");
@@ -179,6 +207,13 @@ int main(int argc, char** argv) {
         }
 
         window.clear(kBg);
+
+        // === Menu state ===
+        if (appState == AppState::Menu) {
+            if (fontOk) menu.draw(window, font);
+            window.display();
+            continue;
+        }
 
         // === TopBar ===
         window.draw(makePanel(0, 0, 1280, 60));
