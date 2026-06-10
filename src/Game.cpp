@@ -2811,6 +2811,12 @@ void Game::update() {
     if (playerCountry.economy.visitors_international < 0) playerCountry.economy.visitors_international = 0;
     playerCountry.economy.annual_visitors = playerCountry.economy.visitors_international
                                           + playerCountry.economy.visitors_domestic;
+    // Compute weighted average spending from tier mix
+    double mid_share = 1.0 - playerCountry.economy.luxury_tourism_share - 0.3; // 30% budget tier baseline
+    if (mid_share < 0.1) mid_share = 0.1;
+    playerCountry.economy.average_tourist_spending = playerCountry.economy.spending_luxury * playerCountry.economy.luxury_tourism_share
+                                                   + 1000.0 * mid_share
+                                                   + playerCountry.economy.spending_budget * 0.3;
     // Seasonality: high seasonality means revenue is volatile — effective spending drops
     double seasonality_factor = 1.0 - playerCountry.economy.tourism_seasonality * 0.15;
     double tourism_exports = (double)playerCountry.economy.annual_visitors

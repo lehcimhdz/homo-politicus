@@ -160,6 +160,9 @@ struct EconomicFinancialSystem {
     double visa_restrictiveness = 0.3;    // 0=visa-free for most, 1=highly restricted entry
     double tourism_seasonality = 0.4;     // Peak/low season spread (0=flat, 1=extreme)
     double average_tourist_spending = 1000.0;
+    double spending_luxury = 5000.0;      // Avg spend: high-end tourists (USD)
+    double spending_budget = 200.0;       // Avg spend: backpackers/budget (USD)
+    double luxury_tourism_share = 0.1;    // Fraction of visitors in luxury tier
     double tourist_safety = 0.8;
     double heritage_preservation = 0.7;
     double foreign_travel_alert_prob = 0.0;
