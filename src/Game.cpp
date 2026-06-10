@@ -1446,6 +1446,64 @@ void Game::processEvents() {
         std::cout << ">> DIPLOMATIC OFFENSIVE: Prestige restored. Sanctions risk reduced." << std::endl;
         std::cout << "   Prestige: " << (int)(playerCountry.security.diplomatic_prestige * 100) << "%" << std::endl;
     }
+    // --- ELECTORAL & CONSTITUTIONAL COMMANDS ---
+    else if (command == "referendum") {
+        double cost = 20000000.0;
+        playerCountry.economy.gdp -= cost;
+        std::cout << ">> NATIONAL REFERENDUM CALLED on constitutional reform." << std::endl;
+        // Result depends on popularity and polarization
+        double approval = playerCountry.politics.popularity * 0.6
+                        + (1.0 - playerCountry.politics.polarization_index) * 0.3;
+        std::uniform_real_distribution<> noise(-0.1, 0.1);
+        approval += noise(rng);
+        if (approval > 0.5) {
+            playerCountry.politics.popularity += 0.05;
+            playerCountry.politics.congressional_support += 0.1;
+            if (playerCountry.politics.congressional_support > 1.0) playerCountry.politics.congressional_support = 1.0;
+            std::cout << "   APPROVED with " << (int)(approval * 100) << "% support. Mandate strengthened." << std::endl;
+        } else {
+            playerCountry.politics.popularity -= 0.05;
+            playerCountry.politics.polarization_index += 0.05;
+            std::cout << "   REJECTED with only " << (int)(approval * 100) << "% support. Political setback." << std::endl;
+        }
+    }
+    else if (command == "reform_constitution") {
+        if (playerCountry.politics.congressional_support < 0.67) {
+            std::cout << ">> BLOCKED: Constitutional reform requires 2/3 congressional support ("
+                      << (int)(playerCountry.politics.congressional_support * 100) << "% current)." << std::endl;
+        } else {
+            playerCountry.politics.constitutional_reforms_pending--;
+            if (playerCountry.politics.term_limit_active) {
+                playerCountry.politics.term_limit_active = false;
+                playerCountry.politics.democratic_backsliding_index += 0.1;
+                playerCountry.economy.international_sanctions_prob += 0.05;
+                std::cout << ">> CONSTITUTIONAL REFORM: Term limits abolished! Democracy watchdogs alarmed." << std::endl;
+            } else {
+                playerCountry.politics.judicial_independence += 0.05;
+                playerCountry.politics.legislative_efficiency += 0.05;
+                std::cout << ">> CONSTITUTIONAL REFORM: Institutional strengthening enacted." << std::endl;
+            }
+        }
+    }
+    else if (command == "snap_election") {
+        std::cout << ">> SNAP ELECTION CALLED!" << std::endl;
+        double effective_vote = playerCountry.politics.popularity
+                              + playerCountry.politics.incumbent_advantage
+                              + playerCountry.politics.electoral_manipulation_capacity * 0.3;
+        std::uniform_real_distribution<> noise2(-0.05, 0.05);
+        effective_vote += noise2(rng);
+        if (effective_vote > 0.50) {
+            playerCountry.politics.popularity += 0.05;
+            playerCountry.politics.honeymoon_turns_remaining = 4;
+            playerCountry.politics.congressional_support += 0.1;
+            if (playerCountry.politics.congressional_support > 1.0) playerCountry.politics.congressional_support = 1.0;
+            std::cout << "   VICTORY: " << (int)(effective_vote * 100) << "%. Fresh mandate secured." << std::endl;
+        } else {
+            std::cout << "   DEFEAT: " << (int)(effective_vote * 100) << "%. You gambled and lost." << std::endl;
+            std::cout << "GAME OVER." << std::endl;
+            exit(0);
+        }
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
