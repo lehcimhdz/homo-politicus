@@ -1891,6 +1891,51 @@ void Game::processEvents() {
             std::cout << ">> Usage: threaten <0-2>" << std::endl;
         }
     }
+    else if (command == "help") {
+        std::cout << "\n=== FAMILIAS DE COMANDOS ===" << std::endl;
+        std::cout << "Turno:        next, exit" << std::endl;
+        std::cout << "Resumen:      help, status_brief" << std::endl;
+        std::cout << "Fiscal:       tax+, tax-, wage-, retire+, retire-, invest_health/security/infra/education" << std::endl;
+        std::cout << "Recursos:     mining+, mining-, mining_reform, royalty+, royalty-, geo_survey, mine_rehab" << std::endl;
+        std::cout << "SWF:          swf_save, swf_rate-, swf_cancel, swf_rule, swf_spend, swf_invest, swf_debt," << std::endl;
+        std::cout << "              swf_conservative, swf_balanced, swf_growth, swf_transparency" << std::endl;
+        std::cout << "Comercio:     tariff+, tariff-, tariff_dumping, fta_sign, hedge_prices" << std::endl;
+        std::cout << "Ambiental:    env_bond, env_audit, consult, mediate, suppress_conflict" << std::endl;
+        std::cout << "Monetario:    autonomy+, autonomy-, interest+, interest-, print+, reform_currency" << std::endl;
+        std::cout << "Política:     worship+/-, torture+/-, disappear+/-, press+/-, minority+/-" << std::endl;
+        std::cout << "Diplomacia:   diplomacy+, diplomacy-" << std::endl;
+        std::cout << "Vecinos:      improve_relations/worsen_relations/trade_deal/threaten <0-2>, negotiate_peace_neighbor" << std::endl;
+        std::cout << "Escándalos:   cover_up, scapegoat, counter_narrative, apologize" << std::endl;
+        std::cout << "============================" << std::endl;
+    }
+    else if (command == "status_brief") {
+        auto& pol = playerCountry.politics;
+        auto& eco = playerCountry.economy;
+        std::cout << "\n--- STATUS BRIEF (Turno " << turnCount << ") ---" << std::endl;
+        std::cout << "Popularidad: " << (int)(pol.popularity * 100) << "%"
+                  << " | GDP: $" << (long long)(eco.gdp / 1000000) << "M"
+                  << " | Inflación: " << (int)(eco.inflation * 100) << "%" << std::endl;
+        std::cout << "Presiones — Cong: " << (int)(pol.congressional_pressure * 100) << "%"
+                  << " Jud: " << (int)(pol.judicial_pressure * 100) << "%"
+                  << " Mil: " << (int)(pol.military_pressure * 100) << "%"
+                  << " Pop: " << (int)(pol.popular_pressure * 100) << "%"
+                  << " Intl: " << (int)(pol.international_pressure * 100) << "%" << std::endl;
+        std::cout << "Escándalos activos: " << pol.active_scandals
+                  << " | Legitimidad: " << (int)(pol.regime_legitimacy * 100) << "%"
+                  << " | Backsliding: " << (int)(pol.democratic_backsliding_index * 100) << "%" << std::endl;
+        std::string events;
+        if (playerCountry.welfare.pandemic_active) events += "pandemia ";
+        if (playerCountry.welfare.general_strike_active) events += "huelga ";
+        if (eco.in_recession) events += "recesión ";
+        if (playerCountry.security.war_active) events += "guerra ";
+        if (playerCountry.security.migration_crisis_active) events += "migración ";
+        if (pol.civil_war_active) events += "guerra-civil ";
+        if (playerCountry.infra.blackout_active) events += "apagón ";
+        if (events.empty()) events = "ninguno";
+        std::cout << "Eventos activos: " << events << std::endl;
+        std::cout << "Decisiones pendientes: " << pendingDecisions.size() << std::endl;
+        std::cout << "----------------------------------" << std::endl;
+    }
     else if (command == "cover_up") {
         double cost = playerCountry.politics.lobbying_cost * 10.0;
         if (playerCountry.economy.tax_collection < cost) {
