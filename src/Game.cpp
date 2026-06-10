@@ -2818,13 +2818,17 @@ void Game::update() {
     // (d) Mining/commodity exports — FX earnings from extraction (net of domestic consumption)
     double mining_exports = playerCountry.economy.state_royalties * 0.6;
 
-    double total_exports = exports_goods + tourism_exports + agri_exports + mining_exports;
+    // Low RoO compliance means exporters can't fully use FTA preferences → reduced export benefit
+    double fta_export_penalty = 1.0 - (1.0 - playerCountry.economy.rules_of_origin_compliance) * 0.3;
+    double total_exports = (exports_goods + tourism_exports + agri_exports + mining_exports) * fta_export_penalty;
 
     // Imports: tariffs + NTBs reduce volume but FTAs re-open them; purchasing power drives demand
     double total_trade_friction = (playerCountry.economy.average_tariffs
                                  + playerCountry.economy.non_tariff_barriers * 0.4) * 0.25;
     double tariff_import_reduction = total_trade_friction;
-    double fta_import_boost        = playerCountry.economy.free_trade_agreements * 0.008;
+    // FTA boost scales with number of agreements AND their depth (shallow=goods, deep=services+investment)
+    double fta_import_boost = playerCountry.economy.free_trade_agreements * 0.008
+                            * (0.5 + playerCountry.economy.fta_depth_index * 0.5);
     double imports = playerCountry.economy.gdp
                    * playerCountry.economy.import_dependency
                    * (net_purchasing_power > 0.8 ? net_purchasing_power : 0.8)
@@ -2925,6 +2929,20 @@ void Game::update() {
             if (playerCountry.welfare.labor_informality   > 1.0) playerCountry.welfare.labor_informality = 1.0;
             std::cout << "[!!] NEAR-AUTARKY: Trade walls suffocating economic dynamism. "
                       << "FDI fleeing. Black markets flourishing." << std::endl;
+        }
+
+        // Trade diversion from FTAs: deep agreements with many partners can hollow out domestic industry
+        if (playerCountry.economy.free_trade_agreements > 8 && playerCountry.economy.fta_depth_index > 0.6) {
+            playerCountry.economy.trade_diversion_risk += 0.005;
+        } else if (playerCountry.economy.free_trade_agreements < 3) {
+            playerCountry.economy.trade_diversion_risk -= 0.002;
+        }
+        if (playerCountry.economy.trade_diversion_risk > 1.0) playerCountry.economy.trade_diversion_risk = 1.0;
+        if (playerCountry.economy.trade_diversion_risk < 0.0) playerCountry.economy.trade_diversion_risk = 0.0;
+        // High trade diversion erodes domestic industry
+        if (playerCountry.economy.trade_diversion_risk > 0.3) {
+            playerCountry.politics.industrial_power -= playerCountry.economy.trade_diversion_risk * 0.005;
+            if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
         }
     }
 

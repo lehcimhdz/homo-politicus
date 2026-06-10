@@ -140,6 +140,9 @@ struct EconomicFinancialSystem {
     double non_tariff_barriers = 0.2;     // Regulatory, quota, bureaucratic friction (0–1)
     int    antidumping_cases = 0;         // Active anti-dumping investigations
     int free_trade_agreements = 5;
+    double fta_depth_index = 0.5;           // Avg depth: 0=goods-only, 1=full economic integration
+    double rules_of_origin_compliance = 0.8; // Share of exports meeting RoO thresholds
+    double trade_diversion_risk = 0.1;      // Risk of cheap imports displacing domestic producers
     double import_dependency = 0.3;
     double international_sanctions_prob = 0.0;
 
