@@ -1504,6 +1504,50 @@ void Game::processEvents() {
             exit(0);
         }
     }
+    // --- ADDITIONAL TRADE COMMANDS ---
+    else if (command == "capital_controls") {
+        if (playerCountry.economy.central_bank_autonomy > 0.8) {
+            std::cout << ">> CENTRAL BANK REFUSES: Autonomous central bank blocks capital controls." << std::endl;
+        } else {
+            playerCountry.infra.capital_flight_risk -= 0.1;
+            if (playerCountry.infra.capital_flight_risk < 0.0) playerCountry.infra.capital_flight_risk = 0.0;
+            playerCountry.infra.fdi_inflow_gdp -= 0.01;
+            if (playerCountry.infra.fdi_inflow_gdp < 0.0) playerCountry.infra.fdi_inflow_gdp = 0.0;
+            playerCountry.economy.exchange_rate_stability += 0.05;
+            if (playerCountry.economy.exchange_rate_stability > 1.0) playerCountry.economy.exchange_rate_stability = 1.0;
+            playerCountry.economy.trade_openness -= 0.05;
+            if (playerCountry.economy.trade_openness < 0.1) playerCountry.economy.trade_openness = 0.1;
+            playerCountry.infra.investment_climate_index -= 0.05;
+            if (playerCountry.infra.investment_climate_index < 0.1) playerCountry.infra.investment_climate_index = 0.1;
+            std::cout << ">> CAPITAL CONTROLS IMPOSED: Outflows restricted. FDI chilled." << std::endl;
+            std::cout << "   (Capital Flight -, FDI -, Exchange Stability +, Investment Climate -)" << std::endl;
+        }
+    }
+    else if (command == "embargo") {
+        playerCountry.economy.trade_openness -= 0.1;
+        if (playerCountry.economy.trade_openness < 0.05) playerCountry.economy.trade_openness = 0.05;
+        playerCountry.economy.average_tariffs += 0.1;
+        playerCountry.economy.import_dependency -= 0.05;
+        if (playerCountry.economy.import_dependency < 0.05) playerCountry.economy.import_dependency = 0.05;
+        playerCountry.economy.inflation += 0.02;
+        playerCountry.security.diplomatic_prestige -= 0.05;
+        std::cout << ">> TRADE EMBARGO: Imports restricted. Self-sufficiency push at inflation cost." << std::endl;
+        std::cout << "   (Imports -, Inflation +, Dependency -, Prestige -)" << std::endl;
+    }
+    else if (command == "devalue") {
+        if (playerCountry.economy.central_bank_autonomy > 0.7) {
+            std::cout << ">> CENTRAL BANK REFUSES: Independent bank won't devalue on political orders." << std::endl;
+        } else {
+            playerCountry.economy.exchange_rate_stability -= 0.1;
+            if (playerCountry.economy.exchange_rate_stability < 0.1) playerCountry.economy.exchange_rate_stability = 0.1;
+            playerCountry.economy.inflation += 0.03;
+            playerCountry.economy.trade_balance += playerCountry.economy.gdp * 0.01; // Export boost
+            playerCountry.economy.growth_rate += 0.005;
+            playerCountry.politics.popularity -= 0.02;
+            std::cout << ">> CURRENCY DEVALUATION: Exports competitive, imports expensive." << std::endl;
+            std::cout << "   (Exports +, Growth +, Inflation +, Popularity -, Stability -)" << std::endl;
+        }
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
