@@ -13,6 +13,7 @@ static const sf::Color kWarn   = sf::Color(240, 180, 60);
 
 MapView::MapView() {
     loadSilhouette("argentina");
+    isoCam_.setCenter(0.f, 0.f);
 }
 
 bool MapView::loadSilhouette(const std::string& name) {
@@ -119,38 +120,23 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
             (uint8_t)(56 - 16 * nightAmount));
         sf::Color outline(220, 222, 232, 200);
         homeSilhouette_.draw(win, homePos_.x, homePos_.y, homeRadius_, baseFill, outline);
-        // Grid 4x4 de provincias - coloreadas segun satisfaccion regional derivada
-        // de popularidad global mas variacion deterministica por region.
-        auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
-        const int kCols = 4, kRows = 4;
-        float cw = bbox.size.x / (float)kCols;
-        float ch = bbox.size.y / (float)kRows;
-        for (int r = 0; r < kRows; ++r) {
-            for (int col = 0; col < kCols; ++col) {
-                float ux = bbox.position.x + col * cw;
-                float uy = bbox.position.y + r * ch;
-                float ccx = ux + cw * 0.5f;
-                float ccy = uy + ch * 0.5f;
-                if (!homeSilhouette_.containsScreen({ccx, ccy}, homePos_.x, homePos_.y, homeRadius_)) continue;
-                // Hash deterministico para esta region.
-                unsigned hash = (unsigned)(r * 73856093u ^ col * 19349663u);
-                float regOffset = ((hash & 0xFF) / 255.f - 0.5f) * 0.30f;
-                float sat = (float)c.politics.popularity + regOffset;
-                if (sat < 0.f) sat = 0.f; if (sat > 1.f) sat = 1.f;
-                uint8_t alpha = (uint8_t)(200 - 110 * nightAmount); // mas tenue de noche
-                sf::Color col_ = sat > 0.55f
-                    ? sf::Color((uint8_t)(40 + (1.f - sat) * 80), (uint8_t)(160 + sat * 40), (uint8_t)(80 + sat * 20), alpha)
-                    : (sat > 0.30f
-                        ? sf::Color(220, (uint8_t)(140 + sat * 40), 60, alpha)
-                        : sf::Color(200, 60, 60, alpha));
-                sf::RectangleShape cell({cw - 1.f, ch - 1.f});
-                cell.setPosition({ux + 0.5f, uy + 0.5f});
-                cell.setFillColor(col_);
-                cell.setOutlineColor(sf::Color(0, 0, 0, 60));
-                cell.setOutlineThickness(0.5f);
-                win.draw(cell);
-            }
+        // Vista isometrica: tiles encima de la silueta base.
+        if (!isoConfigured_) {
+            // Configurar camara: viewport = centro del bbox, zoom para cubrir bbox con N tiles.
+            auto bbox0 = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
+            float bboxCx = bbox0.position.x + bbox0.size.x * 0.5f;
+            float bboxCy = bbox0.position.y + bbox0.size.y * 0.5f;
+            isoCam_.setViewport(bboxCx, bboxCy);
+            // Para que un grid 22x22 isometric cubra el bbox:
+            // ancho iso del grid = N * tileW (en mitad de tile entre filas).
+            // Aprox: zoom = bbox.size.x / (gridSize * tileW * 0.6)
+            float targetZoom = bbox0.size.x / (22.f * IsoCamera::kTileW * 0.55f);
+            isoCam_.setZoom(targetZoom);
+            isoWorld_.configure(homeSilhouette_, isoCam_, homePos_, homeRadius_, 22);
+            isoConfigured_ = true;
         }
+        isoWorld_.draw(win, isoCam_, c, nightAmount);
+        auto bbox = homeSilhouette_.screenBBox(homePos_.x, homePos_.y, homeRadius_);
         // Population dots: cantidad escalada por urbanizacion, micro-movimiento.
         int dotCount = 60 + (int)(c.welfare.urban_population_ratio * 180);
         ensurePopDots(dotCount);
