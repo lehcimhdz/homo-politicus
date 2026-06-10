@@ -5027,6 +5027,58 @@ void Game::update() {
     playerCountry.politics.regions_in_conflict = (playerCountry.politics.regional_loyalty < 0.4)
                                                ? playerCountry.politics.active_separatist_movements + 1 : 0;
 
+    // --- SEPARATIST / GOVERNORS CRISIS ---
+    if (playerCountry.politics.separatist_crisis_active) {
+        playerCountry.politics.separatist_crisis_duration--;
+
+        // Region withholds taxes
+        playerCountry.economy.tax_collection -= playerCountry.economy.tax_collection * 0.05;
+
+        // Federal budget dispute
+        playerCountry.politics.federal_budget_disparity += 0.03;
+        if (playerCountry.politics.federal_budget_disparity > 0.8)
+            playerCountry.politics.federal_budget_disparity = 0.8;
+
+        // Separatist support grows
+        playerCountry.politics.separatist_support_pop += 0.02;
+        if (playerCountry.politics.separatist_support_pop > 0.5)
+            playerCountry.politics.separatist_support_pop = 0.5;
+
+        // Polarization and diplomatic embarrassment
+        playerCountry.politics.polarization_index += 0.02;
+        playerCountry.security.diplomatic_prestige -= 0.02;
+
+        // Independence referendum pressure
+        if (playerCountry.politics.separatist_support_pop > 0.3)
+            playerCountry.politics.independence_referendum_pending = true;
+
+        playerCountry.politics.popularity -= 0.02;
+
+        std::cout << "[!!!] SEPARATIST CRISIS (Turn " << (playerCountry.politics.separatist_crisis_duration + 1)
+                  << " remaining): Region demands autonomy. Separatist support: "
+                  << (int)(playerCountry.politics.separatist_support_pop * 100) << "%" << std::endl;
+
+        if (playerCountry.politics.separatist_crisis_duration <= 0) {
+            playerCountry.politics.separatist_crisis_active = false;
+            // Concession: increase autonomy
+            playerCountry.politics.provincial_autonomy += 0.1;
+            if (playerCountry.politics.provincial_autonomy > 1.0)
+                playerCountry.politics.provincial_autonomy = 1.0;
+            std::cout << "[INFO] SEPARATIST CRISIS RESOLVED: Autonomy deal reached. Provincial autonomy increased."
+                      << std::endl;
+        }
+    } else {
+        if (playerCountry.politics.regional_loyalty < 0.3
+            && dist(rng) < playerCountry.politics.separatism_prob) {
+            playerCountry.politics.separatist_crisis_active = true;
+            std::uniform_int_distribution<int> dur_dist(3, 5);
+            playerCountry.politics.separatist_crisis_duration = dur_dist(rng);
+            std::cout << "[!!!] SEPARATIST CRISIS: Region declares autonomy push! Loyalty: "
+                      << (int)(playerCountry.politics.regional_loyalty * 100) << "%. Duration: "
+                      << playerCountry.politics.separatist_crisis_duration << " turns." << std::endl;
+        }
+    }
+
     // --- LEGISLATIVE PIPELINE ---
     // Bills passed depends on support, law blockade, and pending queue
     double pass_rate = playerCountry.politics.congressional_support * (1.0 - playerCountry.politics.law_blockade_prob);

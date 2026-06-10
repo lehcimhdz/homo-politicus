@@ -279,6 +279,8 @@ struct PoliticalInstitutionalSystem {
     double lagging_region_share = 0.2;         // Fraction of regions below 60% national avg GDP
 
     double separatism_prob = 0.01;
+    bool separatist_crisis_active = false;
+    int separatist_crisis_duration = 0;
     int    active_separatist_movements = 0;    // Organized movements currently active
     double separatist_support_pop = 0.05;      // Share of population with separatist sympathies
     bool   independence_referendum_pending = false; // Formal referendum process underway
