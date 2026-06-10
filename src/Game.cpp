@@ -1548,6 +1548,65 @@ void Game::processEvents() {
             std::cout << "   (Exports +, Growth +, Inflation +, Popularity -, Stability -)" << std::endl;
         }
     }
+    // --- WELFARE & LABOR COMMANDS ---
+    else if (command == "wage+") {
+        playerCountry.welfare.minimum_wage *= 1.10;
+        playerCountry.economy.inflation += 0.005;
+        playerCountry.welfare.poverty_rate -= 0.01;
+        if (playerCountry.welfare.poverty_rate < 0.05) playerCountry.welfare.poverty_rate = 0.05;
+        playerCountry.welfare.union_strength += 0.03;
+        playerCountry.politics.popularity += 0.03;
+        // Can increase unemployment if wage too high
+        if (playerCountry.welfare.minimum_wage > 2000.0) {
+            playerCountry.welfare.unemployment_rate += 0.005;
+        }
+        std::cout << ">> MINIMUM WAGE RAISED to $" << (int)playerCountry.welfare.minimum_wage << std::endl;
+        std::cout << "   (Poverty -, Popularity +, Inflation +, Unions +)" << std::endl;
+    }
+    else if (command == "healthcare+") {
+        double cost = playerCountry.economy.gdp * 0.01;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.welfare.health_coverage += 0.05;
+        if (playerCountry.welfare.health_coverage > 1.0) playerCountry.welfare.health_coverage = 1.0;
+        playerCountry.welfare.hospitals += 5;
+        playerCountry.welfare.mental_health_index += 0.02;
+        playerCountry.politics.popularity += 0.03;
+        std::cout << ">> HEALTHCARE EXPANDED: Coverage now " << (int)(playerCountry.welfare.health_coverage * 100)
+                  << "%. Cost: $" << (int)(cost / 1000000.0) << "M" << std::endl;
+    }
+    else if (command == "healthcare-") {
+        playerCountry.welfare.health_coverage -= 0.05;
+        if (playerCountry.welfare.health_coverage < 0.2) playerCountry.welfare.health_coverage = 0.2;
+        playerCountry.welfare.hospitals -= 3;
+        if (playerCountry.welfare.hospitals < 10) playerCountry.welfare.hospitals = 10;
+        playerCountry.welfare.mental_health_index -= 0.02;
+        playerCountry.politics.popularity -= 0.04;
+        std::cout << ">> HEALTHCARE CUT: Austerity saves money but hospitals close." << std::endl;
+    }
+    else if (command == "pension_reform") {
+        playerCountry.welfare.pension_sustainability += 0.1;
+        if (playerCountry.welfare.pension_sustainability > 1.0) playerCountry.welfare.pension_sustainability = 1.0;
+        playerCountry.welfare.retirement_age += 2.0;
+        playerCountry.politics.popularity -= 0.08;
+        playerCountry.welfare.general_strike_prob += 0.1;
+        if (playerCountry.welfare.general_strike_prob > 0.5) playerCountry.welfare.general_strike_prob = 0.5;
+        std::cout << ">> PENSION REFORM: Retirement age raised to " << playerCountry.welfare.retirement_age
+                  << ". Sustainability improved but massive backlash." << std::endl;
+        std::cout << "   (Pension +, Popularity ---, Strike Risk +++)" << std::endl;
+    }
+    else if (command == "education+") {
+        double cost = playerCountry.economy.gdp * 0.005;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.welfare.educational_quality += 0.03;
+        if (playerCountry.welfare.educational_quality > 1.0) playerCountry.welfare.educational_quality = 1.0;
+        playerCountry.welfare.university_enrollment += 0.02;
+        if (playerCountry.welfare.university_enrollment > 0.8) playerCountry.welfare.university_enrollment = 0.8;
+        playerCountry.welfare.brain_drain -= 0.01;
+        if (playerCountry.welfare.brain_drain < 0.01) playerCountry.welfare.brain_drain = 0.01;
+        playerCountry.infra.innovation_index += 0.01;
+        std::cout << ">> EDUCATION INVESTMENT: Quality improved to " << (int)(playerCountry.welfare.educational_quality * 100)
+                  << "%. Cost: $" << (int)(cost / 1000000.0) << "M" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
