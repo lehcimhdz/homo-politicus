@@ -3333,6 +3333,44 @@ void Game::update() {
         }
     }
 
+    // --- ENVIRONMENT & CLIMATE DYNAMICS ---
+    // Air quality: driven by CO2, industry, and pollution events
+    playerCountry.infra.air_quality_index = 1.0 - playerCountry.infra.pollution_prob * 0.3
+                                          - playerCountry.infra.co2_emissions / 5000000.0;
+    if (playerCountry.infra.air_quality_index < 0.1) playerCountry.infra.air_quality_index = 0.1;
+    // Water quality linked to mining legacy and sanitation
+    playerCountry.infra.water_quality_index = 1.0 - playerCountry.economy.mining_legacy_damage * 0.3
+                                            - playerCountry.infra.soil_contamination_index * 0.2;
+    if (playerCountry.infra.water_quality_index < 0.1) playerCountry.infra.water_quality_index = 0.1;
+    // Biodiversity eroded by deforestation and pollution
+    playerCountry.infra.biodiversity_index -= playerCountry.infra.deforestation_rate * 0.05
+                                           + playerCountry.infra.illegal_wildlife_trade * 0.01;
+    playerCountry.infra.biodiversity_index += playerCountry.infra.protected_area_coverage * 0.005;
+    if (playerCountry.infra.biodiversity_index < 0.05) playerCountry.infra.biodiversity_index = 0.05;
+    if (playerCountry.infra.biodiversity_index > 1.0) playerCountry.infra.biodiversity_index = 1.0;
+    // Climate vulnerability composite
+    playerCountry.infra.climate_vulnerability_index = playerCountry.infra.drought_prob * 0.25
+                                                    + playerCountry.infra.storm_prob * 0.20
+                                                    + playerCountry.infra.flood_prob * 0.25
+                                                    + (1.0 - playerCountry.infra.climate_adaptation_investment * 50.0) * 0.30;
+    if (playerCountry.infra.climate_vulnerability_index < 0.0) playerCountry.infra.climate_vulnerability_index = 0.0;
+    if (playerCountry.infra.climate_vulnerability_index > 1.0) playerCountry.infra.climate_vulnerability_index = 1.0;
+    // CO2 per capita
+    if (playerCountry.welfare.population > 0)
+        playerCountry.infra.co2_per_capita = playerCountry.infra.co2_emissions / (double)playerCountry.welfare.population;
+    // Emissions trajectory
+    playerCountry.infra.co2_emissions *= (1.0 + playerCountry.infra.emissions_trajectory);
+    if (playerCountry.infra.co2_emissions < 0.0) playerCountry.infra.co2_emissions = 0.0;
+    // Carbon tax revenue
+    if (playerCountry.infra.carbon_tax_active && playerCountry.infra.carbon_tax_rate > 0.0) {
+        double carbon_revenue = playerCountry.infra.co2_emissions * playerCountry.infra.carbon_tax_rate;
+        playerCountry.economy.tax_collection += carbon_revenue;
+        // Carbon tax incentivizes emissions reduction
+        playerCountry.infra.emissions_trajectory -= 0.002;
+        playerCountry.infra.fossil_fuel_dependency -= 0.005;
+        if (playerCountry.infra.fossil_fuel_dependency < 0.0) playerCountry.infra.fossil_fuel_dependency = 0.0;
+    }
+
     // --- MEDIA & PROPAGANDA DYNAMICS ---
     // Media pluralism: inverse of control + ownership concentration
     playerCountry.security.media_pluralism = 1.0 - playerCountry.security.media_control * 0.5

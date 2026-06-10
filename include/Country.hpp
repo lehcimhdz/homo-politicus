@@ -424,11 +424,28 @@ struct PowerSecuritySystem {
 struct InfrastructureFutureSystem {
     // Environment
     double pollution_prob = 0.4;
+    double air_quality_index = 0.7;            // PM2.5/AQI (0=toxic, 1=clean)
+    double water_quality_index = 0.8;          // River/groundwater (0–1)
+    double soil_contamination_index = 0.1;     // Agricultural land degradation (0–1)
+
     double fauna_extinction_prob = 0.1;
+    double biodiversity_index = 0.7;           // Overall ecosystem health (0–1)
+    double protected_area_coverage = 0.15;     // Fraction of territory under protection
+    double deforestation_rate = 0.01;          // Annual forest cover loss (fraction)
+    double illegal_wildlife_trade = 0.1;       // Poaching/trafficking intensity (0–1)
+
     double drought_prob = 0.1;
     double storm_prob = 0.1;
     double tornado_prob = 0.01;
-    double co2_emissions = 1000.0;
+    double flood_prob = 0.15;                  // River/coastal flood probability
+    double climate_vulnerability_index = 0.3;  // Composite climate shock exposure (0–1)
+    double climate_adaptation_investment = 0.005; // % GDP in climate adaptation
+
+    double co2_emissions = 1000000.0;
+    double co2_per_capita = 5.0;               // Tons CO2 per person per year
+    double emissions_trajectory = -0.01;       // Annual change rate (negative=declining)
+    bool   carbon_tax_active = false;          // Carbon pricing in force
+    double carbon_tax_rate = 0.0;              // USD per ton CO2
 
     // Science and Technology
     double st_investment_gdp = 0.01;
