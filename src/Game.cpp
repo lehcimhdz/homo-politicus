@@ -3333,6 +3333,24 @@ void Game::update() {
         }
     }
 
+    // --- LOBBY POWER DYNAMICS ---
+    // Extractive sector power correlates with mining concessions and commodity boom
+    playerCountry.politics.extractive_sector_power = 0.3 + playerCountry.economy.mining_concessions * 0.03
+                                                   + (playerCountry.economy.commodity_prices > 1.2 ? 0.1 : 0.0);
+    if (playerCountry.politics.extractive_sector_power > 1.0) playerCountry.politics.extractive_sector_power = 1.0;
+    // Media ownership concentration: high financial power + low press freedom
+    playerCountry.politics.media_ownership_concentration = playerCountry.politics.financial_power * 0.4
+                                                        + (1.0 - playerCountry.security.press_freedom) * 0.3;
+    if (playerCountry.politics.media_ownership_concentration > 1.0) playerCountry.politics.media_ownership_concentration = 1.0;
+    // Total rent-seeking cost: all lobbies extract rents proportional to their power
+    playerCountry.politics.total_lobby_rent_gdp = (playerCountry.politics.industrial_power
+                                                 + playerCountry.politics.agricultural_power
+                                                 + playerCountry.politics.financial_power
+                                                 + playerCountry.politics.tech_power
+                                                 + playerCountry.politics.extractive_sector_power) * 0.006;
+    // Rent-seeking drags GDP growth
+    playerCountry.economy.growth_rate -= playerCountry.politics.total_lobby_rent_gdp * 0.1;
+
     // --- PROSECUTION & IMPUNITY DYNAMICS ---
     // Impunity derives from prosecutor capacity, specialized units, and witness protection
     double prosecutor_capacity = (double)playerCountry.politics.prosecutors / (double)(playerCountry.politics.case_files + 1);

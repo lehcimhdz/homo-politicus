@@ -287,6 +287,9 @@ struct PoliticalInstitutionalSystem {
     double agricultural_power = 0.5;
     double financial_power = 0.7;
     double tech_power = 0.4;
+    double extractive_sector_power = 0.6;      // Mining/oil lobby influence
+    double media_ownership_concentration = 0.5; // Oligarchic media control (0–1)
+    double total_lobby_rent_gdp = 0.02;        // Economic cost of rent-seeking (% GDP)
 };
 
 // 4. Power, Security, and International Relations System
