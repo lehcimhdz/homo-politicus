@@ -168,6 +168,9 @@ struct EconomicFinancialSystem {
     double kidnapping_tourism_risk = 0.001;   // Kidnapping/extortion probability per trip
     double health_risk_tourists = 0.01;       // Disease/medical emergency rate per visitor
     double heritage_preservation = 0.7;
+    int    unesco_sites = 2;                 // Active UNESCO World Heritage designations
+    double cultural_commodification = 0.2;   // Risk of tourism eroding authentic culture (0–1)
+    double heritage_funding_gdp = 0.001;     // Public spending on preservation (% GDP)
     double foreign_travel_alert_prob = 0.0;
 };
 

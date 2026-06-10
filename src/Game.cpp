@@ -2827,12 +2827,23 @@ void Game::update() {
     playerCountry.economy.average_tourist_spending = playerCountry.economy.spending_luxury * playerCountry.economy.luxury_tourism_share
                                                    + 1000.0 * mid_share
                                                    + playerCountry.economy.spending_budget * 0.3;
+    // Heritage & UNESCO boost luxury tourism share and attract more international visitors
+    double heritage_tourism_bonus = 1.0 + playerCountry.economy.unesco_sites * 0.03
+                                       + playerCountry.economy.heritage_preservation * 0.1;
+    playerCountry.economy.luxury_tourism_share += playerCountry.economy.heritage_funding_gdp * 0.5;
+    if (playerCountry.economy.luxury_tourism_share > 0.5) playerCountry.economy.luxury_tourism_share = 0.5;
+    // Cultural commodification: too much tourism degrades heritage
+    if (playerCountry.economy.annual_visitors > 1000000 && playerCountry.economy.heritage_funding_gdp < 0.002)
+        playerCountry.economy.cultural_commodification += 0.003;
+    if (playerCountry.economy.cultural_commodification > 0.7)
+        playerCountry.economy.heritage_preservation -= 0.005;
+    if (playerCountry.economy.heritage_preservation < 0.0) playerCountry.economy.heritage_preservation = 0.0;
     // Seasonality: high seasonality means revenue is volatile — effective spending drops
     double seasonality_factor = 1.0 - playerCountry.economy.tourism_seasonality * 0.15;
     double tourism_exports = (double)playerCountry.economy.annual_visitors
                            * playerCountry.economy.average_tourist_spending
                            * playerCountry.economy.tourist_safety
-                           * seasonality_factor;
+                           * seasonality_factor * heritage_tourism_bonus;
 
     // (c) Agricultural exports — boosted by FTAs, dampened by strong currency
     double agri_exports = playerCountry.economy.gdp * 0.04
