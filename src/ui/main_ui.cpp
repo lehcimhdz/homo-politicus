@@ -8,6 +8,7 @@
 #include "ui/MapView.hpp"
 #include "ui/ActionPanel.hpp"
 #include "ui/DecisionModal.hpp"
+#include "ui/AudioSystem.hpp"
 
 enum class Tab { Dashboard, Map, Action, Decisions, Achievements };
 
@@ -105,18 +106,22 @@ int main(int argc, char** argv) {
     MapView mapView;
     ActionPanel actionPanel;
     DecisionModal modal;
+    AudioSystem audio;
     Tab currentTab = Tab::Dashboard;
     sf::Clock frameClock;
     std::string lastActionFeedback;
     actionPanel.setCallback([&](const std::string& id) {
         lastActionFeedback = ">> " + id;
+        audio.play("button_click");
     });
     modal.setChoiceCallback([&](const std::string& choice) {
         lastActionFeedback = ">> Decision: " + choice;
+        audio.play("button_click");
         modal.hide();
     });
     modal.setSkipCallback([&]() {
         lastActionFeedback = ">> Decision saltada (-credibilidad)";
+        audio.play("warning");
         modal.hide();
     });
     dashboard.recordHistory(bridge.country());
@@ -147,18 +152,28 @@ int main(int argc, char** argv) {
             }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
                 if (kp->code == sf::Keyboard::Key::Escape) window.close();
-                if (kp->code == sf::Keyboard::Key::N) { bridge.tick(); dashboard.recordHistory(bridge.country()); }
-                if (kp->code == sf::Keyboard::Key::R) { bridge.resetCountry(); dashboard.recordHistory(bridge.country()); }
+                if (kp->code == sf::Keyboard::Key::N) {
+                    bridge.tick(); dashboard.recordHistory(bridge.country());
+                    audio.play("turn_advance");
+                }
+                if (kp->code == sf::Keyboard::Key::R) {
+                    bridge.resetCountry(); dashboard.recordHistory(bridge.country());
+                    audio.play("warning");
+                }
+                if (kp->code == sf::Keyboard::Key::M) {
+                    audio.setEnabled(!audio.isEnabled());
+                    lastActionFeedback = audio.isEnabled() ? ">> Audio ON" : ">> Audio OFF";
+                }
                 if (kp->code == sf::Keyboard::Key::Num1) currentTab = Tab::Dashboard;
                 if (kp->code == sf::Keyboard::Key::Num2) currentTab = Tab::Map;
                 if (kp->code == sf::Keyboard::Key::Num3) currentTab = Tab::Action;
                 if (kp->code == sf::Keyboard::Key::Num4) currentTab = Tab::Decisions;
                 if (kp->code == sf::Keyboard::Key::Num5) currentTab = Tab::Achievements;
                 if (kp->code == sf::Keyboard::Key::D) {
-                    // Demo: dispara una decision de prueba
                     modal.show({"coup_threat",
                         "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
                         {"purge_military", "negotiate_military", "cede_power", "resist"}});
+                    audio.play("decision_appears");
                 }
             }
         }
@@ -183,7 +198,7 @@ int main(int argc, char** argv) {
             infStr << "Inflacion: " << std::fixed << std::setprecision(1) << (c.economy.inflation * 100) << "%";
             window.draw(makeText(font, infStr.str(), 18, kText, 760, 22));
 
-            window.draw(makeText(font, "ESC=salir N=next R=reset D=decision 1-5=tabs", 12, kMuted, 1000, 24));
+            window.draw(makeText(font, "ESC N R D M=mute 1-5=tabs", 12, kMuted, 1060, 24));
         }
 
         // === SidebarLeft ===

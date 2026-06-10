@@ -1,11 +1,9 @@
 #include "ui/ActionPanel.hpp"
 #include <sstream>
 
-static const sf::Color kPanel  = sf::Color(32, 36, 48);
 static const sf::Color kPanel2 = sf::Color(46, 50, 64);
 static const sf::Color kBorder = sf::Color(60, 65, 80);
 static const sf::Color kText   = sf::Color(220, 222, 232);
-static const sf::Color kMuted  = sf::Color(150, 154, 168);
 static const sf::Color kAccent = sf::Color(80, 160, 240);
 
 // Coordenadas (relativas a la ventana 1280x800), main panel area: 200..1030, 100..680.
