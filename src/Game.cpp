@@ -1651,6 +1651,56 @@ void Game::processEvents() {
         std::cout << ">> TRANSPARENCY REFORM: Open government, public procurement, FOI laws enacted." << std::endl;
         std::cout << "   (CPI +, Investment Climate +, Prestige +, SWF Governance +)" << std::endl;
     }
+    // --- ENVIRONMENT COMMANDS ---
+    else if (command == "protect_area") {
+        double cost = 10000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.infra.protected_area_coverage += 0.03;
+        if (playerCountry.infra.protected_area_coverage > 0.5) playerCountry.infra.protected_area_coverage = 0.5;
+        playerCountry.infra.biodiversity_index += 0.02;
+        if (playerCountry.infra.biodiversity_index > 1.0) playerCountry.infra.biodiversity_index = 1.0;
+        playerCountry.infra.deforestation_rate -= 0.002;
+        if (playerCountry.infra.deforestation_rate < 0.0) playerCountry.infra.deforestation_rate = 0.0;
+        // Extractive sector conflict
+        playerCountry.economy.community_conflicts += 0.05;
+        playerCountry.politics.extractive_sector_power -= 0.03;
+        playerCountry.security.diplomatic_prestige += 0.02;
+        std::cout << ">> PROTECTED AREA CREATED: " << (int)(playerCountry.infra.protected_area_coverage * 100)
+                  << "% of territory under protection." << std::endl;
+        std::cout << "   (Biodiversity +, Prestige +, Mining Lobby -, Cost $10M)" << std::endl;
+    }
+    else if (command == "pollution_control") {
+        double cost = 20000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.infra.pollution_prob -= 0.05;
+        if (playerCountry.infra.pollution_prob < 0.05) playerCountry.infra.pollution_prob = 0.05;
+        playerCountry.infra.air_quality_index += 0.05;
+        if (playerCountry.infra.air_quality_index > 1.0) playerCountry.infra.air_quality_index = 1.0;
+        playerCountry.infra.water_quality_index += 0.03;
+        if (playerCountry.infra.water_quality_index > 1.0) playerCountry.infra.water_quality_index = 1.0;
+        playerCountry.welfare.health_coverage += 0.01; // Less pollution = less disease
+        // Industry cost
+        playerCountry.politics.industrial_power -= 0.03;
+        if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
+        playerCountry.economy.growth_rate -= 0.002; // Short-term growth cost
+        std::cout << ">> POLLUTION CONTROLS ENFORCED: Air quality " << (int)(playerCountry.infra.air_quality_index * 100)
+                  << "%, Water: " << (int)(playerCountry.infra.water_quality_index * 100) << "%" << std::endl;
+        std::cout << "   (Health +, Industry -, Growth -, Prestige +)" << std::endl;
+    }
+    else if (command == "reforest") {
+        double cost = 15000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.infra.deforestation_rate -= 0.005;
+        if (playerCountry.infra.deforestation_rate < -0.01) playerCountry.infra.deforestation_rate = -0.01; // Net reforestation
+        playerCountry.infra.co2_emissions *= 0.98;
+        playerCountry.infra.biodiversity_index += 0.01;
+        playerCountry.infra.climate_vulnerability_index -= 0.01;
+        if (playerCountry.infra.climate_vulnerability_index < 0.05) playerCountry.infra.climate_vulnerability_index = 0.05;
+        playerCountry.security.diplomatic_prestige += 0.01;
+        std::cout << ">> REFORESTATION PROGRAM: $15M invested in forest recovery." << std::endl;
+        std::cout << "   Deforestation rate: " << playerCountry.infra.deforestation_rate * 100 << "% per year." << std::endl;
+        std::cout << "   (CO2 -, Biodiversity +, Climate Resilience +)" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
