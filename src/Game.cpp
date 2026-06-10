@@ -1286,6 +1286,54 @@ void Game::processEvents() {
             std::cout << "   (AI Development +, Talent +, Innovation +, Automation Risk +)" << std::endl;
         }
     }
+    // --- MEDIA & PROPAGANDA COMMANDS ---
+    else if (command == "media_control+") {
+        playerCountry.security.media_control += 0.1;
+        if (playerCountry.security.media_control > 1.0) playerCountry.security.media_control = 1.0;
+        playerCountry.security.press_freedom -= 0.08;
+        if (playerCountry.security.press_freedom < 0.05) playerCountry.security.press_freedom = 0.05;
+        playerCountry.security.narrative_reach += 0.05;
+        if (playerCountry.security.narrative_reach > 1.0) playerCountry.security.narrative_reach = 1.0;
+        playerCountry.security.self_censorship_rate += 0.05;
+        playerCountry.politics.democratic_backsliding_index += 0.02;
+        playerCountry.economy.international_sanctions_prob += 0.01;
+        std::cout << ">> MEDIA CONTROL TIGHTENED: State narrative dominates. Press freedom eroded." << std::endl;
+        std::cout << "   (Narrative +, Press Freedom -, Democracy -, Sanctions Risk +)" << std::endl;
+    }
+    else if (command == "propaganda") {
+        double cost = 10000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.security.narrative_reach += 0.1;
+        if (playerCountry.security.narrative_reach > 1.0) playerCountry.security.narrative_reach = 1.0;
+        playerCountry.security.social_media_reach += 0.05;
+        playerCountry.politics.popularity += 0.03;
+        // Risk of backfire if press is free
+        if (playerCountry.security.press_freedom > 0.6) {
+            playerCountry.security.fake_news_success_prob += 0.05;
+            std::cout << ">> PROPAGANDA CAMPAIGN: $10M spent. But free press may expose it." << std::endl;
+        } else {
+            playerCountry.politics.popularity += 0.02; // Extra boost with controlled media
+            std::cout << ">> PROPAGANDA CAMPAIGN: $10M spent. Message reaches "
+                      << (int)(playerCountry.security.narrative_reach * 100) << "% of population." << std::endl;
+        }
+    }
+    else if (command == "press_free+") {
+        playerCountry.security.press_freedom += 0.1;
+        if (playerCountry.security.press_freedom > 1.0) playerCountry.security.press_freedom = 1.0;
+        playerCountry.security.media_control -= 0.05;
+        if (playerCountry.security.media_control < 0.0) playerCountry.security.media_control = 0.0;
+        playerCountry.security.media_pluralism += 0.05;
+        if (playerCountry.security.media_pluralism > 1.0) playerCountry.security.media_pluralism = 1.0;
+        playerCountry.security.self_censorship_rate -= 0.05;
+        if (playerCountry.security.self_censorship_rate < 0.0) playerCountry.security.self_censorship_rate = 0.0;
+        playerCountry.politics.democratic_backsliding_index -= 0.01;
+        if (playerCountry.politics.democratic_backsliding_index < 0.0) playerCountry.politics.democratic_backsliding_index = 0.0;
+        playerCountry.security.diplomatic_prestige += 0.02;
+        // Risk: free press exposes government scandals
+        playerCountry.security.document_leak_prob += 0.02;
+        std::cout << ">> PRESS FREEDOM PROTECTED: Media independence strengthened." << std::endl;
+        std::cout << "   (Pluralism +, Democracy +, Prestige +, Leak Risk +)" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
