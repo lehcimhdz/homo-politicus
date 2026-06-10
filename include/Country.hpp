@@ -449,9 +449,24 @@ struct InfrastructureFutureSystem {
 
     // Science and Technology
     double st_investment_gdp = 0.01;
+    double private_rd_gdp = 0.02;              // Private sector R&D (% GDP)
+    double total_rd_gdp = 0.03;                // Combined R&D intensity
+    double researcher_density = 500.0;         // Researchers per million population
+
     double private_investment = 0.02;
+    double fdi_inflow_gdp = 0.03;              // Foreign direct investment inflows (% GDP)
+    double investment_climate_index = 0.6;     // Ease of doing business (0–1)
+    double capital_flight_risk = 0.1;          // Probability of capital flight event
+
     int patent_development = 100;
+    int    patents_granted_international = 10; // Patents approved in foreign jurisdictions
+    double patent_commercialization = 0.2;     // Fraction of patents reaching market (0–1)
+    double technology_transfer_index = 0.3;    // Absorption of foreign technology (0–1)
+
     double innovation_index = 0.4;
+    double startup_ecosystem_strength = 0.3;   // VC funding, accelerators (0–1)
+    double university_research_quality = 0.4;  // Academic output/citations (0–1)
+    double industry_academia_linkage = 0.3;    // Tech transfer between academia/industry (0–1)
 
     // Infrastructure
     double road_connectivity = 0.7;

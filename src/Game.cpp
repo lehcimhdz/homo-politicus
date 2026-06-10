@@ -3333,6 +3333,42 @@ void Game::update() {
         }
     }
 
+    // --- SCIENCE, TECHNOLOGY & INNOVATION DYNAMICS ---
+    // Total R&D intensity
+    playerCountry.infra.total_rd_gdp = playerCountry.infra.st_investment_gdp + playerCountry.infra.private_rd_gdp;
+    // Researcher density grows with R&D spending and education
+    playerCountry.infra.researcher_density += (playerCountry.infra.total_rd_gdp * 100.0 - 2.0) * 5.0;
+    if (playerCountry.infra.researcher_density < 50.0) playerCountry.infra.researcher_density = 50.0;
+    // Investment climate driven by rule of law, corruption, and stability
+    playerCountry.infra.investment_climate_index = playerCountry.politics.judicial_independence * 0.3
+                                                 + (1.0 - playerCountry.politics.administrative_corruption) * 0.3
+                                                 + playerCountry.economy.exchange_rate_stability * 0.2
+                                                 + playerCountry.security.press_freedom * 0.1;
+    if (playerCountry.infra.investment_climate_index > 1.0) playerCountry.infra.investment_climate_index = 1.0;
+    // Capital flight risk: sanctions, instability, high corruption
+    playerCountry.infra.capital_flight_risk = playerCountry.economy.international_sanctions_prob * 0.3
+                                            + playerCountry.politics.polarization_index * 0.2
+                                            + playerCountry.politics.administrative_corruption * 0.2;
+    if (playerCountry.infra.capital_flight_risk > 0.8) playerCountry.infra.capital_flight_risk = 0.8;
+    // Patent commercialization driven by industry-academia linkage and startup ecosystem
+    playerCountry.infra.patent_commercialization = playerCountry.infra.industry_academia_linkage * 0.5
+                                                 + playerCountry.infra.startup_ecosystem_strength * 0.3;
+    if (playerCountry.infra.patent_commercialization > 0.8) playerCountry.infra.patent_commercialization = 0.8;
+    // Technology transfer: FDI + trade openness enable it
+    playerCountry.infra.technology_transfer_index = playerCountry.infra.fdi_inflow_gdp * 2.0
+                                                  + playerCountry.economy.trade_openness * 0.2;
+    if (playerCountry.infra.technology_transfer_index > 1.0) playerCountry.infra.technology_transfer_index = 1.0;
+    // Innovation index: GII-style composite
+    playerCountry.infra.innovation_index = playerCountry.infra.total_rd_gdp * 5.0 * 0.25
+                                         + playerCountry.infra.patent_commercialization * 0.25
+                                         + playerCountry.infra.startup_ecosystem_strength * 0.25
+                                         + playerCountry.infra.university_research_quality * 0.25;
+    if (playerCountry.infra.innovation_index > 1.0) playerCountry.infra.innovation_index = 1.0;
+    // University research quality grows slowly with spending
+    playerCountry.infra.university_research_quality += (playerCountry.welfare.research_spending_gdp - 0.005) * 0.5;
+    if (playerCountry.infra.university_research_quality < 0.1) playerCountry.infra.university_research_quality = 0.1;
+    if (playerCountry.infra.university_research_quality > 1.0) playerCountry.infra.university_research_quality = 1.0;
+
     // --- ENVIRONMENT & CLIMATE DYNAMICS ---
     // Air quality: driven by CO2, industry, and pollution events
     playerCountry.infra.air_quality_index = 1.0 - playerCountry.infra.pollution_prob * 0.3
