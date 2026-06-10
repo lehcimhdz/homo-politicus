@@ -1661,6 +1661,88 @@ void Game::processEvents() {
         std::cout << ">> TRANSPARENCY REFORM: Open government, public procurement, FOI laws enacted." << std::endl;
         std::cout << "   (CPI +, Investment Climate +, Prestige +, SWF Governance +)" << std::endl;
     }
+    // --- AUTHORITARIAN COMMANDS ---
+    else if (command == "pack_court") {
+        if (playerCountry.politics.court_packing_executed) {
+            std::cout << ">> Court already packed. No further changes possible." << std::endl;
+        } else if (playerCountry.politics.judicial_independence > 0.7) {
+            std::cout << ">> BLOCKED: Independent judiciary resists court packing attempt." << std::endl;
+            playerCountry.politics.popularity -= 0.03;
+            playerCountry.politics.judicial_pressure += 0.1;
+        } else {
+            playerCountry.politics.court_packing_executed = true;
+            playerCountry.politics.judicial_independence -= 0.3;
+            if (playerCountry.politics.judicial_independence < 0.1) playerCountry.politics.judicial_independence = 0.1;
+            playerCountry.politics.ruling_against_state_prob -= 0.3;
+            if (playerCountry.politics.ruling_against_state_prob < 0.05) playerCountry.politics.ruling_against_state_prob = 0.05;
+            playerCountry.politics.democratic_backsliding_index += 0.15;
+            playerCountry.politics.auth_dem_axis += 0.1;
+            if (playerCountry.politics.auth_dem_axis > 1.0) playerCountry.politics.auth_dem_axis = 1.0;
+            playerCountry.politics.regime_legitimacy -= 0.1;
+            playerCountry.politics.authoritarian_actions_count++;
+            playerCountry.economy.international_sanctions_prob += 0.05;
+            std::cout << ">> COURT PACKED: Loyalist judges installed. Judicial independence destroyed." << std::endl;
+            std::cout << "   (Courts -, Democracy -, Sanctions Risk +, Legitimacy -)" << std::endl;
+        }
+    }
+    else if (command == "nationalize_media") {
+        if (playerCountry.politics.media_nationalized) {
+            std::cout << ">> Media already under state control." << std::endl;
+        } else {
+            playerCountry.politics.media_nationalized = true;
+            playerCountry.security.media_control = 0.9;
+            playerCountry.security.press_freedom -= 0.5;
+            if (playerCountry.security.press_freedom < 0.05) playerCountry.security.press_freedom = 0.05;
+            playerCountry.security.narrative_reach = 0.9;
+            playerCountry.security.media_pluralism = 0.1;
+            playerCountry.politics.democratic_backsliding_index += 0.15;
+            playerCountry.politics.auth_dem_axis += 0.1;
+            playerCountry.politics.regime_legitimacy -= 0.1;
+            playerCountry.politics.authoritarian_actions_count++;
+            playerCountry.economy.international_sanctions_prob += 0.05;
+            std::cout << ">> MEDIA NATIONALIZED: State controls all major outlets. Dissent silenced." << std::endl;
+            std::cout << "   (Control +++, Freedom ---, Democracy ---, International Outcry)" << std::endl;
+        }
+    }
+    else if (command == "ban_opposition") {
+        if (playerCountry.politics.opposition_banned) {
+            std::cout << ">> Opposition already banned." << std::endl;
+        } else if (playerCountry.security.press_freedom > 0.5) {
+            std::cout << ">> RISKY: Free press makes opposition ban politically costly." << std::endl;
+            playerCountry.politics.popularity -= 0.1;
+            playerCountry.politics.opposition_banned = true;
+            playerCountry.politics.opposition_seats = 0;
+            playerCountry.politics.congressional_support = 1.0;
+        } else {
+            playerCountry.politics.opposition_banned = true;
+            playerCountry.politics.opposition_seats = 0;
+            playerCountry.politics.congressional_support = 1.0;
+            playerCountry.politics.coalition_cohesion = 1.0;
+            playerCountry.politics.democratic_backsliding_index += 0.2;
+            playerCountry.politics.auth_dem_axis += 0.15;
+            playerCountry.politics.regime_legitimacy -= 0.2;
+            playerCountry.politics.authoritarian_actions_count++;
+            playerCountry.economy.international_sanctions_prob += 0.1;
+            std::cout << ">> OPPOSITION BANNED: One-party state established. No legislative resistance." << std::endl;
+            std::cout << "   (Congress = 100%, Democracy -, Legitimacy --, Sanctions +++)" << std::endl;
+        }
+    }
+    else if (command == "rig_election") {
+        playerCountry.politics.election_rigged = true;
+        playerCountry.politics.popularity += 0.1; // Fake boost
+        playerCountry.politics.regime_legitimacy -= 0.15;
+        playerCountry.politics.democratic_backsliding_index += 0.1;
+        playerCountry.politics.authoritarian_actions_count++;
+        // Risk of detection by international observers
+        std::uniform_real_distribution<> obs_dist(0.0, 1.0);
+        if (obs_dist(rng) < (1.0 - playerCountry.security.media_control) * 0.5) {
+            playerCountry.economy.international_sanctions_prob += 0.1;
+            playerCountry.security.diplomatic_prestige -= 0.1;
+            std::cout << ">> ELECTION RIGGED: But international observers detected fraud! Massive backlash." << std::endl;
+        } else {
+            std::cout << ">> ELECTION RIGGED: Results manipulated. Guaranteed victory at legitimacy cost." << std::endl;
+        }
+    }
     // --- ENVIRONMENT COMMANDS ---
     else if (command == "protect_area") {
         double cost = 10000000.0;

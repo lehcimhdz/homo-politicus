@@ -249,6 +249,14 @@ struct PoliticalInstitutionalSystem {
     double popular_pressure = 0.0;         // 0-1, revolution threshold at 0.9
     double international_pressure = 0.0;   // 0-1, intervention threshold at 0.9
     double total_pressure = 0.0;           // Weighted composite
+
+    // Authoritarian toolkit
+    bool court_packing_executed = false;
+    bool media_nationalized = false;
+    bool opposition_banned = false;
+    bool election_rigged = false;
+    double regime_legitimacy = 1.0;        // 0-1, erodes with authoritarian moves
+    int authoritarian_actions_count = 0;
     bool   state_of_emergency_active = false;  // Emergency decree powers in effect
     int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
