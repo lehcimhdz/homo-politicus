@@ -3333,6 +3333,48 @@ void Game::update() {
         }
     }
 
+    // --- ENERGY DYNAMICS ---
+    // Renewables percentage: sum of solar + wind vs total capacity
+    double total_re_gw = playerCountry.infra.solar_capacity_gw + playerCountry.infra.wind_capacity_gw;
+    double implied_total_gw = total_re_gw / (playerCountry.infra.renewables_percentage + 0.01);
+    if (implied_total_gw > 0)
+        playerCountry.infra.renewables_percentage = total_re_gw / implied_total_gw;
+    playerCountry.infra.fossil_fuel_dependency = 1.0 - playerCountry.infra.renewables_percentage;
+    // Energy transition speed: net-zero commitment accelerates transition
+    if (playerCountry.infra.net_zero_commitment)
+        playerCountry.infra.energy_transition_speed = 0.01;
+    playerCountry.infra.fossil_fuel_dependency -= playerCountry.infra.energy_transition_speed;
+    if (playerCountry.infra.fossil_fuel_dependency < 0.05) playerCountry.infra.fossil_fuel_dependency = 0.05;
+    // Stranded asset risk: high fossil dependency + global transition pressure
+    playerCountry.infra.stranded_asset_risk = playerCountry.infra.fossil_fuel_dependency * 0.3;
+    // Oil/gas reserves deplete over time
+    playerCountry.infra.oil_gas_reserves *= (1.0 - playerCountry.infra.reserve_depletion_rate);
+    // Grid resilience: storage + maintenance + low transmission losses
+    playerCountry.infra.grid_resilience = 0.3 + playerCountry.infra.energy_storage_hours * 0.1
+                                        + playerCountry.infra.maintenance_level * 0.2
+                                        + (1.0 - playerCountry.infra.transmission_loss_rate) * 0.2;
+    if (playerCountry.infra.grid_resilience > 1.0) playerCountry.infra.grid_resilience = 1.0;
+    // Blackout probability: inversely related to resilience + capacity margin + cyber risk
+    playerCountry.infra.blackout_prob = (1.0 - playerCountry.infra.grid_resilience) * 0.1
+                                      + (playerCountry.infra.generation_capacity < 1.0 ? 0.1 : 0.0)
+                                      + playerCountry.infra.cyber_grid_vulnerability * 0.05;
+    if (playerCountry.infra.blackout_prob < 0.005) playerCountry.infra.blackout_prob = 0.005;
+    // SAIDI: interruption hours driven by blackout prob and grid resilience
+    playerCountry.infra.saidi_hours = playerCountry.infra.blackout_prob * 200.0
+                                    + (1.0 - playerCountry.infra.grid_resilience) * 10.0;
+    // Energy affordability
+    playerCountry.infra.energy_affordability = 1.0 - playerCountry.infra.kwh_price * 2.0
+                                             + playerCountry.infra.energy_subsidy_gdp * 20.0;
+    if (playerCountry.infra.energy_affordability < 0.1) playerCountry.infra.energy_affordability = 0.1;
+    if (playerCountry.infra.energy_affordability > 1.0) playerCountry.infra.energy_affordability = 1.0;
+    // Industrial price: lower than residential, driven by subsidies
+    playerCountry.infra.industrial_kwh_price = playerCountry.infra.kwh_price * 0.7;
+    // Curtailment: renewables wasted when storage is insufficient
+    if (playerCountry.infra.renewables_percentage > 0.4 && playerCountry.infra.energy_storage_hours < 2.0)
+        playerCountry.infra.grid_curtailment_rate = (playerCountry.infra.renewables_percentage - 0.4) * 0.3;
+    else
+        playerCountry.infra.grid_curtailment_rate = 0.01;
+
     // --- INFRASTRUCTURE DYNAMICS ---
     // Logistics performance: composite of road, rail, port, and air
     playerCountry.infra.logistics_performance = playerCountry.infra.road_connectivity * 0.3

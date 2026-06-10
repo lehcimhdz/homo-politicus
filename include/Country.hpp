@@ -498,12 +498,35 @@ struct InfrastructureFutureSystem {
     double public_works_spending_gdp = 0.04;   // Annual infra investment (% GDP)
 
     // Energy
-    double generation_capacity = 1.2; // relative to demand
+    double generation_capacity = 1.2;
+    double grid_resilience = 0.6;              // Resistance to cascading failures (0–1)
+    double transmission_loss_rate = 0.08;      // Electricity lost in transmission
+    double peak_demand_coverage = 0.9;         // Capacity to meet seasonal peak
+
     double fossil_fuel_dependency = 0.7;
+    double energy_transition_speed = 0.0;      // Annual reduction in fossil dependency
+    double stranded_asset_risk = 0.2;          // Fossil asset devaluation exposure (0–1)
+    bool   net_zero_commitment = false;        // Formal net-zero target in law
+
     double renewables_percentage = 0.2;
+    double solar_capacity_gw = 1.0;            // Installed solar (GW)
+    double wind_capacity_gw = 0.5;             // Installed wind (GW)
+    double energy_storage_hours = 0.5;         // Grid storage capacity (hours)
+    double grid_curtailment_rate = 0.05;       // Renewable energy wasted
+
     double oil_gas_reserves = 1000000.0;
+    double reserve_depletion_rate = 0.03;      // Annual depletion fraction
+    double exploration_success_rate = 0.2;     // Probability exploration finds reserves
+
     double blackout_prob = 0.05;
+    double saidi_hours = 10.0;                 // System Average Interruption Duration (hrs/yr)
+    double critical_infrastructure_backup = 0.6; // Hospitals/govt on backup power (0–1)
+    double cyber_grid_vulnerability = 0.2;     // Grid cyberattack exposure (0–1)
+
     double kwh_price = 0.15;
+    double energy_subsidy_gdp = 0.01;          // Energy subsidies as % GDP
+    double energy_affordability = 0.7;         // Share able to afford adequate energy (0–1)
+    double industrial_kwh_price = 0.10;        // Industrial electricity price (USD/kWh)
 
     // Space Race
     int satellite_capacity = 2;
