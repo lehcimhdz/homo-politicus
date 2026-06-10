@@ -5631,12 +5631,51 @@ void Game::update() {
             }
         }
 
-        // Aggregate neighbor trade into trade balance
+        // --- BILATERAL TRADE EFFECTS ---
         double total_neighbor_trade = 0.0;
-        for (const auto& n : playerCountry.neighbors) {
-            total_neighbor_trade += n.trade_volume;
+        double total_refugee_pressure = 0.0;
+        for (auto& neighbor : playerCountry.neighbors) {
+            // Sanctions from neighbor reduce trade volume sharply
+            if (neighbor.sanctions_against_us) {
+                neighbor.trade_volume *= 0.92; // -8% per turn under sanctions
+                if (neighbor.trade_volume < 1000000.0) neighbor.trade_volume = 1000000.0;
+            }
+
+            // FTA with allied neighbor boosts bilateral trade
+            if (neighbor.diplomatic_relations > 0.6 && playerCountry.economy.trade_openness > 0.5) {
+                double fta_boost = neighbor.trade_volume * 0.02 * neighbor.diplomatic_relations;
+                neighbor.trade_volume += fta_boost;
+            }
+
+            // Neighbor in recession → our exports to them drop
+            if (neighbor.in_crisis || neighbor.economic_growth < -0.01) {
+                double export_loss = neighbor.trade_volume * 0.05;
+                neighbor.trade_volume -= export_loss;
+                playerCountry.economy.gdp -= export_loss * 0.3; // Spillover to our GDP
+                if (neighbor.trade_volume < 5000000.0) neighbor.trade_volume = 5000000.0;
+            }
+
+            // Neighbor refugee crisis → migration pressure on us
+            if (neighbor.in_crisis && neighbor.refugee_generation > 0) {
+                double refugees = neighbor.refugee_generation * 0.1; // 10% flow to us
+                total_refugee_pressure += refugees;
+                playerCountry.welfare.population += (int)(refugees);
+                playerCountry.welfare.unemployment_rate += refugees / playerCountry.welfare.population * 2.0;
+                playerCountry.politics.popularity -= 0.002 * (refugees / 10000.0);
+            }
+
+            total_neighbor_trade += neighbor.trade_volume;
         }
-        playerCountry.economy.trade_balance += total_neighbor_trade * 0.01; // Net benefit from neighbor trade
+
+        // Net contribution from neighbor trade to trade balance
+        playerCountry.economy.trade_balance += total_neighbor_trade * 0.01;
+
+        // Refugee pressure narrative
+        if (total_refugee_pressure > 5000) {
+            std::cout << "[MIGRATION] Refugee influx from neighbors: " << (int)total_refugee_pressure
+                      << " people. Social tensions rising." << std::endl;
+            playerCountry.politics.popularity -= 0.01;
+        }
     }
 
     // --- GEOPOLITICS & INTERNATIONAL RELATIONS ---
