@@ -1386,6 +1386,66 @@ void Game::processEvents() {
         std::cout << ">> CURFEW IMPOSED: Streets cleared. Economic activity reduced." << std::endl;
         std::cout << "   (Protest -, GDP -, Freedom -, Tourism -, Mental Health -)" << std::endl;
     }
+    // --- NEGOTIATION & DIPLOMACY COMMANDS ---
+    else if (command == "negotiate_peace") {
+        if (playerCountry.security.conflict_with_groups < 0.2 && !playerCountry.security.war_active) {
+            std::cout << ">> No active conflict to negotiate." << std::endl;
+        } else {
+            double cost = 20000000.0;
+            playerCountry.economy.gdp -= cost;
+            double peace_chance = playerCountry.security.peace_negotiation_prob
+                                + playerCountry.security.diplomatic_prestige * 0.2;
+            std::uniform_real_distribution<> dist01(0.0, 1.0);
+            if (dist01(rng) < peace_chance) {
+                playerCountry.security.ceasefire_active = true;
+                playerCountry.security.conflict_with_groups *= 0.5;
+                playerCountry.security.conflict_casualties_annual = (int)(playerCountry.security.conflict_casualties_annual * 0.3);
+                playerCountry.politics.popularity += 0.05;
+                playerCountry.security.diplomatic_prestige += 0.05;
+                std::cout << ">> CEASEFIRE ACHIEVED: Peace negotiations successful!" << std::endl;
+            } else {
+                playerCountry.politics.popularity -= 0.02;
+                std::cout << ">> PEACE TALKS COLLAPSED: Groups refuse terms. $20M wasted." << std::endl;
+            }
+        }
+    }
+    else if (command == "seek_alliance") {
+        double cost = 30000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.security.alliance_protection += 0.05;
+        if (playerCountry.security.alliance_protection > 1.0) playerCountry.security.alliance_protection = 1.0;
+        playerCountry.security.diplomatic_prestige += 0.02;
+        playerCountry.security.foreign_intelligence_sharing += 0.05;
+        if (playerCountry.security.foreign_intelligence_sharing > 1.0) playerCountry.security.foreign_intelligence_sharing = 1.0;
+        // Alignment shift based on current position
+        if (playerCountry.security.us_alignment > playerCountry.security.china_alignment) {
+            playerCountry.security.us_alignment += 0.05;
+            if (playerCountry.security.us_alignment > 1.0) playerCountry.security.us_alignment = 1.0;
+            playerCountry.security.china_alignment -= 0.02;
+        } else {
+            playerCountry.security.china_alignment += 0.05;
+            if (playerCountry.security.china_alignment > 1.0) playerCountry.security.china_alignment = 1.0;
+            playerCountry.security.us_alignment -= 0.02;
+        }
+        std::cout << ">> ALLIANCE STRENGTHENED: Military protection enhanced. $30M invested." << std::endl;
+        std::cout << "   Alliance: " << (int)(playerCountry.security.alliance_protection * 100)
+                  << "%, US align: " << (int)(playerCountry.security.us_alignment * 100)
+                  << "%, China align: " << (int)(playerCountry.security.china_alignment * 100) << "%" << std::endl;
+    }
+    else if (command == "diplomacy+") {
+        double cost = 15000000.0;
+        playerCountry.economy.gdp -= cost;
+        playerCountry.security.diplomatic_prestige += 0.05;
+        if (playerCountry.security.diplomatic_prestige > 1.0) playerCountry.security.diplomatic_prestige = 1.0;
+        playerCountry.security.soft_power_index += 0.03;
+        if (playerCountry.security.soft_power_index > 1.0) playerCountry.security.soft_power_index = 1.0;
+        playerCountry.security.multilateral_leadership += 0.03;
+        if (playerCountry.security.multilateral_leadership > 1.0) playerCountry.security.multilateral_leadership = 1.0;
+        playerCountry.economy.international_sanctions_prob -= 0.02;
+        if (playerCountry.economy.international_sanctions_prob < 0.0) playerCountry.economy.international_sanctions_prob = 0.0;
+        std::cout << ">> DIPLOMATIC OFFENSIVE: Prestige restored. Sanctions risk reduced." << std::endl;
+        std::cout << "   Prestige: " << (int)(playerCountry.security.diplomatic_prestige * 100) << "%" << std::endl;
+    }
     else {
         std::cout << ">> Unknown command." << std::endl;
     }
