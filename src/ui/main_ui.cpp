@@ -503,7 +503,7 @@ int main(int argc, char** argv) {
         // === SidebarRight ===
         window.draw(makePanel(1030, 60, 250, 640, currentPalette.sidebar));
         if (fontOk) {
-            // Retrato del presidente (detallado, con expresion segun popularidad).
+            // Retrato del presidente (detallado, con expresion + wardrobe contextual).
             window.draw(makeText(font, "PRESIDENCIA", 14, kMuted, 1046, 76));
             {
                 const Country& cc = bridge.country();
@@ -511,10 +511,30 @@ int main(int argc, char** argv) {
                 if (cc.politics.popularity > 0.65) expr = LeaderPortrait::Expression::Happy;
                 else if (cc.politics.popularity < 0.30) expr = LeaderPortrait::Expression::Angry;
                 else if (cc.politics.popular_pressure > 0.6 || cc.security.war_active) expr = LeaderPortrait::Expression::Worried;
-                sf::Color regimeAccent(40, 60, 110); // default democracy
+                // Color de uniforme segun regimen.
+                sf::Color regimeAccent;
+                if (cc.politics.auth_dem_axis > 0.6) {
+                    regimeAccent = sf::Color(80, 30, 30);     // rojo oscuro autoritario
+                } else if (cc.politics.civilian_military_control < 0.5) {
+                    regimeAccent = sf::Color(60, 80, 50);     // verde militar
+                } else {
+                    regimeAccent = sf::Color(40, 60, 110);    // azul democratico
+                }
+                // En crisis economica/social: uniforme deslucido (oscurecido).
+                bool inCrisis = (cc.economy.inflation > 0.15) || (cc.politics.popular_pressure > 0.7)
+                              || cc.welfare.pandemic_active;
+                if (inCrisis) {
+                    regimeAccent.r = (uint8_t)(regimeAccent.r * 0.65f);
+                    regimeAccent.g = (uint8_t)(regimeAccent.g * 0.65f);
+                    regimeAccent.b = (uint8_t)(regimeAccent.b * 0.65f);
+                }
+                // Bonus de legitimacy si turno reciente fue eleccion ganada.
+                float legit = (float)cc.politics.regime_legitimacy;
+                if (bridge.turn() > 0 && bridge.turn() % 4 == 0 && cc.politics.popularity > 0.5) {
+                    legit = std::min(1.f, legit + 0.25f); // medalla extra
+                }
                 LeaderPortrait::drawDetailed(window, font, "Presidente", "Mandato actual",
-                                             1155.f, 158.f, 42.f, expr, regimeAccent,
-                                             (float)cc.politics.regime_legitimacy);
+                                             1155.f, 158.f, 42.f, expr, regimeAccent, legit);
             }
             // Asesores (3 compactos).
             window.draw(makeText(font, "ASESORES", 14, kMuted, 1046, 248));
