@@ -17,6 +17,7 @@
 #include "ui/LeaderPortrait.hpp"
 #include "ui/MandateTimeline.hpp"
 #include "ui/CourtNetwork.hpp"
+#include "ui/CourtScene.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -189,6 +190,7 @@ int main(int argc, char** argv) {
     timeline.addEvent(0, "Asuncion", sf::Color(80, 160, 240));
     CourtNetwork court;
     court.configure(bridge.country());
+    CourtScene scene;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     AppState appState = AppState::Menu;
@@ -506,8 +508,13 @@ int main(int argc, char** argv) {
                     sf::Text hdr(fTitle, "CORTE  [6]", 18);
                     hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
                     hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+                    // Palacio (escena) arriba + red abajo.
+                    scene.update(dt);
+                    if (modal.visible()) scene.setDialog("Una decision critica espera mi resolucion.");
+                    else scene.clearDialog();
+                    scene.draw(window, font, 218.f, 102.f, 794.f, 230.f, bridge.country());
                     court.update(dt);
-                    court.draw(window, font, 218.f, 110.f, 794.f, 540.f);
+                    court.draw(window, font, 218.f, 340.f, 794.f, 310.f);
                     if (court.hovered() >= 0) {
                         window.draw(makeText(font, court.hoveredDetail(), 12, kAccent, 220, 668));
                     }
