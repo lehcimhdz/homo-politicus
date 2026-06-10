@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread> // For sleep
 #include <chrono> // For time duration
+#include <algorithm>
 
 Game::Game() : isRunning(true), nextTurn(false), turnCount(0), rng(std::random_device{}()) {
     std::cout << "Initializing Game..." << std::endl;
@@ -21,11 +22,21 @@ void Game::run() {
 }
 
 void Game::processEvents() {
-    std::cout << "\nCommand (next/exit/tax+/tax-/invest_.../mining+/mining-/mining_reform/royalty+/royalty-"
-                 "/swf_save/swf_rate-/swf_cancel/swf_rule/swf_spend/swf_invest/swf_debt"
-                 "/swf_conservative/swf_balanced/swf_growth/swf_transparency"
-                 "/tariff+/tariff-/tariff_dumping/fta_sign"
-                 "/hedge_prices/geo_survey/mine_rehab/env_bond/env_audit/consult/mediate/suppress_conflict): ";
+    if (!pendingDecisions.empty()) {
+        const auto& d = pendingDecisions.front();
+        std::cout << "\n>> Pending decision: " << d.prompt << std::endl;
+        std::cout << "Choose: ";
+        for (size_t i = 0; i < d.options.size(); ++i) {
+            std::cout << d.options[i];
+            if (i + 1 < d.options.size()) std::cout << " | ";
+        }
+        std::cout << "\n> ";
+        std::string choice;
+        std::cin >> choice;
+        resolveDecision(choice);
+        return;
+    }
+    std::cout << "\nCommand (next/exit/help/status_brief/...): ";
     std::string command;
     std::cin >> command;
 
@@ -7639,6 +7650,42 @@ void Game::checkGameOver() {
     auto& sec = playerCountry.security;
     std::uniform_real_distribution<double> roll(0.0, 1.0);
 
+    auto hasDecision = [&](const std::string& id) {
+        for (const auto& d : pendingDecisions) if (d.id == id) return true;
+        return false;
+    };
+    if (pol.military_pressure > 0.7 && !hasDecision("coup_threat")) {
+        pendingDecisions.push_back({"coup_threat",
+            "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
+            {"purge_military", "negotiate_military", "cede_power", "resist"}});
+    }
+    double max_scandal = std::max({pol.scandal_corruption_severity, pol.scandal_sex_severity,
+        pol.scandal_financial_severity, pol.scandal_violence_severity, pol.scandal_substance_severity,
+        pol.scandal_treason_severity, pol.scandal_organized_crime_severity});
+    if (max_scandal > 0.6 && !hasDecision("big_scandal")) {
+        pendingDecisions.push_back({"big_scandal",
+            "Escándalo mayor en portada. ¿Cómo reaccionas?",
+            {"cover_up", "resign_minister", "deny", "accept_responsibility"}});
+    }
+    if (pol.congressional_pressure > 0.75 && !hasDecision("congress_crisis")) {
+        pendingDecisions.push_back({"congress_crisis",
+            "El congreso amenaza con destituirte. ¿Qué haces?",
+            {"call_referendum", "dissolve_congress", "negotiate_coalition", "resign"}});
+    }
+    for (const auto& n : playerCountry.neighbors) {
+        if (n.has_territorial_claim && n.diplomatic_relations < -0.5 && !hasDecision("neighbor_ultimatum")) {
+            pendingDecisions.push_back({"neighbor_ultimatum",
+                "Un vecino hostil emite un ultimátum territorial. ¿Cómo respondes?",
+                {"cede_territory", "mobilize", "seek_mediation"}});
+            break;
+        }
+    }
+    if (sec.nuclear_attack_prob > 0.3 && !hasDecision("nuclear_threat")) {
+        pendingDecisions.push_back({"nuclear_threat",
+            "Riesgo de ataque nuclear inminente. ¿Tu decisión?",
+            {"preemptive_strike", "diplomatic_summit", "evacuate_cities"}});
+    }
+
     if (sec.nuclear_strike && sec.nuclear_casualties > 1000000.0) {
         endCondition = EndCondition::NUCLEAR_ANNIHILATION;
         isRunning = false;
@@ -7701,4 +7748,129 @@ void Game::renderEndScreen() {
     std::cout << "Backsliding democrático: " << (int)(playerCountry.politics.democratic_backsliding_index * 100) << "%" << std::endl;
     std::cout << "Guerras vividas (turnos): " << playerCountry.security.war_duration << std::endl;
     std::cout << "==================================================" << std::endl;
+}
+
+void Game::resolveDecision(const std::string& choice) {
+    if (pendingDecisions.empty()) return;
+    PendingDecision d = pendingDecisions.front();
+    pendingDecisions.erase(pendingDecisions.begin());
+    auto& pol = playerCountry.politics;
+    auto& sec = playerCountry.security;
+
+    if (d.id == "coup_threat") {
+        if (choice == "purge_military") {
+            pol.military_pressure *= 0.4;
+            sec.troop_morale -= 0.2;
+            pol.authoritarian_actions_count++;
+            pol.auth_dem_axis += 0.05;
+            pol.democratic_backsliding_index += 0.05;
+            std::cout << ">> PURGE: oficiales desafectos removidos. Riesgo de coup baja, moral cae." << std::endl;
+        } else if (choice == "negotiate_military") {
+            pol.military_pressure *= 0.6;
+            sec.military_spending_gdp += 0.005;
+            std::cout << ">> NEGOCIACIÓN: concesiones al alto mando. Presión cede algo." << std::endl;
+        } else if (choice == "cede_power") {
+            pol.military_pressure = 0.95;
+            pol.coup_success_prob = 0.95;
+            std::cout << ">> CESIÓN: el ejército toma el control de facto." << std::endl;
+        } else if (choice == "resist") {
+            pol.military_pressure += 0.1;
+            pol.popularity += 0.05;
+            std::cout << ">> RESISTENCIA: discurso desafiante. El pueblo aplaude, el riesgo escala." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "big_scandal") {
+        if (choice == "cover_up") {
+            pol.scandal_corruption_severity *= 0.5;
+            pol.cover_up_probability -= 0.05;
+            pol.judicial_pressure += 0.1;
+            std::cout << ">> COVER-UP: severidad cae, pero la justicia sospecha." << std::endl;
+        } else if (choice == "resign_minister") {
+            pol.scandal_corruption_severity *= 0.3;
+            pol.popularity -= 0.03;
+            std::cout << ">> RENUNCIA DE MINISTRO: chivo expiatorio absorbe el golpe." << std::endl;
+        } else if (choice == "deny") {
+            pol.media_exposure_intensity += 0.2;
+            pol.polarization_index += 0.05;
+            std::cout << ">> NIEGA TODO: la prensa se obsesiona, polarización sube." << std::endl;
+        } else if (choice == "accept_responsibility") {
+            pol.popularity -= 0.05;
+            pol.scandal_corruption_severity *= 0.2;
+            pol.regime_legitimacy += 0.05;
+            std::cout << ">> ASUME RESPONSABILIDAD: pierde popularidad, gana legitimidad." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "congress_crisis") {
+        if (choice == "call_referendum") {
+            pol.congressional_pressure *= 0.5;
+            pol.popular_pressure += 0.1;
+            std::cout << ">> REFERÉNDUM: pasa por encima del congreso, juega con el pueblo." << std::endl;
+        } else if (choice == "dissolve_congress") {
+            pol.congressional_pressure = 0.0;
+            pol.auth_dem_axis += 0.15;
+            pol.authoritarian_actions_count++;
+            pol.democratic_backsliding_index += 0.15;
+            pol.regime_legitimacy -= 0.2;
+            pol.international_pressure += 0.2;
+            std::cout << ">> CONGRESO DISUELTO: movida autoritaria flagrante." << std::endl;
+        } else if (choice == "negotiate_coalition") {
+            pol.congressional_pressure *= 0.4;
+            pol.coalition_cohesion += 0.1;
+            pol.legislative_efficiency += 0.05;
+            std::cout << ">> COALICIÓN: cede agenda, gana gobernabilidad." << std::endl;
+        } else if (choice == "resign") {
+            endCondition = EndCondition::IMPEACHMENT;
+            isRunning = false;
+            std::cout << ">> RENUNCIA: sale antes de que lo echen." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "neighbor_ultimatum") {
+        if (choice == "cede_territory") {
+            for (auto& n : playerCountry.neighbors) {
+                if (n.has_territorial_claim) { n.has_territorial_claim = false; n.diplomatic_relations += 0.4; }
+            }
+            pol.popularity -= 0.15;
+            pol.regime_legitimacy -= 0.1;
+            std::cout << ">> CESIÓN TERRITORIAL: paz a costa de soberanía." << std::endl;
+        } else if (choice == "mobilize") {
+            sec.invasion_prob += 0.1;
+            sec.troop_morale += 0.05;
+            pol.popularity += 0.05;
+            std::cout << ">> MOVILIZACIÓN: rally-round-the-flag, pero riesgo de guerra crece." << std::endl;
+        } else if (choice == "seek_mediation") {
+            sec.diplomatic_prestige += 0.05;
+            sec.invasion_prob *= 0.7;
+            std::cout << ">> MEDIACIÓN: la comunidad internacional interviene." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "nuclear_threat") {
+        if (choice == "preemptive_strike") {
+            sec.nuclear_strike = true;
+            sec.nuclear_casualties = 5000000.0;
+            sec.diplomatic_prestige = 0.0;
+            std::cout << ">> ATAQUE PREVENTIVO: la humanidad cruza un umbral." << std::endl;
+        } else if (choice == "diplomatic_summit") {
+            sec.nuclear_attack_prob *= 0.3;
+            sec.diplomatic_prestige += 0.1;
+            std::cout << ">> CUMBRE: riesgo nuclear baja drásticamente." << std::endl;
+        } else if (choice == "evacuate_cities") {
+            sec.nuclear_attack_prob *= 0.6;
+            playerCountry.economy.gdp *= 0.95;
+            pol.popularity -= 0.05;
+            std::cout << ">> EVACUACIÓN: caos económico pero protección parcial." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else {
+        std::cout << ">> Decisión desconocida descartada." << std::endl;
+    }
 }
