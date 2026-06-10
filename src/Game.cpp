@@ -3333,6 +3333,40 @@ void Game::update() {
         }
     }
 
+    // --- SECURITY & VIOLENCE DYNAMICS ---
+    // Non-state groups composition: total = guerrillas + criminal orgs + militia
+    playerCountry.security.non_state_groups = playerCountry.security.guerrilla_groups
+                                            + playerCountry.security.criminal_organizations
+                                            + playerCountry.security.militia_groups;
+    // Territorial control scales with criminal org strength and impunity
+    playerCountry.security.nsg_territorial_control = playerCountry.security.criminal_organizations * 0.02
+                                                   + playerCountry.politics.impunity * 0.05;
+    if (playerCountry.security.nsg_territorial_control > 0.5) playerCountry.security.nsg_territorial_control = 0.5;
+    // Conflict casualties from active confrontation
+    playerCountry.security.conflict_casualties_annual = (int)(playerCountry.security.conflict_with_groups
+                                                            * playerCountry.security.non_state_groups * 80);
+    // Ceasefire reduces casualties
+    if (playerCountry.security.ceasefire_active)
+        playerCountry.security.conflict_casualties_annual = (int)(playerCountry.security.conflict_casualties_annual * 0.2);
+    // Homicide decomposition: organized crime + domestic + state
+    // Organized crime share grows with impunity and NSG strength
+    playerCountry.security.organized_crime_homicide_share = 0.2 + playerCountry.politics.impunity_organized_crime * 0.3
+                                                          + playerCountry.security.nsg_territorial_control * 0.3;
+    if (playerCountry.security.organized_crime_homicide_share > 0.8) playerCountry.security.organized_crime_homicide_share = 0.8;
+    // Weapons drive overall homicide rate
+    playerCountry.security.homicide_rate = 5.0 + playerCountry.security.weapons_in_population * 15.0
+                                         + playerCountry.security.illegal_weapons_share * 10.0
+                                         + playerCountry.security.nsg_territorial_control * 20.0
+                                         - playerCountry.politics.trust_in_justice * 5.0;
+    if (playerCountry.security.homicide_rate < 1.0) playerCountry.security.homicide_rate = 1.0;
+    // Femicide correlates with domestic violence and impunity
+    playerCountry.security.femicide_rate = 1.0 + (1.0 - playerCountry.welfare.minority_protection) * 4.0
+                                         + playerCountry.politics.impunity * 3.0;
+    // Mass shooting driven by weapons access + mental health
+    playerCountry.security.mass_shooting_prob = playerCountry.security.weapons_in_population * 0.01
+                                              + playerCountry.security.military_grade_weapons_civilian * 0.05
+                                              + (1.0 - playerCountry.welfare.mental_health_index) * 0.005;
+
     // --- GEOPOLITICS & INTERNATIONAL RELATIONS ---
     // Non-alignment: inverse of how much you lean towards either bloc
     playerCountry.security.non_aligned_index = 1.0 - (playerCountry.security.us_alignment + playerCountry.security.china_alignment) / 2.0;

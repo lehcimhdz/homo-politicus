@@ -323,10 +323,29 @@ struct PowerSecuritySystem {
 
     // Security
     double serial_killer_prob = 0.01;
+    double femicide_rate = 3.0;                // Femicides per 100k women per year
+    double mass_shooting_prob = 0.005;         // Probability of mass casualty event
+    double hate_crime_index = 0.1;             // Bias-motivated violence incidence (0–1)
+
     double weapons_in_population = 0.3;
+    double illegal_weapons_share = 0.4;        // Fraction of firearms unregistered
+    double military_grade_weapons_civilian = 0.05; // Military-type weapons in civilian hands (0–1)
+
     int non_state_groups = 2;
+    int    guerrilla_groups = 0;               // Ideological insurgent organizations
+    int    criminal_organizations = 2;         // Drug cartels / organized crime
+    int    militia_groups = 0;                 // Paramilitary / community defense
+    double nsg_territorial_control = 0.05;     // Share of territory NSGs control (0–1)
+
     double conflict_with_groups = 0.1;
-    double homicide_rate = 10.0; // per 100k
+    int    conflict_casualties_annual = 50;    // Annual deaths from state vs NSG
+    double peace_negotiation_prob = 0.1;       // Probability of formal peace talks
+    bool   ceasefire_active = false;           // Active ceasefire agreement
+
+    double homicide_rate = 10.0;               // Total homicides per 100k
+    double organized_crime_homicide_share = 0.4; // Fraction from criminal orgs
+    double domestic_violence_homicide_share = 0.15; // Intimate partner violence
+    double state_security_killings = 0.5;      // Extrajudicial killings per 100k
 
     // Intelligence
     double espionage_budget = 500000.0;
