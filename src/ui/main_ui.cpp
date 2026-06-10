@@ -18,6 +18,7 @@
 #include "ui/MandateTimeline.hpp"
 #include "ui/CourtNetwork.hpp"
 #include "ui/CourtScene.hpp"
+#include "ui/Heraldry.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -447,11 +448,16 @@ int main(int argc, char** argv) {
         window.draw(makePanel(shakeX, 0, 1280, 60, currentPalette.topbar));
         if (fontOk) {
             const Country& c = bridge.country();
+            // Heraldica del pais a la izquierda del titulo.
+            {
+                unsigned seed = Heraldry::seedFromString("HomoPoliticusNation");
+                Heraldry::draw(window, 24.f + shakeX, 30.f, 18.f, seed);
+            }
             {
                 sf::Text titleHdr(fTitle, "HOMO POLITICUS", 24);
                 titleHdr.setFillColor(kAccent);
                 titleHdr.setStyle(sf::Text::Bold);
-                titleHdr.setPosition({16.f + shakeX, 16.f});
+                titleHdr.setPosition({52.f + shakeX, 16.f});
                 window.draw(titleHdr);
             }
             std::ostringstream turnStr;
