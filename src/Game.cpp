@@ -6849,6 +6849,66 @@ void Game::update() {
         }
     }
 
+    // --- AUTHORITARIAN ENDGAME & DEMOCRATIC RESILIENCE ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+        // Authoritarian consolidation effects
+        if (playerCountry.politics.authoritarian_actions_count >= 3) {
+            // No more elections in practice
+            playerCountry.politics.democratic_backsliding_index += 0.01;
+            if (playerCountry.politics.democratic_backsliding_index > 1.0) playerCountry.politics.democratic_backsliding_index = 1.0;
+            // Regime fragility: no institutional shock absorbers
+            // Any crisis is amplified
+            if (playerCountry.economy.in_recession) {
+                playerCountry.politics.popular_pressure += 0.05;
+                playerCountry.politics.popularity -= 0.02; // Extra penalty
+            }
+            // International isolation
+            playerCountry.infra.fdi_inflow_gdp *= 0.98;
+            playerCountry.economy.annual_visitors = (int)(playerCountry.economy.annual_visitors * 0.98);
+            // Constant coup risk
+            playerCountry.politics.coup_d_etat_prob += 0.005;
+        }
+
+        // Regime legitimacy erosion: continuous
+        if (playerCountry.politics.regime_legitimacy < 0.3 && playerCountry.politics.authoritarian_actions_count > 0) {
+            // Fragile regime: any shock can topple
+            if (dist(rng) < 0.05) {
+                std::cout << "[!!!] REGIME FRAGILITY: Legitimacy critically low. Internal factions plotting." << std::endl;
+                playerCountry.politics.coup_d_etat_prob += 0.03;
+            }
+        }
+
+        // Democratic resilience: strong institutions resist authoritarianism
+        // Judiciary blocks court packing if strong
+        if (playerCountry.politics.judicial_independence > 0.7
+            && playerCountry.politics.democratic_backsliding_index > 0.4
+            && dist(rng) < 0.1) {
+            playerCountry.politics.democratic_backsliding_index -= 0.02;
+            std::cout << "[DEMOCRACY] Independent judiciary pushes back against executive overreach." << std::endl;
+        }
+
+        // Free press exposes manipulation
+        if (playerCountry.security.press_freedom > 0.7
+            && playerCountry.politics.election_rigged
+            && dist(rng) < 0.2) {
+            playerCountry.politics.popularity -= 0.05;
+            playerCountry.politics.regime_legitimacy -= 0.05;
+            std::cout << "[DEMOCRACY] Free press exposes election rigging. Public trust collapses." << std::endl;
+        }
+
+        // Civil society strength: high education + press = democratic resilience
+        if (playerCountry.welfare.educational_quality > 0.7
+            && playerCountry.security.press_freedom > 0.6
+            && playerCountry.politics.authoritarian_actions_count > 0
+            && dist(rng) < 0.1) {
+            playerCountry.politics.protest_intensity += 0.05;
+            playerCountry.politics.democratic_backsliding_index -= 0.01;
+            std::cout << "[DEMOCRACY] Educated civil society resists authoritarian drift." << std::endl;
+        }
+    }
+
     // --- INTERNAL PRESSURE SYSTEM ---
     {
         // Congressional pressure: f(opposition, scandals, low popularity)
