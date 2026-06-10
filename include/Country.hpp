@@ -296,10 +296,30 @@ struct PoliticalInstitutionalSystem {
 struct PowerSecuritySystem {
     // International Relations
     double proximity_to_superpower = 0.5;
+    double us_alignment = 0.5;                 // Alignment with US bloc (0–1)
+    double china_alignment = 0.3;              // Alignment with China bloc (0–1)
+    double non_aligned_index = 0.4;            // Strategic autonomy (0–1)
+    double geopolitical_rent = 0.0;            // Aid/investment received for alignment (USD)
+
     double mass_migration_prob = 0.1;
+    double emigration_push_index = 0.3;        // Domestic conditions driving emigration (0–1)
+    double refugee_inflow_prob = 0.05;         // Probability of large refugee inflow
+    int    refugee_population = 0;             // Current refugees hosted
+    double migration_policy_restrictiveness = 0.5; // Border control (0–1)
+
     double nuclear_attack_prob = 0.001;
+    bool   nuclear_umbrella = false;           // Protected by allied nuclear deterrence
+    bool   own_nuclear_capability = false;     // Possesses nuclear weapons
+
     double invasion_prob = 0.01;
+    int    hostile_neighbors = 0;              // Neighboring states with territorial claims
+    double territorial_dispute_intensity = 0.1; // Severity of active disputes (0–1)
+    double alliance_protection = 0.5;          // Military alliance coverage (0–1)
+
     double diplomatic_prestige = 0.6;
+    double soft_power_index = 0.5;             // Cultural/educational/aid influence (0–1)
+    int    ambassadors_accredited = 80;        // Countries with diplomatic representation
+    double multilateral_leadership = 0.3;      // Active role in intl organizations (0–1)
 
     // Security
     double serial_killer_prob = 0.01;

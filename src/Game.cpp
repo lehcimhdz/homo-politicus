@@ -3333,6 +3333,35 @@ void Game::update() {
         }
     }
 
+    // --- GEOPOLITICS & INTERNATIONAL RELATIONS ---
+    // Non-alignment: inverse of how much you lean towards either bloc
+    playerCountry.security.non_aligned_index = 1.0 - (playerCountry.security.us_alignment + playerCountry.security.china_alignment) / 2.0;
+    if (playerCountry.security.non_aligned_index < 0.0) playerCountry.security.non_aligned_index = 0.0;
+    // Geopolitical rent: great powers pay for alignment
+    playerCountry.security.geopolitical_rent = playerCountry.security.us_alignment * playerCountry.economy.gdp * 0.005
+                                             + playerCountry.security.china_alignment * playerCountry.economy.gdp * 0.004;
+    playerCountry.economy.international_reserves += playerCountry.security.geopolitical_rent;
+    // Emigration push: poverty + conflict + low freedom
+    playerCountry.security.emigration_push_index = playerCountry.welfare.poverty_rate * 0.4
+                                                 + playerCountry.security.conflict_with_groups * 0.3
+                                                 + (1.0 - playerCountry.welfare.freedom_of_expression) * 0.3;
+    if (playerCountry.security.emigration_push_index > 1.0) playerCountry.security.emigration_push_index = 1.0;
+    playerCountry.security.mass_migration_prob = playerCountry.security.emigration_push_index * 0.15;
+    // Nuclear deterrence
+    if (playerCountry.security.nuclear_umbrella || playerCountry.security.own_nuclear_capability)
+        playerCountry.security.nuclear_attack_prob *= 0.1;
+    // Invasion probability: territorial disputes + weak alliances
+    playerCountry.security.invasion_prob = playerCountry.security.hostile_neighbors * 0.005
+                                         + playerCountry.security.territorial_dispute_intensity * 0.05
+                                         - playerCountry.security.alliance_protection * 0.03;
+    if (playerCountry.security.invasion_prob < 0.001) playerCountry.security.invasion_prob = 0.001;
+    // Soft power: education + heritage + diplomacy
+    playerCountry.security.soft_power_index = playerCountry.welfare.educational_quality * 0.3
+                                            + playerCountry.economy.heritage_preservation * 0.2
+                                            + playerCountry.security.diplomatic_prestige * 0.3
+                                            + playerCountry.security.multilateral_leadership * 0.2;
+    if (playerCountry.security.soft_power_index > 1.0) playerCountry.security.soft_power_index = 1.0;
+
     // --- LOBBY POWER DYNAMICS ---
     // Extractive sector power correlates with mining concessions and commodity boom
     playerCountry.politics.extractive_sector_power = 0.3 + playerCountry.economy.mining_concessions * 0.03
