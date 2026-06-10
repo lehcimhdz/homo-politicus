@@ -3685,6 +3685,76 @@ void Game::update() {
         if (playerCountry.infra.fossil_fuel_dependency < 0.0) playerCountry.infra.fossil_fuel_dependency = 0.0;
     }
 
+    // --- STORM / HURRICANE EVENT ---
+    if (playerCountry.infra.storm_active) {
+        // Aftermath: lingering effects during recovery
+        playerCountry.infra.storm_aftermath_turns--;
+
+        // Reconstruction costs drain reserves
+        double rebuild_cost = playerCountry.infra.storm_damage * 0.3; // 30% of damage per turn
+        playerCountry.economy.international_reserves -= rebuild_cost;
+        if (playerCountry.economy.international_reserves < 0)
+            playerCountry.economy.debt_to_gdp_ratio += 0.02; // Must borrow
+
+        // Blackout probability elevated during recovery
+        playerCountry.infra.blackout_prob += 0.05;
+
+        // Tourism suppressed
+        playerCountry.economy.annual_visitors *= 0.85;
+
+        std::cout << "[!!] STORM AFTERMATH (" << (playerCountry.infra.storm_aftermath_turns + 1)
+                  << " turns left): Rebuilding. Cost so far: $"
+                  << (long long)(playerCountry.infra.storm_damage) << std::endl;
+
+        if (playerCountry.infra.storm_aftermath_turns <= 0) {
+            playerCountry.infra.storm_active = false;
+            std::cout << "[INFO] STORM RECOVERY COMPLETE: Infrastructure restored." << std::endl;
+        }
+    } else {
+        // Stochastic storm trigger
+        if (dist(rng) < playerCountry.infra.storm_prob) {
+            playerCountry.infra.storm_active = true;
+            std::uniform_int_distribution<int> after_dist(2, 3);
+            playerCountry.infra.storm_aftermath_turns = after_dist(rng);
+
+            // Severity determines damage
+            std::uniform_real_distribution<double> sev_dist(0.3, 1.0);
+            double severity = sev_dist(rng);
+
+            // Infrastructure damage
+            playerCountry.infra.road_connectivity -= severity * 0.1;
+            if (playerCountry.infra.road_connectivity < 0.1) playerCountry.infra.road_connectivity = 0.1;
+            playerCountry.infra.port_capacity -= severity * 0.08;
+            if (playerCountry.infra.port_capacity < 0.05) playerCountry.infra.port_capacity = 0.05;
+            playerCountry.infra.grid_resilience -= severity * 0.1;
+            if (playerCountry.infra.grid_resilience < 0.1) playerCountry.infra.grid_resilience = 0.1;
+
+            // Casualties: worse with poor infrastructure
+            double vulnerability = 1.0 - playerCountry.infra.maintenance_level;
+            playerCountry.infra.storm_casualties = severity * vulnerability * 500.0; // Up to hundreds
+            playerCountry.welfare.death_rate += playerCountry.infra.storm_casualties / (double)playerCountry.welfare.population;
+
+            // Damage cost
+            playerCountry.infra.storm_damage = playerCountry.economy.gdp * severity * 0.03;
+
+            // Immediate GDP hit
+            playerCountry.economy.gdp -= playerCountry.infra.storm_damage * 0.5;
+
+            // Popularity: good response helps (high health_coverage)
+            if (playerCountry.welfare.health_coverage > 0.7) {
+                playerCountry.politics.popularity += 0.01; // Rally effect
+            } else {
+                playerCountry.politics.popularity -= 0.03 * severity;
+            }
+
+            std::cout << "[!!!] HURRICANE/STORM: Category " << (int)(severity * 5)
+                      << " storm hits! Casualties: " << (int)playerCountry.infra.storm_casualties
+                      << ". Damage: $" << (long long)playerCountry.infra.storm_damage
+                      << ". Recovery: " << playerCountry.infra.storm_aftermath_turns
+                      << " turns." << std::endl;
+        }
+    }
+
     // --- DROUGHT EVENT ---
     if (playerCountry.infra.drought_active) {
         playerCountry.infra.drought_duration--;

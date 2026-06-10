@@ -453,6 +453,11 @@ struct InfrastructureFutureSystem {
     double crop_loss_pct = 0.0;
 
     double storm_prob = 0.1;
+    bool storm_active = false;
+    int storm_aftermath_turns = 0;   // Turns of recovery after impact
+    double storm_damage = 0.0;       // Infrastructure damage (absolute $)
+    double storm_casualties = 0.0;
+
     double tornado_prob = 0.01;
     double flood_prob = 0.15;                  // River/coastal flood probability
     double climate_vulnerability_index = 0.3;  // Composite climate shock exposure (0–1)
