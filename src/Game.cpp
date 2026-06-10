@@ -3333,6 +3333,32 @@ void Game::update() {
         }
     }
 
+    // --- REGIONAL DYNAMICS ---
+    // Fiscal transfer inadequacy + budget disparity erode regional loyalty
+    playerCountry.politics.fiscal_transfer_adequacy = 0.5 + (1.0 - playerCountry.politics.federal_budget_disparity) * 0.3
+                                                    + playerCountry.politics.fiscal_autonomy * 0.2;
+    if (playerCountry.politics.fiscal_transfer_adequacy > 1.0) playerCountry.politics.fiscal_transfer_adequacy = 1.0;
+    playerCountry.politics.regional_loyalty += (playerCountry.politics.fiscal_transfer_adequacy - 0.5) * 0.01;
+    if (playerCountry.politics.regional_loyalty < 0.0) playerCountry.politics.regional_loyalty = 0.0;
+    if (playerCountry.politics.regional_loyalty > 1.0) playerCountry.politics.regional_loyalty = 1.0;
+    // Lagging regions breed separatism
+    playerCountry.politics.lagging_region_share = playerCountry.politics.regional_gdp_gini * 0.7;
+    if (playerCountry.politics.lagging_region_share > 1.0) playerCountry.politics.lagging_region_share = 1.0;
+    // Separatism dynamics: grows with low loyalty, high disparity, high autonomy demand
+    playerCountry.politics.separatist_support_pop += (1.0 - playerCountry.politics.regional_loyalty) * 0.003
+                                                   + playerCountry.politics.lagging_region_share * 0.002;
+    playerCountry.politics.separatist_support_pop -= playerCountry.politics.fiscal_transfer_adequacy * 0.002;
+    if (playerCountry.politics.separatist_support_pop < 0.0) playerCountry.politics.separatist_support_pop = 0.0;
+    if (playerCountry.politics.separatist_support_pop > 0.5) playerCountry.politics.separatist_support_pop = 0.5;
+    // Active movements emerge above 15% support
+    playerCountry.politics.active_separatist_movements = (int)(playerCountry.politics.separatist_support_pop / 0.15);
+    // Separatism probability derives from structural factors
+    playerCountry.politics.separatism_prob = playerCountry.politics.separatist_support_pop * 0.1
+                                           + playerCountry.politics.active_separatist_movements * 0.02;
+    // Regions in conflict: loyalty below 0.4 = confrontation
+    playerCountry.politics.regions_in_conflict = (playerCountry.politics.regional_loyalty < 0.4)
+                                               ? playerCountry.politics.active_separatist_movements + 1 : 0;
+
     // --- LEGISLATIVE PIPELINE ---
     // Bills passed depends on support, law blockade, and pending queue
     double pass_rate = playerCountry.politics.congressional_support * (1.0 - playerCountry.politics.law_blockade_prob);

@@ -236,9 +236,21 @@ struct PoliticalInstitutionalSystem {
 
     // Governors
     double regional_loyalty = 0.7;
+    double fiscal_transfer_adequacy = 0.6;     // Perceived fairness of center-region fiscal flows (0–1)
+    int    regions_in_conflict = 0;            // Regions with active political confrontation
+
     double federal_budget_disparity = 0.2;
+    double regional_gdp_gini = 0.3;            // Economic inequality across regions
+    double lagging_region_share = 0.2;         // Fraction of regions below 60% national avg GDP
+
     double separatism_prob = 0.01;
+    int    active_separatist_movements = 0;    // Organized movements currently active
+    double separatist_support_pop = 0.05;      // Share of population with separatist sympathies
+    bool   independence_referendum_pending = false; // Formal referendum process underway
+
     double provincial_autonomy = 0.5;
+    double fiscal_autonomy = 0.4;              // Share of sub-national own-revenue vs transfers
+    double legislative_autonomy = 0.5;         // Scope of regional lawmaking authority
 
     // Judiciary
     double judicial_independence = 0.8;
