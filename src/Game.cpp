@@ -18,12 +18,23 @@ void Game::registerCommands() {
     commandHandlers["save"]         = [this]() { saveGame("savegame.txt"); };
     commandHandlers["load"]         = [this]() { loadGame("savegame.txt"); };
     commandHandlers["tax+"]         = [this]() {
-        playerCountry.economy.tax_collection *= 1.10;
+        double current_tax_level = playerCountry.economy.tax_collection / (playerCountry.economy.gdp * 0.30);
+        if (current_tax_level > 1.0) current_tax_level = 1.0;
+        double laffer = 1.0 + 0.8 * current_tax_level - 0.6 * current_tax_level * current_tax_level;
+        double revenue_multiplier = 1.0 + 0.10 * (laffer - 1.0);
+        if (revenue_multiplier < 1.0) revenue_multiplier = 1.0;
+        double pre_rev = playerCountry.economy.tax_collection;
+        double pre_pop = playerCountry.politics.popularity;
+        playerCountry.economy.tax_collection *= revenue_multiplier;
         playerCountry.politics.popularity -= 0.05;
         playerCountry.economy.inflation += 0.01;
         playerCountry.politics.economic_ideology -= 0.02;
         if (playerCountry.politics.economic_ideology < 0.0) playerCountry.politics.economic_ideology = 0.0;
-        std::cout << ">> Taxes RAISED! Revenue up, Popularity down." << std::endl;
+        std::cout << ">> SUBES IMPUESTOS (Laffer x=" << (int)(current_tax_level*100) << "%)" << std::endl;
+        std::cout << "   Recaudacion: $" << (long long)(pre_rev/1e6) << "M -> $" << (long long)(playerCountry.economy.tax_collection/1e6) << "M (+" << (int)((revenue_multiplier-1.0)*100) << "%)" << std::endl;
+        std::cout << "   Popularidad: " << (int)(pre_pop*100) << "% -> " << (int)(playerCountry.politics.popularity*100) << "%" << std::endl;
+        std::cout << "   Inflacion:   +1pt" << std::endl;
+        if (current_tax_level > 0.667) std::cout << "   [!] Estas pasado el optimo Laffer: cada suba rinde menos." << std::endl;
     };
     commandHandlers["tax-"]         = [this]() {
         playerCountry.economy.tax_collection *= 0.90;
@@ -948,21 +959,33 @@ void Game::processEvents() {
         std::cout << "   (Growth ++, Inflation Risk ++)" << std::endl;
     }
     else if (command == "print+") {
-        // Autonomy Check: Cannot print money if Bank is Independent
-         if (playerCountry.economy.central_bank_autonomy > 0.5) {
-             std::cout << ">> BLOCKED: Central Bank Governor refuses to monetize debt. Autonomy is too high." << std::endl;
-             std::cout << "   (Lower Autonomy first with 'autonomy-', but beware capital flight)" << std::endl;
-         } else {
-            // Emergency Funding: Seigniorage (1% of GDP)
+        if (playerCountry.economy.central_bank_autonomy > 0.5) {
+            std::cout << ">> BLOCKED: Central Bank Governor refuses to monetize debt. Autonomy is too high." << std::endl;
+            std::cout << "   (Lower Autonomy first with 'autonomy-', but beware capital flight)" << std::endl;
+        } else {
+            double pre_emission = playerCountry.economy.monetary_emission;
+            double pre_inflation = playerCountry.economy.inflation;
+            int pre_rating = (int)playerCountry.economy.credit_rating;
             double print_amount = playerCountry.economy.gdp * 0.01;
-            
-            playerCountry.economy.monetary_emission += 0.01; // +1% Money Supply
+            playerCountry.economy.monetary_emission += 0.01;
             playerCountry.economy.international_reserves += print_amount;
-            
-            std::cout << "[!!!] DECREE: Central Bank ordered to print money." << std::endl;
-            std::cout << "      Seigniorage Revenue: $" << print_amount / 1000000 << "M added to Reserves." << std::endl;
-            std::cout << "      (Inflation Surge Incoming!)" << std::endl;
-         }
+            double curve_inflation = 0.005 + 0.4 * playerCountry.economy.monetary_emission * playerCountry.economy.monetary_emission;
+            playerCountry.economy.inflation += curve_inflation;
+            if (playerCountry.economy.monetary_emission > 0.15) {
+                int new_rating = (int)playerCountry.economy.credit_rating + 1;
+                if (new_rating > (int)CreditRating::D) new_rating = (int)CreditRating::D;
+                playerCountry.economy.credit_rating = (CreditRating)new_rating;
+            }
+            playerCountry.economy.exchange_rate_stability -= 0.05;
+            if (playerCountry.economy.exchange_rate_stability < 0.0) playerCountry.economy.exchange_rate_stability = 0.0;
+            std::cout << "[!!!] DECREE: emision monetaria autorizada" << std::endl;
+            std::cout << "      Reservas:        +$" << print_amount / 1000000 << "M" << std::endl;
+            std::cout << "      Emision (M2):    " << (int)(pre_emission*100) << "% -> " << (int)(playerCountry.economy.monetary_emission*100) << "%" << std::endl;
+            std::cout << "      Inflacion:       +" << (int)(curve_inflation*1000)/10.0 << "% (de " << (int)(pre_inflation*100) << "% a " << (int)(playerCountry.economy.inflation*100) << "%)" << std::endl;
+            if ((int)playerCountry.economy.credit_rating != pre_rating)
+                std::cout << "      Credit rating:   DOWNGRADE a " << CreditRatingToString(playerCountry.economy.credit_rating) << std::endl;
+            std::cout << "      Estabilidad FX:  -5pts" << std::endl;
+        }
     }
     else if (command == "reform_currency") {
         if (playerCountry.economy.inflation > 0.20) {
@@ -1936,9 +1959,8 @@ void Game::processEvents() {
             auto& n = playerCountry.neighbors[idx];
             n.diplomatic_relations -= 0.2;
             if (n.diplomatic_relations < -1.0) n.diplomatic_relations = -1.0;
-            // May deter aggression if we're strong
             if (playerCountry.security.military_spending_gdp > 0.03) {
-                n.military_strength -= 0.02; // Deterrence effect
+                n.military_strength -= 0.02;
                 if (n.military_strength < 0.1) n.military_strength = 0.1;
                 std::cout << ">> THREAT: Military posturing against " << n.name
                           << ". They back down slightly." << std::endl;
@@ -1946,6 +1968,13 @@ void Game::processEvents() {
                 std::cout << ">> THREAT: " << n.name << " is unimpressed by our weak military." << std::endl;
             }
             playerCountry.security.diplomatic_prestige -= 0.03;
+            playerCountry.politics.threaten_streak_count++;
+            if (playerCountry.politics.threaten_streak_count >= 3) {
+                playerCountry.security.invasion_prob += 0.15;
+                playerCountry.security.diplomatic_prestige -= 0.10;
+                std::cout << "   [!] CREDIBILIDAD ROTA: amenazaste " << playerCountry.politics.threaten_streak_count
+                          << " veces sin actuar. invasion_prob +15%, prestigio -10pts." << std::endl;
+            }
         } else {
             std::cout << ">> Usage: threaten <0-2>" << std::endl;
         }
@@ -2076,16 +2105,22 @@ void Game::processEvents() {
     }
     else if (command == "apologize") {
         auto& pol = playerCountry.politics;
-        pol.popularity -= 0.05;
-        pol.scandal_corruption_severity *= 0.8;
-        pol.scandal_sex_severity *= 0.8;
-        pol.scandal_financial_severity *= 0.8;
-        pol.scandal_violence_severity *= 0.8;
-        pol.scandal_substance_severity *= 0.8;
-        pol.polarization_index -= 0.1;
-        if (pol.polarization_index < 0.0) pol.polarization_index = 0.0;
-        pol.regime_legitimacy += 0.03;
-        std::cout << ">> DISCULPAS PÚBLICAS: costo de imagen, ganancia de legitimidad." << std::endl;
+        if (pol.apologize_cooldown_turns > 0) {
+            std::cout << ">> APOLOGIZE bloqueado: tu ultima disculpa fue demasiado reciente." << std::endl;
+            std::cout << "   Espera " << pol.apologize_cooldown_turns << " turnos para que el publico vuelva a creerte." << std::endl;
+        } else {
+            pol.popularity -= 0.05;
+            pol.scandal_corruption_severity *= 0.8;
+            pol.scandal_sex_severity *= 0.8;
+            pol.scandal_financial_severity *= 0.8;
+            pol.scandal_violence_severity *= 0.8;
+            pol.scandal_substance_severity *= 0.8;
+            pol.polarization_index -= 0.1;
+            if (pol.polarization_index < 0.0) pol.polarization_index = 0.0;
+            pol.regime_legitimacy += 0.03;
+            pol.apologize_cooldown_turns = 3;
+            std::cout << ">> DISCULPAS PUBLICAS: costo de imagen, ganancia de legitimidad. Cooldown 3 turnos." << std::endl;
+        }
     }
     else if (command == "negotiate_peace_neighbor") {
         bool any_war = false;
@@ -7781,6 +7816,8 @@ void Game::update() {
     }
 
     popularitySum += playerCountry.politics.popularity;
+    if (playerCountry.politics.apologize_cooldown_turns > 0) playerCountry.politics.apologize_cooldown_turns--;
+    if (playerCountry.politics.threaten_streak_count > 0) playerCountry.politics.threaten_streak_count--;
     checkGameOver();
     if (!isRunning) renderEndScreen();
 }

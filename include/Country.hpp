@@ -248,6 +248,8 @@ struct PoliticalInstitutionalSystem {
     double cover_up_probability = 0.5;         // Ability to suppress scandals
     double media_exposure_intensity = 0.0;     // How much media is covering scandals
     int scandal_fatigue_turns = 0;             // Diminishing impact over time
+    int apologize_cooldown_turns = 0;          // Cooldown for repeated public apologies
+    int threaten_streak_count = 0;             // Consecutive empty threats to same neighbor
 
     // Internal pressure system
     double congressional_pressure = 0.0;   // 0-1, impeachment threshold at 0.8
