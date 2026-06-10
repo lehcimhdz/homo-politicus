@@ -400,9 +400,24 @@ struct PowerSecuritySystem {
 
     // Communication and Propaganda
     double media_control = 0.3;
+    double media_pluralism = 0.6;              // Number and independence of outlets (0–1)
+    int    journalists_jailed = 0;             // Journalists currently imprisoned
+    double ad_market_dependence = 0.4;         // Media reliance on govt ad spending (0–1)
+
     double narrative_reach = 0.5;
+    double social_media_reach = 0.6;           // Digital platform penetration (0–1)
+    double traditional_media_reach = 0.5;      // TV/radio/print reach (0–1)
+    double diaspora_narrative_reach = 0.2;     // Influence over citizens abroad (0–1)
+
     double fake_news_success_prob = 0.2;
+    double media_literacy = 0.5;               // Population's disinfo resistance (0–1)
+    double foreign_disinfo_operations = 0.1;   // Foreign-backed disinfo intensity (0–1)
+    double fact_checking_ecosystem = 0.4;      // Independent fact-checking strength (0–1)
+
     double press_freedom = 0.8;
+    double journalist_safety = 0.8;            // Physical safety of reporters (0–1)
+    double legal_harassment_index = 0.2;       // SLAPP suits against press (0–1)
+    double self_censorship_rate = 0.15;        // Fraction of journalists self-censoring
 };
 
 // 5. Infrastructure and Future System

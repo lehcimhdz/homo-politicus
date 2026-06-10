@@ -3333,6 +3333,42 @@ void Game::update() {
         }
     }
 
+    // --- MEDIA & PROPAGANDA DYNAMICS ---
+    // Media pluralism: inverse of control + ownership concentration
+    playerCountry.security.media_pluralism = 1.0 - playerCountry.security.media_control * 0.5
+                                           - playerCountry.politics.media_ownership_concentration * 0.3;
+    if (playerCountry.security.media_pluralism < 0.05) playerCountry.security.media_pluralism = 0.05;
+    // Narrative reach: composite of channels
+    playerCountry.security.narrative_reach = playerCountry.security.social_media_reach * 0.5
+                                           + playerCountry.security.traditional_media_reach * 0.35
+                                           + playerCountry.security.diaspora_narrative_reach * 0.15;
+    if (playerCountry.security.narrative_reach > 1.0) playerCountry.security.narrative_reach = 1.0;
+    // Social media reach scales with internet coverage
+    playerCountry.security.social_media_reach = playerCountry.infra.internet_coverage * 0.8;
+    // Fake news success: inversely related to media literacy and fact-checking
+    playerCountry.security.fake_news_success_prob = 0.1 + playerCountry.security.foreign_disinfo_operations * 0.3
+                                                  + (1.0 - playerCountry.security.media_literacy) * 0.25
+                                                  - playerCountry.security.fact_checking_ecosystem * 0.15;
+    if (playerCountry.security.fake_news_success_prob < 0.02) playerCountry.security.fake_news_success_prob = 0.02;
+    if (playerCountry.security.fake_news_success_prob > 0.8) playerCountry.security.fake_news_success_prob = 0.8;
+    // Media literacy improves with education
+    playerCountry.security.media_literacy = playerCountry.welfare.educational_quality * 0.5
+                                          + playerCountry.welfare.secondary_enrollment * 0.3;
+    if (playerCountry.security.media_literacy > 1.0) playerCountry.security.media_literacy = 1.0;
+    // Press freedom: composite index
+    playerCountry.security.press_freedom = playerCountry.security.journalist_safety * 0.3
+                                         + playerCountry.security.media_pluralism * 0.3
+                                         + (1.0 - playerCountry.security.legal_harassment_index) * 0.2
+                                         + (1.0 - playerCountry.security.self_censorship_rate) * 0.2;
+    if (playerCountry.security.press_freedom > 1.0) playerCountry.security.press_freedom = 1.0;
+    // Jailing journalists worsens self-censorship and safety
+    if (playerCountry.security.journalists_jailed > 0) {
+        playerCountry.security.self_censorship_rate += playerCountry.security.journalists_jailed * 0.02;
+        if (playerCountry.security.self_censorship_rate > 0.9) playerCountry.security.self_censorship_rate = 0.9;
+        playerCountry.security.journalist_safety -= playerCountry.security.journalists_jailed * 0.03;
+        if (playerCountry.security.journalist_safety < 0.1) playerCountry.security.journalist_safety = 0.1;
+    }
+
     // --- DEFENSE & MILITARY DYNAMICS ---
     // Troop morale driven by veteran benefits, combat stress, and pay (personnel budget)
     playerCountry.security.troop_morale = 0.5 + playerCountry.security.veteran_benefit_adequacy * 0.2
