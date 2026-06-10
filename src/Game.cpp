@@ -5550,6 +5550,95 @@ void Game::update() {
                                               + playerCountry.security.military_grade_weapons_civilian * 0.05
                                               + (1.0 - playerCountry.welfare.mental_health_index) * 0.005;
 
+    // --- NEIGHBOR COUNTRIES DYNAMICS ---
+    {
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        for (auto& neighbor : playerCountry.neighbors) {
+            // Relations drift based on ideology alignment
+            double ideology_gap = std::abs(playerCountry.politics.economic_ideology - neighbor.ideology);
+            if (ideology_gap > 0.5) {
+                neighbor.diplomatic_relations -= 0.01;
+            } else if (ideology_gap < 0.2) {
+                neighbor.diplomatic_relations += 0.005;
+            }
+            // Clamp
+            if (neighbor.diplomatic_relations > 1.0) neighbor.diplomatic_relations = 1.0;
+            if (neighbor.diplomatic_relations < -1.0) neighbor.diplomatic_relations = -1.0;
+
+            // Trade volume proportional to relations and openness
+            double trade_potential = neighbor.gdp * 0.05 * playerCountry.economy.trade_openness;
+            if (neighbor.diplomatic_relations > 0.3) {
+                neighbor.trade_volume += (trade_potential - neighbor.trade_volume) * 0.1;
+            } else if (neighbor.diplomatic_relations < -0.3) {
+                neighbor.trade_volume *= 0.95; // Trade declines with hostility
+            }
+            if (neighbor.sanctions_against_us) neighbor.trade_volume *= 0.5;
+
+            // Hostile neighbor effects
+            if (neighbor.diplomatic_relations < -0.5) {
+                playerCountry.security.invasion_prob += 0.005;
+                // Espionage against us
+                if (dist(rng) < 0.1) {
+                    playerCountry.security.document_leak_prob += 0.01;
+                }
+                // Border incidents
+                if (dist(rng) < 0.05) {
+                    neighbor.diplomatic_relations -= 0.05;
+                    playerCountry.security.conflict_casualties_annual += 5;
+                    std::cout << "[NEIGHBOR] Border skirmish with " << neighbor.name
+                              << "! Relations deteriorating." << std::endl;
+                }
+            }
+
+            // Allied neighbor benefits
+            if (neighbor.diplomatic_relations > 0.5) {
+                playerCountry.security.foreign_intelligence_sharing += 0.002;
+                if (playerCountry.security.foreign_intelligence_sharing > 1.0)
+                    playerCountry.security.foreign_intelligence_sharing = 1.0;
+            }
+
+            // Neighbor economy affects our trade
+            neighbor.gdp *= (1.0 + neighbor.economic_growth);
+            if (neighbor.in_crisis) {
+                neighbor.economic_growth = -0.02;
+                neighbor.refugee_generation += 0.01;
+                // Refugee pressure
+                if (neighbor.refugee_generation > 0.05) {
+                    playerCountry.security.mass_migration_prob += 0.02;
+                }
+            } else {
+                // Random neighbor crisis
+                if (dist(rng) < 0.03) {
+                    neighbor.in_crisis = true;
+                    std::cout << "[NEIGHBOR] " << neighbor.name << " enters economic crisis! "
+                              << "Refugee flows and trade disruption expected." << std::endl;
+                }
+            }
+            // Neighbor crisis recovery
+            if (neighbor.in_crisis && dist(rng) < 0.15) {
+                neighbor.in_crisis = false;
+                neighbor.economic_growth = 0.01;
+                neighbor.refugee_generation = 0.0;
+                std::cout << "[NEIGHBOR] " << neighbor.name << " stabilizes. Trade normalizing." << std::endl;
+            }
+
+            // Territorial claim → invasion risk
+            if (neighbor.has_territorial_claim && neighbor.diplomatic_relations < -0.7
+                && neighbor.military_strength > 0.5 && dist(rng) < 0.03) {
+                std::cout << "[!!!] " << neighbor.name << " masses troops on border! Invasion threat!" << std::endl;
+                playerCountry.security.invasion_prob += 0.05;
+                playerCountry.security.territorial_dispute_intensity += 0.1;
+            }
+        }
+
+        // Aggregate neighbor trade into trade balance
+        double total_neighbor_trade = 0.0;
+        for (const auto& n : playerCountry.neighbors) {
+            total_neighbor_trade += n.trade_volume;
+        }
+        playerCountry.economy.trade_balance += total_neighbor_trade * 0.01; // Net benefit from neighbor trade
+    }
+
     // --- GEOPOLITICS & INTERNATIONAL RELATIONS ---
     // IDEOLOGY → INTERNATIONAL ALIGNMENT
     // Left-leaning → China alignment drift, Right-leaning → US alignment drift
