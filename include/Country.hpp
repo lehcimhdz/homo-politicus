@@ -71,6 +71,9 @@ struct WelfareSocietySystem {
     double minimum_wage = 1000.0;
     double labor_informality = 0.15;
     double general_strike_prob = 0.02;
+    bool general_strike_active = false;
+    int strike_duration = 0;
+    double strike_economic_cost = 0.0;
     double poverty_rate = 0.25; // 25% of population below poverty line
 
     // Demographics

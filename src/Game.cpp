@@ -3553,6 +3553,51 @@ void Game::update() {
         }
     }
 
+    // --- GENERAL STRIKE EVENT ---
+    if (playerCountry.welfare.general_strike_active) {
+        playerCountry.welfare.strike_duration--;
+
+        // Economy halts: GDP hit scales with union strength
+        double gdp_loss = playerCountry.economy.gdp * 0.04 * playerCountry.welfare.union_strength;
+        playerCountry.economy.gdp -= gdp_loss;
+        playerCountry.welfare.strike_economic_cost += gdp_loss;
+
+        // Ports and airports shut
+        playerCountry.infra.port_capacity *= 0.7;
+        playerCountry.economy.annual_visitors *= 0.6; // Tourism disrupted
+
+        // Exports halted
+        playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.01; // Trade paralysis
+
+        // Popularity: depends on whether player concedes or represses
+        playerCountry.politics.popularity -= 0.02;
+        playerCountry.politics.protest_intensity += 0.03;
+
+        std::cout << "[!!] GENERAL STRIKE (Turn " << (playerCountry.welfare.strike_duration + 1)
+                  << " remaining): Economy paralyzed. Cost: $"
+                  << (long long)playerCountry.welfare.strike_economic_cost << std::endl;
+
+        if (playerCountry.welfare.strike_duration <= 0) {
+            playerCountry.welfare.general_strike_active = false;
+            // Strike resolution: automatic concession (wage increase)
+            playerCountry.welfare.minimum_wage *= 1.1; // 10% raise
+            playerCountry.economy.gdp -= playerCountry.economy.gdp * 0.005; // Fiscal cost of concession
+            std::cout << "[INFO] STRIKE RESOLVED: Workers return. Minimum wage increased 10%." << std::endl;
+        }
+    } else {
+        if (dist(rng) < playerCountry.welfare.general_strike_prob) {
+            playerCountry.welfare.general_strike_active = true;
+            // Duration scales with union strength
+            int base_dur = (int)(playerCountry.welfare.union_strength * 4.0) + 1;
+            if (base_dur > 4) base_dur = 4;
+            playerCountry.welfare.strike_duration = base_dur;
+            playerCountry.welfare.strike_economic_cost = 0.0;
+            std::cout << "[!!] GENERAL STRIKE: Workers across all sectors walk out! Union strength: "
+                      << (int)(playerCountry.welfare.union_strength * 100) << "%. Duration: "
+                      << playerCountry.welfare.strike_duration << " turns." << std::endl;
+        }
+    }
+
     // --- MASS CASUALTY EVENT (Industrial/Transport Disaster) ---
     // Single-turn shock: reset flag each turn
     playerCountry.welfare.mass_casualty_event = false;
