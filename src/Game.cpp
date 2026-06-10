@@ -2972,6 +2972,37 @@ void Game::update() {
         if (playerCountry.politics.industrial_power < 0.0) playerCountry.politics.industrial_power = 0.0;
     }
 
+    // --- STRATEGIC IMPORT DEPENDENCY DYNAMICS ---
+    // Agricultural power reduces food import dependency; weak agro increases it
+    if (playerCountry.politics.agricultural_power > 0.5)
+        playerCountry.economy.food_import_dependency -= 0.002;
+    else if (playerCountry.politics.agricultural_power < 0.25)
+        playerCountry.economy.food_import_dependency += 0.001;
+    if (playerCountry.economy.food_import_dependency < 0.0) playerCountry.economy.food_import_dependency = 0.0;
+    if (playerCountry.economy.food_import_dependency > 1.0) playerCountry.economy.food_import_dependency = 1.0;
+
+    // Domestic energy production reduces energy dependency
+    if (playerCountry.infra.renewables_percentage > 0.4 || playerCountry.infra.oil_gas_reserves > 500000.0)
+        playerCountry.economy.energy_import_dependency -= 0.003;
+    if (playerCountry.economy.energy_import_dependency < 0.0) playerCountry.economy.energy_import_dependency = 0.0;
+    if (playerCountry.economy.energy_import_dependency > 1.0) playerCountry.economy.energy_import_dependency = 1.0;
+
+    // R&D and innovation reduce medicine dependency over time
+    if (playerCountry.infra.innovation_index > 0.5)
+        playerCountry.economy.medicine_import_dependency -= 0.002;
+    if (playerCountry.economy.medicine_import_dependency < 0.0) playerCountry.economy.medicine_import_dependency = 0.0;
+    if (playerCountry.economy.medicine_import_dependency > 1.0) playerCountry.economy.medicine_import_dependency = 1.0;
+
+    // Supply chain vulnerability: weighted average of strategic dependencies
+    playerCountry.economy.supply_chain_vulnerability = playerCountry.economy.food_import_dependency * 0.35
+                                                     + playerCountry.economy.energy_import_dependency * 0.35
+                                                     + playerCountry.economy.medicine_import_dependency * 0.30;
+    // High vulnerability amplifies external shock damage
+    if (playerCountry.economy.supply_chain_vulnerability > 0.6 && playerCountry.economy.commodity_prices < 0.8) {
+        playerCountry.economy.inflation += 0.003;
+        std::cout << "[!] SUPPLY CHAIN STRESS: High strategic import dependency during price shock." << std::endl;
+    }
+
     // --- CALCULATE DYNAMIC EXCHANGE RATE STABILITY ---
     // Stability depends on: Institutions (Autonomy) + War Chest (Reserves) + Fundamentals (Trade)
     double base_stability = 0.4 + (playerCountry.economy.central_bank_autonomy * 0.4);

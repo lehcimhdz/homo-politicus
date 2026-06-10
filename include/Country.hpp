@@ -144,6 +144,10 @@ struct EconomicFinancialSystem {
     double rules_of_origin_compliance = 0.8; // Share of exports meeting RoO thresholds
     double trade_diversion_risk = 0.1;      // Risk of cheap imports displacing domestic producers
     double import_dependency = 0.3;
+    double food_import_dependency = 0.2;      // Food security risk (0=self-sufficient, 1=fully dependent)
+    double energy_import_dependency = 0.5;    // Fuel/electricity import reliance
+    double medicine_import_dependency = 0.4;  // Pharmaceutical supply chain exposure
+    double supply_chain_vulnerability = 0.3;  // Composite shock propagation risk
     double international_sanctions_prob = 0.0;
 
     // Tourism
