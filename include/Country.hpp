@@ -229,6 +229,18 @@ struct PoliticalInstitutionalSystem {
     double opposition_ideology = 0.5;      // Rival's economic position
     double opposition_social = 0.5;        // Rival's social position
     double ideology_alignment_bonus = 0.0; // Popularity bonus/penalty from alignment
+
+    // Scandals system
+    int active_scandals = 0;
+    double scandal_corruption_severity = 0.0;  // 0-1
+    double scandal_sex_severity = 0.0;         // 0-1
+    double scandal_financial_severity = 0.0;   // Insider trading, tax evasion, fraud
+    double scandal_violence_severity = 0.0;    // Assault, harassment
+    double scandal_substance_severity = 0.0;   // Drug, alcohol, gambling
+    double scandal_treason_severity = 0.0;     // Treason, espionage
+    double cover_up_probability = 0.5;         // Ability to suppress scandals
+    double media_exposure_intensity = 0.0;     // How much media is covering scandals
+    int scandal_fatigue_turns = 0;             // Diminishing impact over time
     bool   state_of_emergency_active = false;  // Emergency decree powers in effect
     int    emergency_turns_elapsed = 0;        // Turns since emergency declared
     double coup_d_etat_prob = 0.01;
