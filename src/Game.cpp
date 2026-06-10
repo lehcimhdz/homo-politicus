@@ -7765,10 +7765,17 @@ void Game::checkGameOver() {
         for (const auto& d : pendingDecisions) if (d.id == id) return true;
         return false;
     };
-    if (pol.military_pressure > 0.7 && !hasDecision("coup_threat")) {
+    if (pol.military_pressure > 0.7 && !hasDecision("coup_threat") && !hasDecision("coup_attempt_imminent")) {
         pendingDecisions.push_back({"coup_threat",
             "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
             {"purge_military", "negotiate_military", "cede_power", "resist"}});
+    }
+    if (pol.coup_d_etat_prob > 0.4 && pol.civilian_military_control < 0.5
+        && !hasDecision("coup_attempt_imminent")) {
+        pendingDecisions.push_back({"coup_attempt_imminent",
+            "INTELIGENCIA: conspiración militar inminente. ¿Acción inmediata?",
+            {"arrest_plotters", "mobilize_loyal_troops", "flee", "fight_back"}});
+        pol.coup_attempts_history++;
     }
     double max_scandal = std::max({pol.scandal_corruption_severity, pol.scandal_sex_severity,
         pol.scandal_financial_severity, pol.scandal_violence_severity, pol.scandal_substance_severity,
@@ -7888,6 +7895,50 @@ void Game::resolveDecision(const std::string& choice) {
             pol.military_pressure += 0.1;
             pol.popularity += 0.05;
             std::cout << ">> RESISTENCIA: discurso desafiante. El pueblo aplaude, el riesgo escala." << std::endl;
+        } else {
+            std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
+            pendingDecisions.insert(pendingDecisions.begin(), d);
+        }
+    } else if (d.id == "coup_attempt_imminent") {
+        std::uniform_real_distribution<double> roll(0.0, 1.0);
+        if (choice == "arrest_plotters") {
+            if (roll(rng) < sec.humint_capability + 0.2) {
+                pol.coup_d_etat_prob *= 0.2;
+                pol.military_pressure *= 0.3;
+                pol.civilian_military_control += 0.1;
+                std::cout << ">> ARRESTOS: conspiradores detenidos. La trama se desactiva." << std::endl;
+            } else {
+                pol.military_pressure = 0.95;
+                pol.coup_d_etat_prob = 0.9;
+                std::cout << ">> FALLO: los conspiradores escapan y aceleran el golpe." << std::endl;
+            }
+        } else if (choice == "mobilize_loyal_troops") {
+            if (roll(rng) > pol.coup_success_prob) {
+                pol.military_pressure *= 0.3;
+                pol.coup_d_etat_prob *= 0.5;
+                sec.troop_morale -= 0.1;
+                std::cout << ">> CONTRAGOLPE EXITOSO: tropas leales repelen la asonada." << std::endl;
+            } else {
+                endCondition = EndCondition::COUP_SUCCESS;
+                isRunning = false;
+                std::cout << ">> DERROTA: las tropas leales son superadas. Golpe consumado." << std::endl;
+            }
+        } else if (choice == "flee") {
+            endCondition = EndCondition::EXILE;
+            isRunning = false;
+            std::cout << ">> EXILIO: dejas el país antes del asalto al palacio." << std::endl;
+        } else if (choice == "fight_back") {
+            sec.war_casualties += 5000.0;
+            pol.civil_war_active = true;
+            if (roll(rng) > pol.coup_success_prob - 0.1) {
+                pol.military_pressure *= 0.4;
+                pol.popularity -= 0.05;
+                std::cout << ">> COMBATE: el palacio resiste, hay muertos civiles." << std::endl;
+            } else {
+                endCondition = EndCondition::ASSASSINATION;
+                isRunning = false;
+                std::cout << ">> CAÍDA: el palacio cae bajo el asalto." << std::endl;
+            }
         } else {
             std::cout << ">> Opción no válida; decisión queda pendiente." << std::endl;
             pendingDecisions.insert(pendingDecisions.begin(), d);
