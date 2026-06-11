@@ -451,18 +451,18 @@ int main(int argc, char** argv) {
             // Heraldica del pais a la izquierda del titulo.
             {
                 unsigned seed = Heraldry::seedFromString("HomoPoliticusNation");
-                Heraldry::draw(window, 24.f + shakeX, 30.f, 18.f, seed);
+                Heraldry::draw(window, 24.f + shakeX, 30.f, 16.f, seed);
             }
             {
-                sf::Text titleHdr(fTitle, "HOMO POLITICUS", 24);
+                sf::Text titleHdr(fTitle, "HOMO POLITICUS", 22);
                 titleHdr.setFillColor(kAccent);
                 titleHdr.setStyle(sf::Text::Bold);
-                titleHdr.setPosition({52.f + shakeX, 16.f});
+                titleHdr.setPosition({48.f + shakeX, 18.f});
                 window.draw(titleHdr);
             }
             std::ostringstream turnStr;
             turnStr << tr("ui.turn_prefix", "Turno") << " " << bridge.turn();
-            window.draw(makeText(font, turnStr.str(), 18, kMuted, 240 + shakeX, 22));
+            window.draw(makeText(font, turnStr.str(), 18, kMuted, 290 + shakeX, 22));
 
             window.draw(makeText(font, tr("ui.pop_short", "Pop:"), 16, kMuted, 380 + shakeX, 25));
             window.draw(makeText(font, fmtPct(c.politics.popularity), 20, popularityColor(c.politics.popularity), 425 + shakeX, 22));

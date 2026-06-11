@@ -8,6 +8,10 @@ void MandateTimeline::addEvent(int turn, const std::string& label, sf::Color col
 void MandateTimeline::draw(sf::RenderWindow& win, const sf::Font& font,
                            float x, float y, float w, float h,
                            int currentTurn, int totalTurns) const {
+    // Si el turno actual supera el rango, expandir dinamicamente con margen.
+    if (currentTurn + 8 > totalTurns) {
+        totalTurns = currentTurn + 8;
+    }
     // Linea base.
     float lineY = y + h * 0.55f;
     sf::RectangleShape base({w, 2.f});
@@ -55,7 +59,7 @@ void MandateTimeline::draw(sf::RenderWindow& win, const sf::Font& font,
         win.draw(link);
     }
 
-    // Labels: solo los ultimos 4 eventos para no saturar.
+    // Labels: solo los ultimos 4 eventos para no saturar. Clamp dentro del rect.
     int shown = 0;
     for (auto it = events_.rbegin(); it != events_.rend() && shown < 4; ++it, ++shown) {
         float ex = toX(it->turn);
@@ -63,6 +67,12 @@ void MandateTimeline::draw(sf::RenderWindow& win, const sf::Font& font,
         t.setFillColor(sf::Color(it->color.r, it->color.g, it->color.b, 220));
         auto lb = t.getLocalBounds();
         t.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+        // Clamp horizontal: que el texto no sobresalga del rect.
+        float labelHalfW = lb.size.x / 2.f;
+        float minX = x + labelHalfW + 4.f;
+        float maxX = x + w - labelHalfW - 4.f;
+        if (ex < minX) ex = minX;
+        if (ex > maxX) ex = maxX;
         t.setPosition({ex, lineY - 32.f - shown * 12.f});
         win.draw(t);
     }
