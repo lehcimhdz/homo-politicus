@@ -66,16 +66,10 @@ static sf::Text mkText(const sf::Font& font, const std::string& s, unsigned sz, 
 void MainMenu::draw(sf::RenderWindow& win, const sf::Font& font) const {
     win.draw(mkRect(0, 0, 1280, 800, kBg, sf::Color(0, 0, 0, 0), 0.f));
 
-    // Heraldica grande detras del titulo.
+    // Heraldica arriba del titulo como sello presidencial.
     {
         unsigned seed = Heraldry::seedFromString("HomoPoliticusNation");
-        Heraldry::draw(win, 640.f, 140.f, 110.f, seed);
-        // Veil sutil para que no compita con el texto.
-        sf::CircleShape veil(115.f);
-        veil.setOrigin({115.f, 115.f});
-        veil.setPosition({640.f, 140.f});
-        veil.setFillColor(sf::Color(15, 17, 26, 120));
-        win.draw(veil);
+        Heraldry::draw(win, 640.f, 70.f, 38.f, seed);
     }
 
     // Titulo grande centrado - Cinzel serif si esta disponible
