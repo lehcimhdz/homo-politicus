@@ -15,6 +15,7 @@ public:
     void tick();                            // Avanza un turno (placeholder simple)
     void resetCountry();
     const Country& country() const { return c_; }
+    Country& mutableCountry() { return c_; }
     int turn() const { return turn_; }
     EndCondition endCondition() const { return end_; }
     bool isGameOver() const { return end_ != EndCondition::NONE; }

@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <cmath>
 #include <vector>
+#include <unordered_set>
 #include "DecisionSystem.hpp"
 #include "ui/UIBridge.hpp"
 #include "ui/Dashboard.hpp"
@@ -25,6 +26,8 @@
 #include "ui/AchievementsView.hpp"
 #include "AchievementTracker.hpp"
 #include "Localization.hpp"
+#include "EventManager.hpp"
+#include "Persistence.hpp"
 
 enum class AppState { Menu, Playing };
 static const std::string LOCALES_DIR = "/Users/michelcano/Documents/Repositorios/homo-politicus-game/content/locales";
@@ -201,6 +204,8 @@ int main(int argc, char** argv) {
     AchievementTracker achievementTracker;
     AchievementsView achievements;
     achievements.configure(achievementTracker);
+    EventManager eventMgr;
+    double initialGdp = bridge.country().economy.gdp;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     int gameSeed = 1;  // incrementa con cada Nueva Partida (rota retratos)
@@ -272,6 +277,21 @@ int main(int argc, char** argv) {
         double prevPop = bridge.country().politics.popularity;
         double prevGDP = bridge.country().economy.gdp;
         bridge.tick();
+        // Disparar eventos del motor.
+        eventMgr.triggerRandomEvent(bridge.mutableCountry());
+        // Achievement tracking.
+        std::unordered_set<std::string> prevUnlocked;
+        for (const auto& s : achievementTracker.unlockedList()) prevUnlocked.insert(s);
+        achievementTracker.recordHistory(bridge.country());
+        achievementTracker.evaluate(bridge.country(), bridge.turn(),
+                                    bridge.endCondition(), initialGdp);
+        // Reportar nuevos unlocks.
+        for (const auto& id : achievementTracker.unlockedList()) {
+            if (prevUnlocked.find(id) == prevUnlocked.end()) {
+                pushEvent("LOGRO: " + id, sf::Color(240, 200, 80));
+                audio.play("achievement");
+            }
+        }
         dashboard.recordHistory(bridge.country());
         const Country& cc = bridge.country();
         popularitySumDemo += cc.politics.popularity;
@@ -445,6 +465,35 @@ int main(int argc, char** argv) {
                 }
                 if (kp->code == sf::Keyboard::Key::T) {
                     tutorialUI.start();
+                    audio.play("button_click");
+                }
+                if (kp->code == sf::Keyboard::Key::S) {
+                    // Save al slot 1.
+                    bool ok = Persistence::save(bridge.country(), bridge.turn(),
+                                                popularitySumDemo, bridge.endCondition(),
+                                                "save_slot1.txt",
+                                                achievementTracker.serialize());
+                    pushEvent(ok ? "Partida guardada (slot 1)" : "Error al guardar",
+                              ok ? sf::Color(80, 200, 120) : sf::Color(220, 80, 80));
+                    audio.play("button_click");
+                }
+                if (kp->code == sf::Keyboard::Key::P) {
+                    // Load del slot 1 (P de "Cargar Partida").
+                    Country tmp;
+                    int t = 0;
+                    double pSum = 0;
+                    EndCondition end = EndCondition::NONE;
+                    std::string achLine;
+                    bool ok = Persistence::load(tmp, t, pSum, end, "save_slot1.txt", &achLine);
+                    if (ok) {
+                        bridge.mutableCountry() = tmp;
+                        popularitySumDemo = pSum;
+                        achievementTracker.deserialize(achLine);
+                        achievements.update(achievementTracker);
+                        pushEvent("Partida cargada (slot 1)", sf::Color(80, 200, 120));
+                    } else {
+                        pushEvent("Error al cargar (no existe slot)", sf::Color(220, 80, 80));
+                    }
                     audio.play("button_click");
                 }
                 if (kp->code == sf::Keyboard::Key::Space && tutorialUI.visible()) {
