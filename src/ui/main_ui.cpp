@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <vector>
+#include "DecisionSystem.hpp"
 #include "ui/UIBridge.hpp"
 #include "ui/Dashboard.hpp"
 #include "ui/MapView.hpp"
@@ -197,6 +199,15 @@ int main(int argc, char** argv) {
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     int gameSeed = 1;  // incrementa con cada Nueva Partida (rota retratos)
+    // Log de eventos para sidebar (los ultimos 6, mas reciente primero).
+    struct EventLogEntry { int turn; std::string label; sf::Color color; };
+    std::vector<EventLogEntry> eventLog;
+    auto pushEvent = [&](const std::string& lbl, sf::Color col) {
+        eventLog.insert(eventLog.begin(), {bridge.turn(), lbl, col});
+        if (eventLog.size() > 12) eventLog.resize(12);
+    };
+    // Cola de decisiones pendientes.
+    std::vector<PendingDecision> decisionQueue;
     AppState appState = AppState::Menu;
     gameOver.setCallback([&](GameOverScreen::Action a) {
         audio.play("button_click");
@@ -273,14 +284,48 @@ int main(int argc, char** argv) {
         if (bridge.turn() % 4 == 0 && cc.politics.popularity > 0.5) {
             particles.emit(ParticleEmitter::Preset::Confetti, 615.f, 220.f, 50);
         }
-        // Registrar eventos clave en el timeline.
+        // Registrar eventos clave en el timeline + sidebar log.
         if (bridge.turn() % 4 == 0 && bridge.turn() > 0) {
             timeline.addEvent(bridge.turn(), "Eleccion", sf::Color(80, 200, 120));
+            pushEvent("Eleccion legislativa", sf::Color(80, 200, 120));
         }
         if (dPop < -0.05) {
             timeline.addEvent(bridge.turn(), "Caida pop.", sf::Color(220, 80, 80));
+            pushEvent("Caida en popularidad", sf::Color(220, 80, 80));
         } else if (dPop > 0.05) {
             timeline.addEvent(bridge.turn(), "Repunte", sf::Color(80, 200, 120));
+            pushEvent("Repunte popular", sf::Color(80, 200, 120));
+        }
+        // Eventos por estado del pais.
+        if (cc.economy.inflation > 0.15) {
+            pushEvent("Crisis inflacionaria", sf::Color(220, 180, 60));
+            DecisionSystem::enqueueOnce(decisionQueue, {
+                "monetary_crisis",
+                "La inflacion supera el 15%. La gente exige medidas.",
+                {"subir_tasa", "control_precios", "no_actuar"}
+            });
+        }
+        if (cc.politics.popular_pressure > 0.7) {
+            pushEvent("Presion popular critica", sf::Color(220, 80, 80));
+            DecisionSystem::enqueueOnce(decisionQueue, {
+                "popular_pressure",
+                "La presion popular es altisima. ?Como responder?",
+                {"dialogo", "represion", "concesiones", "ignorar"}
+            });
+        }
+        if (cc.politics.military_pressure > 0.7) {
+            pushEvent("Tension con las FFAA", sf::Color(200, 90, 80));
+            DecisionSystem::enqueueOnce(decisionQueue, {
+                "coup_threat",
+                "El alto mando amenaza con tomar el poder. ?Tu respuesta?",
+                {"purgar", "negociar", "ceder", "resistir"}
+            });
+        }
+        if (cc.welfare.pandemic_active) {
+            pushEvent("Pandemia activa", sf::Color(180, 120, 220));
+        }
+        if (cc.security.war_active) {
+            pushEvent("Guerra externa", sf::Color(220, 60, 60));
         }
     };
     std::string lastActionFeedback;
@@ -363,12 +408,20 @@ int main(int argc, char** argv) {
                 if (kp->code == sf::Keyboard::Key::Num5) currentTab = Tab::Achievements;
                 if (kp->code == sf::Keyboard::Key::Num6) currentTab = Tab::Court;
                 if (kp->code == sf::Keyboard::Key::D) {
-                    modal.show({"coup_threat",
-                        "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
-                        {"purge_military", "negotiate_military", "cede_power", "resist"}});
+                    PendingDecision next;
+                    if (!decisionQueue.empty()) {
+                        next = decisionQueue.front();
+                        decisionQueue.erase(decisionQueue.begin());
+                    } else {
+                        next = {"coup_threat",
+                            "El alto mando amenaza con tomar el poder. ¿Tu respuesta?",
+                            {"purgar", "negociar", "ceder", "resistir"}};
+                    }
+                    modal.show(next);
                     audio.play("decision_appears");
                     particles.emit(ParticleEmitter::Preset::RedSpark, 640.f, 400.f, 40);
                     timeline.addEvent(bridge.turn(), "Decision", sf::Color(80, 160, 240));
+                    pushEvent("Decision tomada: " + next.id, sf::Color(80, 160, 240));
                 }
                 if (kp->code == sf::Keyboard::Key::G) {
                     gameOver.show(EndCondition::COUP_SUCCESS, bridge.country(),
@@ -656,10 +709,46 @@ int main(int argc, char** argv) {
                 rl.setPosition({ax, ay + 38.f});
                 window.draw(rl);
             }
-            window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 372));
-            window.draw(makeText(font, "(Sprint 11)", 12, kMuted, 1046, 392));
-            window.draw(makeText(font, "DECISIONES PEND.", 14, kMuted, 1046, 478));
-            window.draw(makeText(font, "(Sprint 14)", 12, kMuted, 1046, 498));
+            // EVENTOS reales (ultimos 5).
+            window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 358));
+            if (eventLog.empty()) {
+                window.draw(makeText(font, "Sin novedades", 11, kMuted, 1046, 378));
+            } else {
+                for (size_t i = 0; i < eventLog.size() && i < 5; ++i) {
+                    const auto& ev = eventLog[i];
+                    float ey = 378.f + i * 22.f;
+                    // Dot de color al inicio.
+                    sf::CircleShape dot(3.f);
+                    dot.setOrigin({3.f, 3.f});
+                    dot.setPosition({1052.f, ey + 6.f});
+                    dot.setFillColor(ev.color);
+                    window.draw(dot);
+                    // Turno y label.
+                    std::ostringstream s;
+                    s << "T" << ev.turn << "  " << ev.label;
+                    window.draw(makeText(font, s.str(), 11, kText, 1062, ey));
+                }
+            }
+            // DECISIONES PENDIENTES reales.
+            window.draw(makeText(font, "DECISIONES PEND.", 14, kMuted, 1046, 504));
+            if (decisionQueue.empty()) {
+                window.draw(makeText(font, "Sin decisiones", 11, kMuted, 1046, 524));
+            } else {
+                window.draw(makeText(font,
+                    std::to_string(decisionQueue.size()) + " en cola",
+                    11, kWarn, 1046, 524));
+                for (size_t i = 0; i < decisionQueue.size() && i < 4; ++i) {
+                    float dy = 542.f + i * 22.f;
+                    sf::CircleShape dot(3.f);
+                    dot.setOrigin({3.f, 3.f});
+                    dot.setPosition({1052.f, dy + 6.f});
+                    dot.setFillColor(kAccent);
+                    window.draw(dot);
+                    window.draw(makeText(font, decisionQueue[i].id, 11, kText, 1062, dy));
+                }
+                // Hint para abrir.
+                window.draw(makeText(font, "[D] siguiente", 10, kMuted, 1046, 642));
+            }
         }
 
         // === BottomBar: Mandate Timeline ===
