@@ -196,6 +196,7 @@ int main(int argc, char** argv) {
     CourtScene scene;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
+    int gameSeed = 1;  // incrementa con cada Nueva Partida (rota retratos)
     AppState appState = AppState::Menu;
     gameOver.setCallback([&](GameOverScreen::Action a) {
         audio.play("button_click");
@@ -203,6 +204,7 @@ int main(int argc, char** argv) {
             bridge.resetCountry();
             dashboard.recordHistory(bridge.country());
             popularitySumDemo = 0.0;
+            ++gameSeed;
             gameOver.hide();
             appState = AppState::Playing;
         } else if (a == GameOverScreen::Action::MainMenu) {
@@ -217,6 +219,7 @@ int main(int argc, char** argv) {
                 bridge.resetCountry();
                 dashboard.recordHistory(bridge.country());
                 tutorialUI.start();
+                ++gameSeed;
                 appState = AppState::Playing;
                 break;
             case MainMenu::Action::Continue:
@@ -553,7 +556,7 @@ int main(int argc, char** argv) {
                     scene.update(dt);
                     if (modal.visible()) scene.setDialog("Una decision critica espera mi resolucion.");
                     else scene.clearDialog();
-                    scene.draw(window, font, 218.f, 102.f, 794.f, 230.f, bridge.country());
+                    scene.draw(window, font, 218.f, 102.f, 794.f, 230.f, bridge.country(), gameSeed);
                     court.update(dt);
                     court.draw(window, font, 218.f, 340.f, 794.f, 310.f);
                     if (court.hovered() >= 0) {
@@ -597,11 +600,12 @@ int main(int argc, char** argv) {
                 if (bridge.turn() > 0 && bridge.turn() % 4 == 0 && cc.politics.popularity > 0.5) {
                     legit = std::min(1.f, legit + 0.25f); // medalla extra
                 }
-                // Si hay retrato real cargado, usarlo; sino fallback procedural.
-                const sf::Texture* portraitTex = AssetManager::instance().getTexture("portrait_bolivar");
+                // Retrato rotativo segun seed de partida (rol 0 = lider).
+                const sf::Texture* portraitTex = AssetManager::instance().pickPortrait(gameSeed, 0);
+                const char* leaderName = AssetManager::instance().pickPortraitName(gameSeed, 0);
                 if (portraitTex) {
                     LeaderPortrait::drawTextured(window, font, portraitTex,
-                                                 "Presidente", "Mandato actual",
+                                                 leaderName, "Presidente",
                                                  1155.f, 158.f, 42.f, regimeAccent, legit);
                 } else {
                     LeaderPortrait::drawDetailed(window, font, "Presidente", "Mandato actual",
@@ -611,15 +615,16 @@ int main(int argc, char** argv) {
             }
             // Asesores (3 compactos).
             window.draw(makeText(font, "ASESORES", 14, kMuted, 1046, 248));
-            const struct { const char* name; const char* role; const char* tex; } advisors[] = {
-                {"Economia",  "Min. Hacienda",  "portrait_bismarck"},
-                {"Defensa",   "Min. Seguridad", "portrait_garibaldi"},
-                {"Gabinete",  "Jefe de Gab.",   "portrait_napoleon"},
+            const struct { const char* role; } advisorRoles[] = {
+                {"Min. Hacienda"},
+                {"Min. Seguridad"},
+                {"Jefe de Gab."},
             };
             for (int i = 0; i < 3; ++i) {
                 float ax = 1062.f + (i % 3) * 70.f;
                 float ay = 296.f;
-                const sf::Texture* at = AssetManager::instance().getTexture(advisors[i].tex);
+                const sf::Texture* at = AssetManager::instance().pickPortrait(gameSeed, i + 1);
+                const char* advName = AssetManager::instance().pickPortraitName(gameSeed, i + 1);
                 if (at) {
                     float ar = 22.f;
                     sf::CircleShape disk(ar);
@@ -634,15 +639,15 @@ int main(int argc, char** argv) {
                     disk.setOutlineThickness(1.5f);
                     window.draw(disk);
                 } else {
-                    LeaderPortrait::drawCompact(window, font, advisors[i].name, ax, ay, 22.f);
+                    LeaderPortrait::drawCompact(window, font, advName, ax, ay, 22.f);
                 }
-                sf::Text nm(font, advisors[i].name, 10);
+                sf::Text nm(font, advName, 10);
                 nm.setFillColor(kText);
                 auto lb = nm.getLocalBounds();
                 nm.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
                 nm.setPosition({ax, ay + 28.f});
                 window.draw(nm);
-                sf::Text rl(font, advisors[i].role, 9);
+                sf::Text rl(font, advisorRoles[i].role, 9);
                 rl.setFillColor(kMuted);
                 auto lb2 = rl.getLocalBounds();
                 rl.setOrigin({lb2.position.x + lb2.size.x / 2.f, 0.f});

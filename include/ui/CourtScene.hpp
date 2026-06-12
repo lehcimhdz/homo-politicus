@@ -12,7 +12,8 @@ public:
     void setDialog(const std::string& text) { dialog_ = text; }
     void clearDialog() { dialog_.clear(); }
     void draw(sf::RenderWindow& win, const sf::Font& font,
-              float x, float y, float w, float h, const Country& c) const;
+              float x, float y, float w, float h, const Country& c,
+              int gameSeed = 0) const;
 
 private:
     float t_ = 0.f;

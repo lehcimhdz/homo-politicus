@@ -37,13 +37,33 @@ static std::vector<std::string> pathsFor(const std::string& rel) {
     };
 }
 
+static const char* kPortraitSlugs[] = {
+    "bolivar", "belgrano", "juarez", "bismarck",
+    "garibaldi", "washington", "lincoln", "napoleon",
+};
+static const int kPortraitCount = 8;
+
+static const char* kPortraitNames[] = {
+    "Bolivar",  "Belgrano",  "Juarez",     "Bismarck",
+    "Garibaldi", "Washington", "Lincoln",  "Napoleon",
+};
+
+const sf::Texture* AssetManager::pickPortrait(int gameSeed, int role) const {
+    // Asigna a cada rol un slug distinto rotando con la seed.
+    // Asegura que los 4 roles consecutivos no colisionen.
+    int idx = ((gameSeed * 7 + role * 11 + 13) % kPortraitCount + kPortraitCount) % kPortraitCount;
+    std::string key = std::string("portrait_") + kPortraitSlugs[idx];
+    return getTexture(key);
+}
+
+const char* AssetManager::pickPortraitName(int gameSeed, int role) const {
+    int idx = ((gameSeed * 7 + role * 11 + 13) % kPortraitCount + kPortraitCount) % kPortraitCount;
+    return kPortraitNames[idx];
+}
+
 void AssetManager::preloadDefaults() {
     // Retratos historicos (dominio publico, Wikimedia Commons).
-    const char* portraits[] = {
-        "bolivar", "san_martin", "belgrano", "juarez", "bismarck",
-        "garibaldi", "washington", "lincoln", "napoleon",
-    };
-    for (const char* slug : portraits) {
+    for (const char* slug : kPortraitSlugs) {
         std::string key = std::string("portrait_") + slug;
         loadTexture(key, pathsFor(std::string("assets/portraits/") + slug + ".jpg"));
     }

@@ -31,7 +31,8 @@ static void drawColumn(sf::RenderWindow& win, float cx, float topY, float botY, 
 }
 
 void CourtScene::draw(sf::RenderWindow& win, const sf::Font& font,
-                      float x, float y, float w, float h, const Country& c) const {
+                      float x, float y, float w, float h, const Country& c,
+                      int gameSeed) const {
     // Fondo del salon: pintura historica (Trumbull o David) si esta cargada.
     const sf::Texture* bgTex = AssetManager::instance().getTexture("bg_napoleon_coronation");
     if (!bgTex) bgTex = AssetManager::instance().getTexture("bg_declaration");
@@ -107,30 +108,32 @@ void CourtScene::draw(sf::RenderWindow& win, const sf::Font& font,
     if (c.politics.auth_dem_axis > 0.6) regimeAccent = sf::Color(80, 30, 30);
     else if (c.politics.civilian_military_control < 0.5) regimeAccent = sf::Color(60, 80, 50);
     float lr = 38.f * scale;
-    const sf::Texture* lt = AssetManager::instance().getTexture("portrait_bolivar");
+    const sf::Texture* lt = AssetManager::instance().pickPortrait(gameSeed, 0);
+    const char* lname = AssetManager::instance().pickPortraitName(gameSeed, 0);
     if (lt) {
-        LeaderPortrait::drawTextured(win, font, lt, "Presidente", "",
+        LeaderPortrait::drawTextured(win, font, lt, lname, "",
                                      lx, ly, lr, regimeAccent,
                                      (float)c.politics.regime_legitimacy);
     } else {
-        LeaderPortrait::drawDetailed(win, font, "Presidente", "",
+        LeaderPortrait::drawDetailed(win, font, lname, "",
                                      lx, ly, lr, expr, regimeAccent,
                                      (float)c.politics.regime_legitimacy);
     }
     (void)expr;
 
-    // 3 asesores alrededor con retratos historicos como sprites.
-    const struct { const char* name; const char* role; const char* texKey; float offset; } ads[] = {
-        {"Economia", "Min. Hacienda", "portrait_bismarck",  -0.30f},
-        {"Defensa",  "Min. Seguridad","portrait_garibaldi",  0.22f},
-        {"Gabinete", "Jefe de Gab.",  "portrait_napoleon",   0.30f},
+    // 3 asesores alrededor con retratos historicos rotando segun gameSeed.
+    const struct { const char* role; float offset; } ads[] = {
+        {"Min. Hacienda", -0.30f},
+        {"Min. Seguridad", 0.22f},
+        {"Jefe de Gab.",   0.30f},
     };
     for (int i = 0; i < 3; ++i) {
         float ax = x + w * (0.5f + ads[i].offset);
         float ay = y + h * 0.68f;
         float ascale = 1.f + 0.012f * std::sin(t_ * 1.6f + i * 0.7f);
         float ar = 22.f * ascale;
-        const sf::Texture* at = AssetManager::instance().getTexture(ads[i].texKey);
+        const sf::Texture* at = AssetManager::instance().pickPortrait(gameSeed, i + 1);
+        const char* adName = AssetManager::instance().pickPortraitName(gameSeed, i + 1);
         if (at) {
             sf::CircleShape disk(ar);
             disk.setOrigin({ar, ar});
@@ -144,9 +147,9 @@ void CourtScene::draw(sf::RenderWindow& win, const sf::Font& font,
             disk.setOutlineThickness(1.5f);
             win.draw(disk);
         } else {
-            LeaderPortrait::drawCompact(win, font, ads[i].name, ax, ay, ar);
+            LeaderPortrait::drawCompact(win, font, adName, ax, ay, ar);
         }
-        sf::Text nm(font, ads[i].name, 10);
+        sf::Text nm(font, adName, 10);
         nm.setFillColor(sf::Color(225, 228, 240));
         auto bb = nm.getLocalBounds();
         nm.setOrigin({bb.position.x + bb.size.x / 2.f, 0.f});

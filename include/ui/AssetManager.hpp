@@ -24,6 +24,11 @@ public:
     // Pre-cargas comunes (portraits + backgrounds).
     void preloadDefaults();
 
+    // Selecciona retrato segun seed de partida y rol (0=lider, 1=econ, 2=def, 3=gab).
+    // Garantiza que cada rol toma un slug distinto.
+    const sf::Texture* pickPortrait(int gameSeed, int role) const;
+    const char* pickPortraitName(int gameSeed, int role) const;
+
 private:
     AssetManager() = default;
     std::unordered_map<std::string, std::unique_ptr<sf::Texture>> textures_;
