@@ -616,19 +616,21 @@ int main(int argc, char** argv) {
             // Asesores (3 compactos).
             window.draw(makeText(font, "ASESORES", 14, kMuted, 1046, 248));
             const struct { const char* role; } advisorRoles[] = {
-                {"Min. Hacienda"},
-                {"Min. Seguridad"},
-                {"Jefe de Gab."},
+                {"Hacienda"},
+                {"Defensa"},
+                {"Gabinete"},
             };
+            const float advR = 20.f;
+            const float advSpacing = 76.f;
+            const float advBaseX = 1064.f;
             for (int i = 0; i < 3; ++i) {
-                float ax = 1062.f + (i % 3) * 70.f;
+                float ax = advBaseX + (float)(i % 3) * advSpacing;
                 float ay = 296.f;
                 const sf::Texture* at = AssetManager::instance().pickPortrait(gameSeed, i + 1);
                 const char* advName = AssetManager::instance().pickPortraitName(gameSeed, i + 1);
                 if (at) {
-                    float ar = 22.f;
-                    sf::CircleShape disk(ar);
-                    disk.setOrigin({ar, ar});
+                    sf::CircleShape disk(advR);
+                    disk.setOrigin({advR, advR});
                     disk.setPosition({ax, ay});
                     disk.setTexture(at);
                     auto sz = at->getSize();
@@ -639,19 +641,19 @@ int main(int argc, char** argv) {
                     disk.setOutlineThickness(1.5f);
                     window.draw(disk);
                 } else {
-                    LeaderPortrait::drawCompact(window, font, advName, ax, ay, 22.f);
+                    LeaderPortrait::drawCompact(window, font, advName, ax, ay, advR);
                 }
                 sf::Text nm(font, advName, 10);
                 nm.setFillColor(kText);
                 auto lb = nm.getLocalBounds();
                 nm.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
-                nm.setPosition({ax, ay + 28.f});
+                nm.setPosition({ax, ay + 24.f});
                 window.draw(nm);
                 sf::Text rl(font, advisorRoles[i].role, 9);
                 rl.setFillColor(kMuted);
                 auto lb2 = rl.getLocalBounds();
                 rl.setOrigin({lb2.position.x + lb2.size.x / 2.f, 0.f});
-                rl.setPosition({ax, ay + 40.f});
+                rl.setPosition({ax, ay + 38.f});
                 window.draw(rl);
             }
             window.draw(makeText(font, "EVENTOS", 14, kMuted, 1046, 372));
