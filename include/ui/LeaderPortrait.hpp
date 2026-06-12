@@ -20,6 +20,12 @@ public:
                              float cx, float cy, float radius,
                              Expression expr, sf::Color regimeAccent,
                              float legitimacy = 0.5f);
+    // Variante con textura real (Wikimedia portrait) recortada en circulo.
+    static void drawTextured(sf::RenderWindow& win, const sf::Font& font,
+                             const sf::Texture* texture,
+                             const std::string& name, const std::string& title,
+                             float cx, float cy, float radius,
+                             sf::Color regimeAccent, float legitimacy = 0.5f);
     static void drawCompact(sf::RenderWindow& win, const sf::Font& font,
                             const std::string& name, float cx, float cy, float radius);
 

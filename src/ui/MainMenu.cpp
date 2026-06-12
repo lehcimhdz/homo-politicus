@@ -1,5 +1,6 @@
 #include "ui/MainMenu.hpp"
 #include "ui/Heraldry.hpp"
+#include "ui/AssetManager.hpp"
 
 static const sf::Color kBg     = sf::Color(15, 17, 26);
 static const sf::Color kBtn    = sf::Color(40, 45, 60);
@@ -65,6 +66,31 @@ static sf::Text mkText(const sf::Font& font, const std::string& s, unsigned sz, 
 
 void MainMenu::draw(sf::RenderWindow& win, const sf::Font& font) const {
     win.draw(mkRect(0, 0, 1280, 800, kBg, sf::Color(0, 0, 0, 0), 0.f));
+
+    // Background historico (Liberty Leading the People) si esta cargado.
+    const sf::Texture* bg = AssetManager::instance().getTexture("bg_revolution");
+    if (bg) {
+        sf::Sprite sprite(*bg);
+        auto sz = bg->getSize();
+        float scale = std::max(1280.f / sz.x, 800.f / sz.y);
+        sprite.setScale({scale, scale});
+        // Centrar.
+        sprite.setPosition({
+            (1280.f - sz.x * scale) * 0.5f,
+            (800.f - sz.y * scale) * 0.5f
+        });
+        sprite.setColor(sf::Color(255, 255, 255, 95)); // dim para no competir con UI
+        win.draw(sprite);
+        // Vignette oscuro arriba/abajo para legibilidad.
+        sf::RectangleShape topVeil({1280.f, 280.f});
+        topVeil.setPosition({0.f, 0.f});
+        topVeil.setFillColor(sf::Color(0, 0, 0, 140));
+        win.draw(topVeil);
+        sf::RectangleShape bottomVeil({1280.f, 500.f});
+        bottomVeil.setPosition({0.f, 300.f});
+        bottomVeil.setFillColor(sf::Color(0, 0, 0, 180));
+        win.draw(bottomVeil);
+    }
 
     // Heraldica arriba del titulo como sello presidencial.
     {

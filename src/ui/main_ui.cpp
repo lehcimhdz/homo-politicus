@@ -19,6 +19,7 @@
 #include "ui/CourtNetwork.hpp"
 #include "ui/CourtScene.hpp"
 #include "ui/Heraldry.hpp"
+#include "ui/AssetManager.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -177,6 +178,7 @@ int main(int argc, char** argv) {
     const sf::Font& fTitle = titleFontOk ? titleFont : font;
 
     Localization::load(LOCALES_DIR, "es");
+    AssetManager::instance().preloadDefaults();
     UIBridge bridge;
     Dashboard dashboard;
     MapView mapView;
@@ -595,20 +597,45 @@ int main(int argc, char** argv) {
                 if (bridge.turn() > 0 && bridge.turn() % 4 == 0 && cc.politics.popularity > 0.5) {
                     legit = std::min(1.f, legit + 0.25f); // medalla extra
                 }
-                LeaderPortrait::drawDetailed(window, font, "Presidente", "Mandato actual",
-                                             1155.f, 158.f, 42.f, expr, regimeAccent, legit);
+                // Si hay retrato real cargado, usarlo; sino fallback procedural.
+                const sf::Texture* portraitTex = AssetManager::instance().getTexture("portrait_bolivar");
+                if (portraitTex) {
+                    LeaderPortrait::drawTextured(window, font, portraitTex,
+                                                 "Presidente", "Mandato actual",
+                                                 1155.f, 158.f, 42.f, regimeAccent, legit);
+                } else {
+                    LeaderPortrait::drawDetailed(window, font, "Presidente", "Mandato actual",
+                                                 1155.f, 158.f, 42.f, expr, regimeAccent, legit);
+                }
+                (void)expr;
             }
             // Asesores (3 compactos).
             window.draw(makeText(font, "ASESORES", 14, kMuted, 1046, 248));
-            const struct { const char* name; const char* role; } advisors[] = {
-                {"Economia",  "Min. Hacienda"},
-                {"Defensa",   "Min. Seguridad"},
-                {"Gabinete",  "Jefe de Gab."},
+            const struct { const char* name; const char* role; const char* tex; } advisors[] = {
+                {"Economia",  "Min. Hacienda",  "portrait_bismarck"},
+                {"Defensa",   "Min. Seguridad", "portrait_garibaldi"},
+                {"Gabinete",  "Jefe de Gab.",   "portrait_napoleon"},
             };
             for (int i = 0; i < 3; ++i) {
                 float ax = 1062.f + (i % 3) * 70.f;
                 float ay = 296.f;
-                LeaderPortrait::drawCompact(window, font, advisors[i].name, ax, ay, 22.f);
+                const sf::Texture* at = AssetManager::instance().getTexture(advisors[i].tex);
+                if (at) {
+                    float ar = 22.f;
+                    sf::CircleShape disk(ar);
+                    disk.setOrigin({ar, ar});
+                    disk.setPosition({ax, ay});
+                    disk.setTexture(at);
+                    auto sz = at->getSize();
+                    int side = (int)std::min(sz.x, sz.y);
+                    sf::IntRect rect({(int)((sz.x - side) / 2), 0}, {side, side});
+                    disk.setTextureRect(rect);
+                    disk.setOutlineColor(sf::Color(190, 160, 80));
+                    disk.setOutlineThickness(1.5f);
+                    window.draw(disk);
+                } else {
+                    LeaderPortrait::drawCompact(window, font, advisors[i].name, ax, ay, 22.f);
+                }
                 sf::Text nm(font, advisors[i].name, 10);
                 nm.setFillColor(kText);
                 auto lb = nm.getLocalBounds();

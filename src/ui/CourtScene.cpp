@@ -1,5 +1,6 @@
 #include "ui/CourtScene.hpp"
 #include "ui/LeaderPortrait.hpp"
+#include "ui/AssetManager.hpp"
 #include <cmath>
 
 void CourtScene::update(float dt) {
@@ -31,13 +32,33 @@ static void drawColumn(sf::RenderWindow& win, float cx, float topY, float botY, 
 
 void CourtScene::draw(sf::RenderWindow& win, const sf::Font& font,
                       float x, float y, float w, float h, const Country& c) const {
-    // Fondo del salon.
-    sf::RectangleShape bg({w, h});
-    bg.setPosition({x, y});
-    bg.setFillColor(sf::Color(46, 36, 50));
-    bg.setOutlineColor(sf::Color(80, 65, 90));
-    bg.setOutlineThickness(1.f);
-    win.draw(bg);
+    // Fondo del salon: pintura historica (Trumbull o David) si esta cargada.
+    const sf::Texture* bgTex = AssetManager::instance().getTexture("bg_napoleon_coronation");
+    if (!bgTex) bgTex = AssetManager::instance().getTexture("bg_declaration");
+    if (bgTex) {
+        sf::Sprite sprite(*bgTex);
+        auto sz = bgTex->getSize();
+        float scale = std::max(w / sz.x, h / sz.y);
+        sprite.setScale({scale, scale});
+        sprite.setPosition({
+            x + (w - sz.x * scale) * 0.5f,
+            y + (h - sz.y * scale) * 0.5f
+        });
+        sprite.setColor(sf::Color(255, 255, 255, 180));
+        win.draw(sprite);
+        // Dim overlay para legibilidad.
+        sf::RectangleShape dim({w, h});
+        dim.setPosition({x, y});
+        dim.setFillColor(sf::Color(20, 16, 28, 90));
+        win.draw(dim);
+    } else {
+        sf::RectangleShape bg({w, h});
+        bg.setPosition({x, y});
+        bg.setFillColor(sf::Color(46, 36, 50));
+        bg.setOutlineColor(sf::Color(80, 65, 90));
+        bg.setOutlineThickness(1.f);
+        win.draw(bg);
+    }
     // Piso.
     sf::RectangleShape floor({w, h * 0.20f});
     floor.setPosition({x, y + h * 0.78f});
@@ -77,7 +98,7 @@ void CourtScene::draw(sf::RenderWindow& win, const sf::Font& font,
     podium.setOutlineColor(sf::Color(70, 55, 40));
     podium.setOutlineThickness(0.8f);
     win.draw(podium);
-    // Lider (portrait detallado).
+    // Lider con textura real (fallback a procedural).
     LeaderPortrait::Expression expr = LeaderPortrait::Expression::Neutral;
     if (c.politics.popularity > 0.65) expr = LeaderPortrait::Expression::Happy;
     else if (c.politics.popularity < 0.30) expr = LeaderPortrait::Expression::Angry;
@@ -86,22 +107,45 @@ void CourtScene::draw(sf::RenderWindow& win, const sf::Font& font,
     if (c.politics.auth_dem_axis > 0.6) regimeAccent = sf::Color(80, 30, 30);
     else if (c.politics.civilian_military_control < 0.5) regimeAccent = sf::Color(60, 80, 50);
     float lr = 38.f * scale;
-    LeaderPortrait::drawDetailed(win, font, "Presidente", "",
-                                 lx, ly, lr, expr, regimeAccent,
-                                 (float)c.politics.regime_legitimacy);
+    const sf::Texture* lt = AssetManager::instance().getTexture("portrait_bolivar");
+    if (lt) {
+        LeaderPortrait::drawTextured(win, font, lt, "Presidente", "",
+                                     lx, ly, lr, regimeAccent,
+                                     (float)c.politics.regime_legitimacy);
+    } else {
+        LeaderPortrait::drawDetailed(win, font, "Presidente", "",
+                                     lx, ly, lr, expr, regimeAccent,
+                                     (float)c.politics.regime_legitimacy);
+    }
+    (void)expr;
 
-    // 3 asesores alrededor.
-    const struct { const char* name; const char* role; float offset; } ads[] = {
-        {"Economia", "Min. Hacienda", -0.30f},
-        {"Defensa",  "Min. Seguridad", 0.22f},
-        {"Gabinete", "Jefe de Gab.",   0.30f},
+    // 3 asesores alrededor con retratos historicos como sprites.
+    const struct { const char* name; const char* role; const char* texKey; float offset; } ads[] = {
+        {"Economia", "Min. Hacienda", "portrait_bismarck",  -0.30f},
+        {"Defensa",  "Min. Seguridad","portrait_garibaldi",  0.22f},
+        {"Gabinete", "Jefe de Gab.",  "portrait_napoleon",   0.30f},
     };
     for (int i = 0; i < 3; ++i) {
         float ax = x + w * (0.5f + ads[i].offset);
         float ay = y + h * 0.68f;
         float ascale = 1.f + 0.012f * std::sin(t_ * 1.6f + i * 0.7f);
         float ar = 22.f * ascale;
-        LeaderPortrait::drawCompact(win, font, ads[i].name, ax, ay, ar);
+        const sf::Texture* at = AssetManager::instance().getTexture(ads[i].texKey);
+        if (at) {
+            sf::CircleShape disk(ar);
+            disk.setOrigin({ar, ar});
+            disk.setPosition({ax, ay});
+            disk.setTexture(at);
+            auto sz = at->getSize();
+            int side = (int)std::min(sz.x, sz.y);
+            sf::IntRect rect({(int)((sz.x - side) / 2), 0}, {side, side});
+            disk.setTextureRect(rect);
+            disk.setOutlineColor(sf::Color(190, 160, 80));
+            disk.setOutlineThickness(1.5f);
+            win.draw(disk);
+        } else {
+            LeaderPortrait::drawCompact(win, font, ads[i].name, ax, ay, ar);
+        }
         sf::Text nm(font, ads[i].name, 10);
         nm.setFillColor(sf::Color(225, 228, 240));
         auto bb = nm.getLocalBounds();

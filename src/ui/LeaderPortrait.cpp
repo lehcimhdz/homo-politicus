@@ -255,6 +255,95 @@ void LeaderPortrait::drawDetailed(sf::RenderWindow& win, const sf::Font& font,
     }
 }
 
+void LeaderPortrait::drawTextured(sf::RenderWindow& win, const sf::Font& font,
+                                  const sf::Texture* texture,
+                                  const std::string& name, const std::string& title,
+                                  float cx, float cy, float radius,
+                                  sf::Color regimeAccent, float legitimacy) {
+    if (!texture) {
+        // Fallback al render procedural.
+        Expression expr = Expression::Neutral;
+        drawDetailed(win, font, name, title, cx, cy, radius, expr, regimeAccent, legitimacy);
+        return;
+    }
+    // Marco grabado dorado (atras).
+    sf::CircleShape frame(radius + 4.f);
+    frame.setOrigin({radius + 4.f, radius + 4.f});
+    frame.setPosition({cx, cy});
+    frame.setFillColor(sf::Color(28, 32, 44));
+    frame.setOutlineColor(sf::Color(220, 180, 80));
+    frame.setOutlineThickness(2.5f);
+    win.draw(frame);
+    // Rayos decorativos del grabado.
+    for (int i = 0; i < 8; ++i) {
+        float ang = (float)i * (6.28318f / 8.f);
+        float rIn  = radius + 7.f;
+        float rOut = radius + 10.f;
+        sf::Vertex line[2] = {
+            sf::Vertex{{cx + std::cos(ang) * rIn,  cy + std::sin(ang) * rIn},
+                       sf::Color(190, 150, 70), {}},
+            sf::Vertex{{cx + std::cos(ang) * rOut, cy + std::sin(ang) * rOut},
+                       sf::Color(190, 150, 70), {}},
+        };
+        win.draw(line, 2, sf::PrimitiveType::Lines);
+    }
+
+    // Disco con textura: cuadrado centrado de la imagen como textureRect.
+    sf::Vector2u sz = texture->getSize();
+    int side = (int)std::min(sz.x, sz.y);
+    sf::IntRect rect({(int)((sz.x - side) / 2), (int)(sz.y * 0)}, {side, side});
+    // Crop: en retratos el rostro suele estar arriba, no centrado. Tomamos
+    // un cuadrado anclado al tope para preservar la cara.
+    sf::CircleShape disk(radius);
+    disk.setOrigin({radius, radius});
+    disk.setPosition({cx, cy});
+    disk.setTexture(texture);
+    disk.setTextureRect(rect);
+    disk.setOutlineColor(sf::Color(120, 95, 50));
+    disk.setOutlineThickness(1.f);
+    win.draw(disk);
+
+    // Hombros con uniforme color regime (banda inferior).
+    sf::ConvexShape band(4);
+    band.setPoint(0, {cx - radius * 0.95f, cy + radius * 0.55f});
+    band.setPoint(1, {cx + radius * 0.95f, cy + radius * 0.55f});
+    band.setPoint(2, {cx + radius * 0.85f, cy + radius * 1.0f});
+    band.setPoint(3, {cx - radius * 0.85f, cy + radius * 1.0f});
+    band.setFillColor(regimeAccent);
+    win.draw(band);
+    // Medallas en la banda.
+    int meds = (int)std::clamp(legitimacy * 4.f + 0.5f, 0.f, 4.f);
+    for (int m = 0; m < meds; ++m) {
+        sf::CircleShape med(radius * 0.07f);
+        med.setOrigin({radius * 0.07f, radius * 0.07f});
+        med.setPosition({cx - radius * 0.30f + (float)m * radius * 0.18f,
+                         cy + radius * 0.78f});
+        med.setFillColor(sf::Color(230, 200, 90));
+        med.setOutlineColor(sf::Color(150, 110, 30));
+        med.setOutlineThickness(0.5f);
+        win.draw(med);
+    }
+
+    // Nombre y titulo.
+    if (!name.empty()) {
+        sf::Text t(font, name, 14);
+        t.setStyle(sf::Text::Bold);
+        t.setFillColor(sf::Color(225, 228, 240));
+        auto lb = t.getLocalBounds();
+        t.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+        t.setPosition({cx, cy + radius + 14.f});
+        win.draw(t);
+    }
+    if (!title.empty()) {
+        sf::Text t(font, title, 11);
+        t.setFillColor(sf::Color(170, 174, 188));
+        auto lb = t.getLocalBounds();
+        t.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+        t.setPosition({cx, cy + radius + 32.f});
+        win.draw(t);
+    }
+}
+
 void LeaderPortrait::drawCompact(sf::RenderWindow& win, const sf::Font& font,
                                  const std::string& name, float cx, float cy, float radius) {
     (void)font;
