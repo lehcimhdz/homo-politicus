@@ -12,7 +12,7 @@
 // Una capital + N ciudades secundarias colocadas en tiles urban dentro de la silueta.
 class IsoBuilding {
 public:
-    enum class Kind { Capital, City, Tower };
+    enum class Kind { Capital, City, Tower, Market, Temple, Fortress, Residential };
 
     struct Building {
         float gx, gy;  // grid coords (continuos para placement fino)
@@ -27,7 +27,8 @@ public:
                    const Country& country);
 
     void draw(sf::RenderWindow& win, const IsoCamera& cam,
-              const Country& country, float nightAmount) const;
+              const Country& country, float nightAmount,
+              float sunPhase = 0.f) const;
 
     void updateForCountry(const Country& country);
 
@@ -41,7 +42,9 @@ private:
 
     static void drawPrism(sf::RenderWindow& win, const IsoCamera& cam,
                           float gx, float gy, float w, float d, float h,
-                          sf::Color base, float nightAmount);
+                          sf::Color base, float nightAmount,
+                          const sf::Texture* wallTex = nullptr,
+                          const sf::Texture* roofTex = nullptr);
 };
 
 #endif

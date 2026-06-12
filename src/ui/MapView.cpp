@@ -256,7 +256,8 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
         isoVehicles_.drawRoads(win, isoCam_);
         isoNpcs_.draw(win, isoCam_, nightAmount);
         isoVehicles_.drawVehicles(win, isoCam_, nightAmount);
-        isoBuildings_.draw(win, isoCam_, c, nightAmount);
+        float sunPhase = t_ * 0.262f;
+        isoBuildings_.draw(win, isoCam_, c, nightAmount, sunPhase);
         // Tooltip de provincia hovered.
         if (provinces_.hovered() >= 0) {
             sf::Text tip(font, provinces_.hoveredTooltip(), 12);
