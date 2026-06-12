@@ -6,8 +6,6 @@ static const sf::Color kOverlay = sf::Color(0, 0, 0, 180);
 static const sf::Color kInk     = sf::Color(60, 35, 18);
 static const sf::Color kInkSoft = sf::Color(95, 60, 32);
 static const sf::Color kAccent  = sf::Color(130, 30, 30);   // rojo sello
-static const sf::Color kButton  = sf::Color(165, 135, 90, 200);
-static const sf::Color kButtonH = sf::Color(220, 195, 140, 220);
 static const sf::Color kBorder  = sf::Color(110, 80, 40);
 static const sf::Color kSkip    = sf::Color(140, 50, 50, 180);
 static const sf::Color kSkipH   = sf::Color(180, 70, 70, 220);
@@ -146,15 +144,47 @@ void DecisionModal::draw(sf::RenderWindow& win, const sf::Font& font) const {
         if (py > kModalY + 160) break;
     }
 
-    // Botones de opciones
+    // Botones de opciones con gradient sepia + hover glow.
     float startY = kModalY + 180.f;
     float btnH = 48.f;
     float btnW = kModalW - 80.f;
     for (size_t i = 0; i < current_.options.size(); ++i) {
         float y = startY + (float)i * (btnH + 12.f);
-        sf::Color fill = (current_.options[i] == hoveredOption_) ? kButtonH : kButton;
-        win.draw(makeRect(kModalX + 40, y, btnW, btnH, fill, kBorder, 1.f));
-        win.draw(mkText(font, current_.options[i], 16, kInk, kModalX + 56, y + 14));
+        bool hov = (current_.options[i] == hoveredOption_);
+        sf::Color top = hov ? sf::Color(235, 215, 160) : sf::Color(195, 165, 115);
+        sf::Color bot = hov ? sf::Color(200, 170, 110) : sf::Color(155, 125,  80);
+        sf::VertexArray grad(sf::PrimitiveType::TriangleStrip, 4);
+        grad[0] = sf::Vertex{{kModalX + 40.f,         y       }, top, {}};
+        grad[1] = sf::Vertex{{kModalX + 40.f + btnW,  y       }, top, {}};
+        grad[2] = sf::Vertex{{kModalX + 40.f,         y + btnH}, bot, {}};
+        grad[3] = sf::Vertex{{kModalX + 40.f + btnW,  y + btnH}, bot, {}};
+        win.draw(grad);
+        // Highlight superior.
+        sf::VertexArray glow(sf::PrimitiveType::TriangleStrip, 4);
+        sf::Color glowOut(255, 245, 220, hov ? 110 : 60);
+        sf::Color glowIn (255, 245, 220, 0);
+        glow[0] = sf::Vertex{{kModalX + 40.f,        y      }, glowOut, {}};
+        glow[1] = sf::Vertex{{kModalX + 40.f + btnW, y      }, glowOut, {}};
+        glow[2] = sf::Vertex{{kModalX + 40.f,        y + 5.f}, glowIn,  {}};
+        glow[3] = sf::Vertex{{kModalX + 40.f + btnW, y + 5.f}, glowIn,  {}};
+        win.draw(glow);
+        win.draw(makeRect(kModalX + 40, y, btnW, btnH, sf::Color(0,0,0,0), kBorder, hov ? 2.f : 1.f));
+        win.draw(makeRect(kModalX + 43, y + 3, btnW - 6, btnH - 6, sf::Color(0,0,0,0),
+                          sf::Color(255, 235, 200, hov ? 80 : 40), 0.5f));
+        // Chevron a la izquierda cuando hover.
+        if (hov) {
+            sf::ConvexShape chev(3);
+            chev.setPoint(0, {kModalX + 50.f, y + btnH * 0.5f - 6.f});
+            chev.setPoint(1, {kModalX + 58.f, y + btnH * 0.5f});
+            chev.setPoint(2, {kModalX + 50.f, y + btnH * 0.5f + 6.f});
+            chev.setFillColor(kInk);
+            win.draw(chev);
+        }
+        sf::Text opt(font, current_.options[i], 16);
+        opt.setStyle(hov ? sf::Text::Bold : sf::Text::Regular);
+        opt.setFillColor(kInk);
+        opt.setPosition({kModalX + (hov ? 70.f : 56.f), y + 14.f});
+        win.draw(opt);
     }
 
     // Skip

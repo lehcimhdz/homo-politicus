@@ -536,6 +536,18 @@ int main(int argc, char** argv) {
             turnStr << tr("ui.turn_prefix", "Turno") << " " << bridge.turn();
             window.draw(makeText(font, turnStr.str(), 18, kMuted, 290 + shakeX, 22));
 
+            // Separadores verticales sutiles entre secciones.
+            auto drawSep = [&](float sx) {
+                sf::RectangleShape sep({1.f, 38.f});
+                sep.setPosition({sx + shakeX, 11.f});
+                sep.setFillColor(sf::Color(255, 255, 255, 35));
+                window.draw(sep);
+            };
+            drawSep(225.f);   // antes de Turno
+            drawSep(370.f);   // antes de Pop
+            drawSep(540.f);   // antes de GDP
+            drawSep(750.f);   // antes de Inflacion
+
             window.draw(makeText(font, tr("ui.pop_short", "Pop:"), 16, kMuted, 380 + shakeX, 25));
             window.draw(makeText(font, fmtPct(c.politics.popularity), 20, popularityColor(c.politics.popularity), 425 + shakeX, 22));
             drawProgressBar(window, 380 + shakeX, 47, 130, 6, c.politics.popularity, popularityColor(c.politics.popularity));
@@ -819,7 +831,24 @@ int main(int argc, char** argv) {
         }
 
         // === BottomBar: Mandate Timeline ===
-        window.draw(makePanel(0, 700, 1280, 100, currentPalette.topbar));
+        {
+            sf::Color top = currentPalette.topbar;
+            sf::Color bot(
+                (uint8_t)std::max(0, top.r - 12),
+                (uint8_t)std::max(0, top.g - 12),
+                (uint8_t)std::max(0, top.b - 8));
+            sf::VertexArray g(sf::PrimitiveType::TriangleStrip, 4);
+            g[0] = sf::Vertex{{0.f,    700.f}, top, {}};
+            g[1] = sf::Vertex{{1280.f, 700.f}, top, {}};
+            g[2] = sf::Vertex{{0.f,    800.f}, bot, {}};
+            g[3] = sf::Vertex{{1280.f, 800.f}, bot, {}};
+            window.draw(g);
+            // Separador superior dorado sutil.
+            sf::RectangleShape topLine({1280.f, 1.f});
+            topLine.setPosition({0.f, 700.f});
+            topLine.setFillColor(sf::Color(180, 150, 80, 80));
+            window.draw(topLine);
+        }
         if (fontOk) {
             window.draw(makeText(font, "TIMELINE DEL MANDATO", 12, kMuted, 16, 706));
             timeline.draw(window, font, 16.f, 718.f, 1248.f, 76.f, bridge.turn(), 60);

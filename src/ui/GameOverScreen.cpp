@@ -130,7 +130,34 @@ void GameOverScreen::draw(sf::RenderWindow& win, const sf::Font& font) const {
         win.draw(mkRect(0, 0, 1280, 800, ov, sf::Color(0, 0, 0, 0), 0.f));
     }
 
-    win.draw(mkRect(kPanelX, kPanelY, kPanelW, kPanelH_, kPanel, kBorder, 2.f));
+    // Panel central con gradient vertical.
+    {
+        sf::Color topC(38, 42, 60);
+        sf::Color botC(20, 22, 36);
+        sf::VertexArray grad(sf::PrimitiveType::TriangleStrip, 4);
+        grad[0] = sf::Vertex{{kPanelX,           kPanelY          }, topC, {}};
+        grad[1] = sf::Vertex{{kPanelX + kPanelW, kPanelY          }, topC, {}};
+        grad[2] = sf::Vertex{{kPanelX,           kPanelY + kPanelH_}, botC, {}};
+        grad[3] = sf::Vertex{{kPanelX + kPanelW, kPanelY + kPanelH_}, botC, {}};
+        win.draw(grad);
+        // Highlight superior.
+        sf::VertexArray hl(sf::PrimitiveType::TriangleStrip, 4);
+        sf::Color hlOut(255, 255, 255, 30);
+        sf::Color hlIn(255, 255, 255, 0);
+        hl[0] = sf::Vertex{{kPanelX,           kPanelY      }, hlOut, {}};
+        hl[1] = sf::Vertex{{kPanelX + kPanelW, kPanelY      }, hlOut, {}};
+        hl[2] = sf::Vertex{{kPanelX,           kPanelY + 8.f}, hlIn,  {}};
+        hl[3] = sf::Vertex{{kPanelX + kPanelW, kPanelY + 8.f}, hlIn,  {}};
+        win.draw(hl);
+    }
+    // Borde doble.
+    win.draw(mkRect(kPanelX, kPanelY, kPanelW, kPanelH_, sf::Color(0,0,0,0), kBorder, 2.f));
+    win.draw(mkRect(kPanelX + 4, kPanelY + 4, kPanelW - 8, kPanelH_ - 8, sf::Color(0,0,0,0),
+                    sf::Color(255, 255, 255, 30), 0.8f));
+    // Separador horizontal entre titulo y datos.
+    win.draw(mkRect(kPanelX + 40, kPanelY + 110, kPanelW - 80, 1.f,
+                    sf::Color(255, 255, 255, 50), sf::Color(0,0,0,0), 0.f));
+    (void)kPanel;
 
     win.draw(mkText(font, "GAME OVER", 14, kAccent, kPanelX + 40, kPanelY + 30));
     sf::Color condColor = (cond_ == EndCondition::TERM_COMPLETED) ? kGood : kBad;
@@ -167,12 +194,31 @@ void GameOverScreen::draw(sf::RenderWindow& win, const sf::Font& font) const {
     scoreText.setPosition({kPanelX + 40, y + 20});
     win.draw(scoreText);
 
-    // Botones
+    // Botones con gradient.
     float btnW = 280.f, btnH = 50.f;
     float bx1 = kPanelX + 80, by = kPanelY + kPanelH_ - 80;
     float bx2 = kPanelX + kPanelW - 80 - btnW;
-    win.draw(mkRect(bx1, by, btnW, btnH, kBtn, kBorder, 1.f));
-    win.draw(mkText(font, "Nueva partida", 18, kText, bx1 + 80, by + 14));
-    win.draw(mkRect(bx2, by, btnW, btnH, kBtn, kBorder, 1.f));
-    win.draw(mkText(font, "Menu principal", 18, kText, bx2 + 80, by + 14));
+    auto drawBtn = [&](float x, const std::string& label) {
+        sf::Color tg(60, 90, 130);
+        sf::Color bg(30, 50,  80);
+        sf::VertexArray gr(sf::PrimitiveType::TriangleStrip, 4);
+        gr[0] = sf::Vertex{{x,        by       }, tg, {}};
+        gr[1] = sf::Vertex{{x + btnW, by       }, tg, {}};
+        gr[2] = sf::Vertex{{x,        by + btnH}, bg, {}};
+        gr[3] = sf::Vertex{{x + btnW, by + btnH}, bg, {}};
+        win.draw(gr);
+        win.draw(mkRect(x, by, btnW, btnH, sf::Color(0,0,0,0), kBorder, 1.5f));
+        win.draw(mkRect(x + 3, by + 3, btnW - 6, btnH - 6, sf::Color(0,0,0,0),
+                        sf::Color(255, 255, 255, 30), 0.5f));
+        sf::Text t(font, label, 18);
+        t.setStyle(sf::Text::Bold);
+        t.setFillColor(kText);
+        auto lb = t.getLocalBounds();
+        t.setOrigin({lb.position.x + lb.size.x / 2.f, lb.position.y + lb.size.y / 2.f});
+        t.setPosition({x + btnW / 2.f, by + btnH / 2.f});
+        win.draw(t);
+    };
+    drawBtn(bx1, "Nueva partida");
+    drawBtn(bx2, "Menu principal");
+    (void)kBtn;
 }

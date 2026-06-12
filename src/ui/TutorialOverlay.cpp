@@ -97,7 +97,29 @@ void TutorialOverlay::onClick(sf::Vector2f mouse) {
 void TutorialOverlay::draw(sf::RenderWindow& win, const sf::Font& font) const {
     if (!visible_) return;
     win.draw(mkRect(0, 0, 1280, 800, kOverlay, sf::Color(0, 0, 0, 0), 0.f));
-    win.draw(mkRect(kPanelX, kPanelY, kPanelW, kPanelH, kPanel, kBorder, 2.f));
+    // Panel con gradient.
+    {
+        sf::Color top(50, 56, 80);
+        sf::Color bot(28, 32, 48);
+        sf::VertexArray g(sf::PrimitiveType::TriangleStrip, 4);
+        g[0] = sf::Vertex{{kPanelX,           kPanelY          }, top, {}};
+        g[1] = sf::Vertex{{kPanelX + kPanelW, kPanelY          }, top, {}};
+        g[2] = sf::Vertex{{kPanelX,           kPanelY + kPanelH}, bot, {}};
+        g[3] = sf::Vertex{{kPanelX + kPanelW, kPanelY + kPanelH}, bot, {}};
+        win.draw(g);
+        // Highlight superior.
+        sf::VertexArray hl(sf::PrimitiveType::TriangleStrip, 4);
+        sf::Color hlOut(255, 255, 255, 35); sf::Color hlIn(255, 255, 255, 0);
+        hl[0] = sf::Vertex{{kPanelX,           kPanelY      }, hlOut, {}};
+        hl[1] = sf::Vertex{{kPanelX + kPanelW, kPanelY      }, hlOut, {}};
+        hl[2] = sf::Vertex{{kPanelX,           kPanelY + 6.f}, hlIn,  {}};
+        hl[3] = sf::Vertex{{kPanelX + kPanelW, kPanelY + 6.f}, hlIn,  {}};
+        win.draw(hl);
+        (void)kPanel;
+    }
+    win.draw(mkRect(kPanelX, kPanelY, kPanelW, kPanelH, sf::Color(0,0,0,0), kBorder, 2.f));
+    win.draw(mkRect(kPanelX + 3, kPanelY + 3, kPanelW - 6, kPanelH - 6, sf::Color(0,0,0,0),
+                    sf::Color(255, 255, 255, 35), 0.5f));
 
     auto mt = textFor(mission_);
     win.draw(mkText(font, "TUTORIAL", 12, kAccent, kPanelX + 20, kPanelY + 16));
