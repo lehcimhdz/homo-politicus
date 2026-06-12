@@ -1,14 +1,16 @@
 #include "ui/DecisionModal.hpp"
+#include "ui/AssetManager.hpp"
 
-static const sf::Color kModal   = sf::Color(28, 30, 42, 245);
 static const sf::Color kOverlay = sf::Color(0, 0, 0, 180);
-static const sf::Color kBorder  = sf::Color(80, 160, 240);
-static const sf::Color kText    = sf::Color(230, 232, 240);
-static const sf::Color kAccent  = sf::Color(80, 160, 240);
-static const sf::Color kButton  = sf::Color(46, 50, 64);
-static const sf::Color kButtonH = sf::Color(70, 100, 140);
-static const sf::Color kSkip    = sf::Color(100, 60, 60);
-static const sf::Color kSkipH   = sf::Color(160, 80, 80);
+// Paleta sepia papiro (modal con textura de pergamino).
+static const sf::Color kInk     = sf::Color(60, 35, 18);
+static const sf::Color kInkSoft = sf::Color(95, 60, 32);
+static const sf::Color kAccent  = sf::Color(130, 30, 30);   // rojo sello
+static const sf::Color kButton  = sf::Color(165, 135, 90, 200);
+static const sf::Color kButtonH = sf::Color(220, 195, 140, 220);
+static const sf::Color kBorder  = sf::Color(110, 80, 40);
+static const sf::Color kSkip    = sf::Color(140, 50, 50, 180);
+static const sf::Color kSkipH   = sf::Color(180, 70, 70, 220);
 
 static constexpr float kModalW = 720.f;
 static constexpr float kModalH = 460.f;
@@ -96,12 +98,37 @@ void DecisionModal::draw(sf::RenderWindow& win, const sf::Font& font) const {
     // Overlay opaco
     win.draw(makeRect(0, 0, 1280, 800, kOverlay));
 
-    // Modal
-    win.draw(makeRect(kModalX, kModalY, kModalW, kModalH, kModal, kBorder, 2.f));
+    // Modal: textura de Magna Carta como pergamino.
+    const sf::Texture* parch = AssetManager::instance().getTexture("bg_magna_carta");
+    if (parch) {
+        sf::Sprite sprite(*parch);
+        auto sz = parch->getSize();
+        float sx = kModalW / sz.x;
+        float sy = kModalH / sz.y;
+        sprite.setScale({sx, sy});
+        sprite.setPosition({kModalX, kModalY});
+        sprite.setColor(sf::Color(255, 230, 195));  // tinte sepia
+        win.draw(sprite);
+        // Veil de papel envejecido (warm tint) para uniformar.
+        win.draw(makeRect(kModalX, kModalY, kModalW, kModalH,
+                          sf::Color(245, 220, 175, 110)));
+    } else {
+        win.draw(makeRect(kModalX, kModalY, kModalW, kModalH,
+                          sf::Color(232, 210, 168, 245)));
+    }
+    // Borde sello con doble linea.
+    win.draw(makeRect(kModalX, kModalY, kModalW, kModalH,
+                      sf::Color(0,0,0,0), kBorder, 3.f));
+    win.draw(makeRect(kModalX + 6, kModalY + 6, kModalW - 12, kModalH - 12,
+                      sf::Color(0,0,0,0), sf::Color(170, 130, 70), 1.f));
 
-    // Titulo
+    // Titulo (tinta roja para "DECISION REQUERIDA" como sello).
     win.draw(mkText(font, "DECISION REQUERIDA", 14, kAccent, kModalX + 40, kModalY + 24));
-    win.draw(mkText(font, current_.id, 20, kText, kModalX + 40, kModalY + 48));
+    sf::Text idText(font, current_.id, 22);
+    idText.setStyle(sf::Text::Bold);
+    idText.setFillColor(kInk);
+    idText.setPosition({kModalX + 40, kModalY + 48});
+    win.draw(idText);
 
     // Prompt (envuelve si es largo, naive split por 80 chars)
     std::string p = current_.prompt;
@@ -113,7 +140,7 @@ void DecisionModal::draw(sf::RenderWindow& win, const sf::Font& font) const {
             size_t spc = p.rfind(' ', end);
             if (spc != std::string::npos && spc > start) end = spc;
         }
-        win.draw(mkText(font, p.substr(start, end - start), 14, kText, kModalX + 40, py));
+        win.draw(mkText(font, p.substr(start, end - start), 14, kInk, kModalX + 40, py));
         py += 20.f;
         start = (end == p.size()) ? end : end + 1;
         if (py > kModalY + 160) break;
@@ -127,12 +154,13 @@ void DecisionModal::draw(sf::RenderWindow& win, const sf::Font& font) const {
         float y = startY + (float)i * (btnH + 12.f);
         sf::Color fill = (current_.options[i] == hoveredOption_) ? kButtonH : kButton;
         win.draw(makeRect(kModalX + 40, y, btnW, btnH, fill, kBorder, 1.f));
-        win.draw(mkText(font, current_.options[i], 16, kText, kModalX + 56, y + 14));
+        win.draw(mkText(font, current_.options[i], 16, kInk, kModalX + 56, y + 14));
     }
 
     // Skip
     float skipY = kModalY + kModalH - 60.f;
     sf::Color skipFill = (hoveredOption_ == "__skip__") ? kSkipH : kSkip;
     win.draw(makeRect(kModalX + 40, skipY, btnW, 40.f, skipFill, kBorder, 1.f));
-    win.draw(mkText(font, "Saltar (-credibilidad)", 14, kText, kModalX + 56, skipY + 10));
+    win.draw(mkText(font, "Saltar (-credibilidad)", 14, sf::Color(245, 230, 200), kModalX + 56, skipY + 10));
+    (void)kInkSoft;
 }

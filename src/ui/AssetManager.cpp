@@ -70,6 +70,7 @@ void AssetManager::preloadDefaults() {
     // Backgrounds.
     const char* backgrounds[] = {
         "declaration", "napoleon_coronation", "bastille", "revolution",
+        "magna_carta", "declaration_orig",
     };
     for (const char* slug : backgrounds) {
         std::string key = std::string("bg_") + slug;
