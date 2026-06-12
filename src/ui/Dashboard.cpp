@@ -1,10 +1,10 @@
 #include "ui/Dashboard.hpp"
+#include "ui/AssetManager.hpp"
 #include <iomanip>
 #include <sstream>
 #include <algorithm>
 #include <cmath>
 
-static const sf::Color kPanel  = sf::Color(32, 36, 48);
 static const sf::Color kBorder = sf::Color(60, 65, 80);
 static const sf::Color kText   = sf::Color(220, 222, 232);
 static const sf::Color kMuted  = sf::Color(150, 154, 168);
@@ -149,12 +149,75 @@ void Dashboard::drawCard(sf::RenderWindow& win, const sf::Font& font,
         if (std::abs(x - cx) < 1.f && std::abs(y - cy) < 1.f) { idx = i; break; }
     }
     bool isHovered = (idx == hoveredCard_);
+
+    // Gradient vertical (top mas claro, bottom mas oscuro).
+    sf::Color top, bot;
+    if (isHovered) {
+        top = sf::Color(46, 54, 76);
+        bot = sf::Color(30, 36, 54);
+    } else {
+        top = sf::Color(40, 44, 60);
+        bot = sf::Color(26, 30, 42);
+    }
+    sf::VertexArray grad(sf::PrimitiveType::TriangleStrip, 4);
+    grad[0] = sf::Vertex{{x,     y    }, top, {}};
+    grad[1] = sf::Vertex{{x + w, y    }, top, {}};
+    grad[2] = sf::Vertex{{x,     y + h}, bot, {}};
+    grad[3] = sf::Vertex{{x + w, y + h}, bot, {}};
+    win.draw(grad);
+
+    // Paper noise overlay sutil.
+    const sf::Texture* noiseTex = AssetManager::instance().getTexture("texture_paper_noise");
+    if (noiseTex) {
+        sf::Sprite noise(*noiseTex);
+        noise.setTextureRect(sf::IntRect({0, 0}, {(int)w, (int)h}));
+        noise.setPosition({x, y});
+        noise.setColor(sf::Color(255, 255, 255, 18));
+        win.draw(noise);
+    }
+
+    // Inner glow borders: 4 mini-rects con alpha fade hacia adentro.
+    {
+        sf::Color glowBase = isHovered ? sf::Color(80, 160, 240) : sf::Color(80, 90, 120);
+        uint8_t alpha = isHovered ? 90 : 50;
+        // Top
+        sf::VertexArray gt(sf::PrimitiveType::TriangleStrip, 4);
+        sf::Color cIn(glowBase.r, glowBase.g, glowBase.b, 0);
+        sf::Color cOut(glowBase.r, glowBase.g, glowBase.b, alpha);
+        gt[0] = sf::Vertex{{x,     y      }, cOut, {}};
+        gt[1] = sf::Vertex{{x + w, y      }, cOut, {}};
+        gt[2] = sf::Vertex{{x,     y + 8.f}, cIn,  {}};
+        gt[3] = sf::Vertex{{x + w, y + 8.f}, cIn,  {}};
+        win.draw(gt);
+        // Bottom
+        sf::VertexArray gb(sf::PrimitiveType::TriangleStrip, 4);
+        gb[0] = sf::Vertex{{x,     y + h - 8.f}, cIn,  {}};
+        gb[1] = sf::Vertex{{x + w, y + h - 8.f}, cIn,  {}};
+        gb[2] = sf::Vertex{{x,     y + h      }, cOut, {}};
+        gb[3] = sf::Vertex{{x + w, y + h      }, cOut, {}};
+        win.draw(gb);
+        // Left
+        sf::VertexArray gl(sf::PrimitiveType::TriangleStrip, 4);
+        gl[0] = sf::Vertex{{x,       y    }, cOut, {}};
+        gl[1] = sf::Vertex{{x + 8.f, y    }, cIn,  {}};
+        gl[2] = sf::Vertex{{x,       y + h}, cOut, {}};
+        gl[3] = sf::Vertex{{x + 8.f, y + h}, cIn,  {}};
+        win.draw(gl);
+        // Right
+        sf::VertexArray gr(sf::PrimitiveType::TriangleStrip, 4);
+        gr[0] = sf::Vertex{{x + w - 8.f, y    }, cIn,  {}};
+        gr[1] = sf::Vertex{{x + w,       y    }, cOut, {}};
+        gr[2] = sf::Vertex{{x + w - 8.f, y + h}, cIn,  {}};
+        gr[3] = sf::Vertex{{x + w,       y + h}, cOut, {}};
+        win.draw(gr);
+    }
+
+    // Borde + glow.
     sf::RectangleShape r({w, h});
     r.setPosition({x, y});
-    r.setFillColor(isHovered ? sf::Color(40, 50, 70) : kPanel);
-    // Borde dorado parpadeante mientras goldGlow_ > 0 (animacion de pasar turno).
+    r.setFillColor(sf::Color::Transparent);
     if (goldGlow_ > 0.f) {
-        float t = goldGlow_ / 0.2f; // 1 -> 0
+        float t = goldGlow_ / 0.2f;
         sf::Color gold(240, 200, 90, (uint8_t)(255 * t));
         r.setOutlineColor(gold);
         r.setOutlineThickness(3.f);
@@ -163,7 +226,60 @@ void Dashboard::drawCard(sf::RenderWindow& win, const sf::Font& font,
         r.setOutlineThickness(isHovered ? 2.f : 1.f);
     }
     win.draw(r);
-    win.draw(makeText(font, title, 14, isHovered ? kAccent : kMuted, x + 12, y + 10));
+
+    // Icono pequeño junto al titulo.
+    sf::Color iconCol = isHovered ? kAccent : kMuted;
+    float ix = x + 16.f, iy = y + 18.f;
+    if (title == "POPULARIDAD") {
+        // Corazon: 2 circulos + triangulo abajo.
+        sf::CircleShape h1(3.f); h1.setOrigin({3.f,3.f}); h1.setPosition({ix - 2.f, iy - 2.f}); h1.setFillColor(iconCol); win.draw(h1);
+        sf::CircleShape h2(3.f); h2.setOrigin({3.f,3.f}); h2.setPosition({ix + 2.f, iy - 2.f}); h2.setFillColor(iconCol); win.draw(h2);
+        sf::ConvexShape t(3); t.setPoint(0,{ix-5.f,iy-1.f}); t.setPoint(1,{ix+5.f,iy-1.f}); t.setPoint(2,{ix,iy+5.f}); t.setFillColor(iconCol); win.draw(t);
+    } else if (title == "ECONOMIA") {
+        // Moneda con $.
+        sf::CircleShape c(5.f); c.setOrigin({5.f,5.f}); c.setPosition({ix,iy}); c.setFillColor(iconCol); win.draw(c);
+        sf::RectangleShape bar({1.f, 6.f}); bar.setOrigin({0.5f,3.f}); bar.setPosition({ix,iy}); bar.setFillColor(sf::Color(20,20,30)); win.draw(bar);
+    } else if (title == "PRESIONES") {
+        // Cruz de 4 flechas.
+        sf::CircleShape mid(2.f); mid.setOrigin({2.f,2.f}); mid.setPosition({ix,iy}); mid.setFillColor(iconCol); win.draw(mid);
+        for (int k=0;k<4;++k) {
+            float ang=k*1.5708f;
+            sf::RectangleShape arr({5.f,1.5f});
+            arr.setOrigin({0.f,0.75f});
+            arr.setPosition({ix,iy});
+            arr.setRotation(sf::radians(ang));
+            arr.setFillColor(iconCol);
+            win.draw(arr);
+        }
+    } else if (title == "ESCANDALOS") {
+        // Triangulo de advertencia.
+        sf::ConvexShape tri(3);
+        tri.setPoint(0,{ix,iy-5.f});
+        tri.setPoint(1,{ix+5.f,iy+4.f});
+        tri.setPoint(2,{ix-5.f,iy+4.f});
+        tri.setFillColor(iconCol);
+        win.draw(tri);
+        sf::RectangleShape excl({1.f,4.f}); excl.setOrigin({0.5f,2.f}); excl.setPosition({ix,iy+1.f}); excl.setFillColor(sf::Color(20,15,15)); win.draw(excl);
+    } else if (title == "SISTEMAS DEL PAIS") {
+        // Pentagono 5 puntos.
+        for (int k=0;k<5;++k) {
+            float ang = -1.5708f + k * (6.28318f/5.f);
+            sf::CircleShape p(1.5f);
+            p.setOrigin({1.5f,1.5f});
+            p.setPosition({ix + std::cos(ang)*5.f, iy + std::sin(ang)*5.f});
+            p.setFillColor(iconCol);
+            win.draw(p);
+        }
+    } else if (title == "VECINOS") {
+        // 3 circulos pequeños conectados.
+        sf::CircleShape a(2.f); a.setOrigin({2.f,2.f}); a.setPosition({ix - 4.f, iy - 2.f}); a.setFillColor(iconCol); win.draw(a);
+        sf::CircleShape b(2.f); b.setOrigin({2.f,2.f}); b.setPosition({ix + 4.f, iy - 2.f}); b.setFillColor(iconCol); win.draw(b);
+        sf::CircleShape c(2.f); c.setOrigin({2.f,2.f}); c.setPosition({ix, iy + 4.f}); c.setFillColor(iconCol); win.draw(c);
+        sf::Vertex line1[2] = {sf::Vertex{{ix-4.f,iy-2.f},iconCol,{}}, sf::Vertex{{ix+4.f,iy-2.f},iconCol,{}}};
+        win.draw(line1, 2, sf::PrimitiveType::Lines);
+    }
+
+    win.draw(makeText(font, title, 14, isHovered ? kAccent : kMuted, x + 30, y + 10));
 }
 
 void Dashboard::drawPopularityCard(sf::RenderWindow& win, const sf::Font& font, float x, float y, const Country& c) const {

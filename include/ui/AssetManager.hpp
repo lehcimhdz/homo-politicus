@@ -24,6 +24,9 @@ public:
     // Pre-cargas comunes (portraits + backgrounds).
     void preloadDefaults();
 
+    // Genera texturas procedurales (paper noise, etc) y las inserta al cache.
+    void generateProcedural();
+
     // Selecciona retrato segun seed de partida y rol (0=lider, 1=econ, 2=def, 3=gab).
     // Garantiza que cada rol toma un slug distinto.
     const sf::Texture* pickPortrait(int gameSeed, int role) const;

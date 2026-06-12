@@ -61,7 +61,31 @@ const char* AssetManager::pickPortraitName(int gameSeed, int role) const {
     return kPortraitNames[idx];
 }
 
+void AssetManager::generateProcedural() {
+    // Paper noise 256x256 gris con variacion sutil.
+    sf::Image img({256u, 256u}, sf::Color(120, 120, 120));
+    auto hashXY = [](unsigned x, unsigned y) -> unsigned {
+        unsigned h = x * 73856093u ^ y * 19349663u;
+        h ^= h >> 13;
+        h *= 1274126177u;
+        h ^= h >> 16;
+        return h;
+    };
+    for (unsigned y = 0; y < 256; ++y) {
+        for (unsigned x = 0; x < 256; ++x) {
+            unsigned h = hashXY(x, y);
+            uint8_t base = 110 + (uint8_t)(h & 0x3F);  // 110..173
+            img.setPixel({x, y}, sf::Color(base, base, base * 95 / 100, 255));
+        }
+    }
+    auto tex = std::make_unique<sf::Texture>(img);
+    tex->setRepeated(true);
+    tex->setSmooth(true);
+    textures_["texture_paper_noise"] = std::move(tex);
+}
+
 void AssetManager::preloadDefaults() {
+    generateProcedural();
     // Retratos historicos (dominio publico, Wikimedia Commons).
     for (const char* slug : kPortraitSlugs) {
         std::string key = std::string("portrait_") + slug;

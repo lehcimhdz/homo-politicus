@@ -383,6 +383,13 @@ int main(int argc, char** argv) {
                         // Click en el boton SIGUIENTE
                         doTick();
                     }
+                    else if (pos.x >= 8 && pos.x <= 192 && pos.y >= 314 && pos.y <= 462) {
+                        // Click en SidebarLeft ACCIONES.
+                        int idx = (int)((pos.y - 314.f) / 32.f);
+                        const Tab tabFor[] = {Tab::Dashboard, Tab::Map, Tab::Action, Tab::Decisions, Tab::Achievements};
+                        if (idx >= 0 && idx < 5) currentTab = tabFor[idx];
+                        audio.play("button_click");
+                    }
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                     else if (currentTab == Tab::Achievements) achievements.onClick(pos);
                 }
@@ -560,8 +567,26 @@ int main(int argc, char** argv) {
             }
             window.draw(makeText(font, "ACCIONES", 14, kMuted, 16, 290));
             const char* actions[] = {"Dashboard", "Mapa", "Accion", "Decisiones", "Logros"};
+            const Tab tabFor[] = {Tab::Dashboard, Tab::Map, Tab::Action, Tab::Decisions, Tab::Achievements};
             for (int i = 0; i < 5; ++i) {
-                window.draw(makeText(font, actions[i], 16, kText, 16, 318.f + i * 32));
+                bool active = (currentTab == tabFor[i]);
+                float ty = 314.f + i * 32;
+                if (active) {
+                    // Fondo highlight + barra accent a la izquierda.
+                    sf::RectangleShape bg({184.f, 28.f});
+                    bg.setPosition({8.f, ty});
+                    bg.setFillColor(sf::Color(40, 60, 100, 180));
+                    window.draw(bg);
+                    sf::RectangleShape bar({3.f, 28.f});
+                    bar.setPosition({8.f, ty});
+                    bar.setFillColor(kAccent);
+                    window.draw(bar);
+                }
+                sf::Text it(font, actions[i], 16);
+                it.setStyle(active ? sf::Text::Bold : sf::Text::Regular);
+                it.setFillColor(active ? kAccent : kText);
+                it.setPosition({16.f, ty + 4.f});
+                window.draw(it);
             }
         }
 
