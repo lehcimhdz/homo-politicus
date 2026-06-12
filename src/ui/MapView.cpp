@@ -72,6 +72,102 @@ static sf::Color relationColor(double rel, bool atWar) {
     return kBad;
 }
 
+static unsigned strHash(const std::string& s) {
+    unsigned h = 2166136261u;
+    for (char c : s) { h ^= (unsigned)(unsigned char)c; h *= 16777619u; }
+    return h;
+}
+
+// Bandera procedural con 3 franjas + outline coloreado por relacion.
+static void drawNeighborFlag(sf::RenderWindow& win, sf::Vector2f pos, float w, float h,
+                             unsigned seed, sf::Color outlineColor) {
+    static const sf::Color palette[] = {
+        {180,  30,  35}, {30,  60, 160}, {30, 130,  60},
+        {200, 170,  30}, {80,  35, 130}, {220, 220, 215},
+        {35,  35,  40}, {200, 90,  20},
+    };
+    sf::Color c1 = palette[(seed >> 0) % 8];
+    sf::Color c2 = palette[(seed >> 4) % 8];
+    sf::Color c3 = palette[(seed >> 8) % 8];
+    bool vertical = ((seed >> 12) & 1) != 0;
+    sf::Vector2f origin = {pos.x - w * 0.5f, pos.y - h * 0.5f};
+    if (vertical) {
+        for (int i = 0; i < 3; ++i) {
+            sf::RectangleShape s({w / 3.f, h});
+            s.setPosition({origin.x + (float)i * (w / 3.f), origin.y});
+            s.setFillColor(i == 0 ? c1 : i == 1 ? c2 : c3);
+            win.draw(s);
+        }
+    } else {
+        for (int i = 0; i < 3; ++i) {
+            sf::RectangleShape s({w, h / 3.f});
+            s.setPosition({origin.x, origin.y + (float)i * (h / 3.f)});
+            s.setFillColor(i == 0 ? c1 : i == 1 ? c2 : c3);
+            win.draw(s);
+        }
+    }
+    // Simbolo central segun seed.
+    int sym = (seed >> 16) & 3;
+    sf::Color symColor = palette[(seed >> 20) % 8];
+    if (symColor == c2) symColor = sf::Color(245, 240, 220);
+    sf::Vector2f center = pos;
+    switch (sym) {
+        case 0: { // estrella simple
+            sf::ConvexShape star(5);
+            float r = h * 0.30f;
+            for (int i = 0; i < 5; ++i) {
+                float ang = -1.5708f + i * (3.14159f * 2.f / 5.f);
+                star.setPoint(i, {center.x + std::cos(ang) * r, center.y + std::sin(ang) * r});
+            }
+            star.setFillColor(symColor);
+            win.draw(star);
+            break;
+        }
+        case 1: { // sol
+            sf::CircleShape sun(h * 0.18f);
+            sun.setOrigin({h * 0.18f, h * 0.18f});
+            sun.setPosition(center);
+            sun.setFillColor(symColor);
+            win.draw(sun);
+            break;
+        }
+        case 2: { // cruz
+            sf::RectangleShape v({w * 0.10f, h * 0.55f});
+            v.setOrigin({w * 0.05f, h * 0.275f});
+            v.setPosition(center);
+            v.setFillColor(symColor);
+            win.draw(v);
+            sf::RectangleShape hr({w * 0.45f, h * 0.10f});
+            hr.setOrigin({w * 0.225f, h * 0.05f});
+            hr.setPosition(center);
+            hr.setFillColor(symColor);
+            win.draw(hr);
+            break;
+        }
+        case 3: { // circulo concéntrico
+            sf::CircleShape c(h * 0.30f);
+            c.setOrigin({h * 0.30f, h * 0.30f});
+            c.setPosition(center);
+            c.setFillColor(symColor);
+            win.draw(c);
+            sf::CircleShape inner(h * 0.12f);
+            inner.setOrigin({h * 0.12f, h * 0.12f});
+            inner.setPosition(center);
+            inner.setFillColor(palette[(seed >> 24) % 8]);
+            win.draw(inner);
+            break;
+        }
+    }
+    // Outline grueso de relacion diplomatica.
+    sf::RectangleShape outline({w, h});
+    outline.setOrigin({w * 0.5f, h * 0.5f});
+    outline.setPosition(pos);
+    outline.setFillColor(sf::Color::Transparent);
+    outline.setOutlineColor(outlineColor);
+    outline.setOutlineThickness(2.5f);
+    win.draw(outline);
+}
+
 static sf::CircleShape circleShape(sf::Vector2f pos, float r, sf::Color fill, sf::Color outline) {
     sf::CircleShape c(r);
     c.setOrigin({r, r});
@@ -297,20 +393,55 @@ void MapView::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c
     popStr << std::fixed << std::setprecision(0) << (c.politics.popularity * 100) << "%";
     win.draw(makeText(font, popStr.str(), 16, kText, homePos_.x - 14, homePos_.y + 12));
 
-    // === Vecinos ===
+    // === Vecinos === banderas procedurales con outline por relacion diplomatica.
     for (size_t i = 0; i < c.neighbors.size() && i < 3; ++i) {
         const auto& n = c.neighbors[i];
         sf::Color col = relationColor(n.diplomatic_relations, n.at_war);
-        win.draw(circleShape(neighbor_[i], neighRadius_, col, kBorder));
-        win.draw(makeText(font, n.name, 14, kText, neighbor_[i].x - 35, neighbor_[i].y - 10));
+        unsigned seed = strHash(n.name);
+        float flagW = neighRadius_ * 1.8f;
+        float flagH = neighRadius_ * 1.2f;
+        drawNeighborFlag(win, neighbor_[i], flagW, flagH, seed, col);
 
+        // Nombre encima de la bandera.
+        sf::Text name(font, n.name, 14);
+        name.setStyle(sf::Text::Bold);
+        name.setFillColor(kText);
+        name.setOutlineColor(sf::Color(0, 0, 0, 180));
+        name.setOutlineThickness(1.5f);
+        auto lb = name.getLocalBounds();
+        name.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+        name.setPosition({neighbor_[i].x, neighbor_[i].y - flagH * 0.5f - 22.f});
+        win.draw(name);
+
+        // Relacion como numero debajo.
         std::ostringstream relStr;
-        relStr << std::fixed << std::setprecision(1) << n.diplomatic_relations;
-        win.draw(makeText(font, relStr.str(), 12, kText, neighbor_[i].x - 12, neighbor_[i].y + 10));
+        relStr << "rel " << std::fixed << std::setprecision(2) << n.diplomatic_relations;
+        sf::Text rt(font, relStr.str(), 11);
+        rt.setFillColor(kText);
+        rt.setOutlineColor(sf::Color(0, 0, 0, 180));
+        rt.setOutlineThickness(1.2f);
+        auto rb = rt.getLocalBounds();
+        rt.setOrigin({rb.position.x + rb.size.x / 2.f, 0.f});
+        rt.setPosition({neighbor_[i].x, neighbor_[i].y + flagH * 0.5f + 4.f});
+        win.draw(rt);
 
-        if (n.at_war)               win.draw(makeText(font, "GUERRA", 11, kBad, neighbor_[i].x - 25, neighbor_[i].y + 28));
-        else if (n.has_territorial_claim) win.draw(makeText(font, "CLAIM", 11, kWarn, neighbor_[i].x - 20, neighbor_[i].y + 28));
-        else if (n.sanctions_against_us)  win.draw(makeText(font, "SANC", 11, kWarn, neighbor_[i].x - 18, neighbor_[i].y + 28));
+        // Status badge.
+        const char* badge = n.at_war ? "GUERRA"
+                          : n.has_territorial_claim ? "CLAIM"
+                          : n.sanctions_against_us ? "SANCIONES"
+                          : nullptr;
+        if (badge) {
+            sf::Color badgeColor = n.at_war ? kBad : kWarn;
+            sf::Text bt(font, badge, 11);
+            bt.setStyle(sf::Text::Bold);
+            bt.setFillColor(badgeColor);
+            bt.setOutlineColor(sf::Color(0, 0, 0, 220));
+            bt.setOutlineThickness(1.5f);
+            auto bb = bt.getLocalBounds();
+            bt.setOrigin({bb.position.x + bb.size.x / 2.f, 0.f});
+            bt.setPosition({neighbor_[i].x, neighbor_[i].y + flagH * 0.5f + 22.f});
+            win.draw(bt);
+        }
     }
 
     // === Clima: tinte + particulas sobre el area del mapa ===
