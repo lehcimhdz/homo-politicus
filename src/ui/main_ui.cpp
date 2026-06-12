@@ -22,6 +22,8 @@
 #include "ui/CourtScene.hpp"
 #include "ui/Heraldry.hpp"
 #include "ui/AssetManager.hpp"
+#include "ui/AchievementsView.hpp"
+#include "AchievementTracker.hpp"
 #include "Localization.hpp"
 
 enum class AppState { Menu, Playing };
@@ -196,6 +198,9 @@ int main(int argc, char** argv) {
     CourtNetwork court;
     court.configure(bridge.country());
     CourtScene scene;
+    AchievementTracker achievementTracker;
+    AchievementsView achievements;
+    achievements.configure(achievementTracker);
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     int gameSeed = 1;  // incrementa con cada Nueva Partida (rota retratos)
@@ -365,6 +370,7 @@ int main(int argc, char** argv) {
                 else if (currentTab == Tab::Dashboard) dashboard.onMouseMove(pos);
                 else if (currentTab == Tab::Court) court.onMouseMove(pos);
                 else if (currentTab == Tab::Map) mapView.onMouseMove(pos);
+                else if (currentTab == Tab::Achievements) achievements.onMouseMove(pos);
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {
@@ -378,6 +384,7 @@ int main(int argc, char** argv) {
                         doTick();
                     }
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
+                    else if (currentTab == Tab::Achievements) achievements.onClick(pos);
                 }
             }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
@@ -629,9 +636,11 @@ int main(int argc, char** argv) {
                     break;
                 }
                 case Tab::Achievements: {
-                    sf::Text hdr(fTitle, "LOGROS  [5]  (Sprint futuro)", 18);
+                    sf::Text hdr(fTitle, "LOGROS  [5]", 18);
                     hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
                     hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+                    achievements.update(achievementTracker);
+                    achievements.draw(window, font, 218.f, 102.f, 794.f, 580.f);
                     break;
                 }
                 case Tab::Court: {
