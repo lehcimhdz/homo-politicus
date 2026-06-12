@@ -13,9 +13,9 @@ static const sf::Color kGood   = sf::Color(80, 200, 120);
 static const sf::Color kBad    = sf::Color(220, 80, 80);
 static const sf::Color kWarn   = sf::Color(240, 180, 60);
 
-static const float kCardW = 260.f;
+static const float kCardW = 244.f;
 static const float kCardH = 200.f;
-static const float kGap   = 16.f;
+static const float kGap   = 18.f;
 
 Dashboard::Dashboard() {
     popHist.reserve(kHistMax);
@@ -48,7 +48,7 @@ void Dashboard::triggerTurnGlow() {
 
 void Dashboard::onMouseMove(sf::Vector2f mouse) {
     hoveredCard_ = -1;
-    const float baseX = 218.f;
+    const float baseX = 230.f;
     const float baseY = 100.f;
     for (int i = 0; i < 6; ++i) {
         int col = i % 3;
@@ -140,7 +140,7 @@ void Dashboard::drawCard(sf::RenderWindow& win, const sf::Font& font,
                          float x, float y, float w, float h,
                          const std::string& title) const {
     // Detectar si esta card es la hovered
-    const float baseX = 218.f, baseY = 100.f;
+    const float baseX = 230.f, baseY = 100.f;
     int idx = -1;
     for (int i = 0; i < 6; ++i) {
         int col = i % 3, row = i / 3;
@@ -293,7 +293,7 @@ void Dashboard::drawNeighborsCard(sf::RenderWindow& win, const sf::Font& font, f
 
 void Dashboard::draw(sf::RenderWindow& win, const sf::Font& font, const Country& c) const {
     // Grid 3 columnas x 2 filas, x base 218, y base 100
-    const float baseX = 218.f;
+    const float baseX = 230.f;
     const float baseY = 100.f;
     drawPopularityCard(win, font, baseX + 0 * (kCardW + kGap), baseY + 0 * (kCardH + kGap), c);
     drawEconomyCard   (win, font, baseX + 1 * (kCardW + kGap), baseY + 0 * (kCardH + kGap), c);
