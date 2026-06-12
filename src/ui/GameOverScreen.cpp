@@ -1,4 +1,5 @@
 #include "ui/GameOverScreen.hpp"
+#include "ui/AssetManager.hpp"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -99,8 +100,35 @@ void GameOverScreen::onClick(sf::Vector2f mouse) {
 void GameOverScreen::draw(sf::RenderWindow& win, const sf::Font& font) const {
     if (!visible_) return;
     std::uint8_t alpha = (std::uint8_t)(std::min(1.f, fadeTime_) * 230);
-    sf::Color ov(0, 0, 0, alpha);
-    win.draw(mkRect(0, 0, 1280, 800, ov, sf::Color(0, 0, 0, 0), 0.f));
+
+    // Background historico segun condicion (Bastille para crisis violenta,
+    // Declaration para final pacifico).
+    const sf::Texture* bgTex = nullptr;
+    bool violent = (cond_ == EndCondition::COUP_SUCCESS ||
+                    cond_ == EndCondition::REVOLUTION ||
+                    cond_ == EndCondition::ASSASSINATION ||
+                    cond_ == EndCondition::NUCLEAR_ANNIHILATION);
+    if (violent) bgTex = AssetManager::instance().getTexture("bg_bastille");
+    else         bgTex = AssetManager::instance().getTexture("bg_declaration");
+    if (bgTex) {
+        sf::Sprite sprite(*bgTex);
+        auto sz = bgTex->getSize();
+        float scale = std::max(1280.f / sz.x, 800.f / sz.y);
+        sprite.setScale({scale, scale});
+        sprite.setPosition({
+            (1280.f - sz.x * scale) * 0.5f,
+            (800.f - sz.y * scale) * 0.5f
+        });
+        sprite.setColor(sf::Color(255, 255, 255, alpha));
+        win.draw(sprite);
+        // Veil sobre el background.
+        sf::Color tint = violent ? sf::Color(80, 10, 10, (uint8_t)(alpha * 0.5f))
+                                 : sf::Color(0, 0, 30, (uint8_t)(alpha * 0.5f));
+        win.draw(mkRect(0, 0, 1280, 800, tint, sf::Color(0,0,0,0), 0.f));
+    } else {
+        sf::Color ov(0, 0, 0, alpha);
+        win.draw(mkRect(0, 0, 1280, 800, ov, sf::Color(0, 0, 0, 0), 0.f));
+    }
 
     win.draw(mkRect(kPanelX, kPanelY, kPanelW, kPanelH_, kPanel, kBorder, 2.f));
 
