@@ -590,9 +590,42 @@ int main(int argc, char** argv) {
                     break;
                 }
                 case Tab::Decisions: {
-                    sf::Text hdr(fTitle, "DECISIONES  [4]  (Sprint 14)", 18);
+                    sf::Text hdr(fTitle, "DECISIONES  [4]", 18);
                     hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
                     hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+                    window.draw(makeText(font,
+                        "Decisiones acumuladas: " + std::to_string(decisionQueue.size()),
+                        13, kMuted, 220, 102));
+                    if (decisionQueue.empty()) {
+                        window.draw(makeText(font,
+                            "No hay decisiones pendientes. Avanza turnos para que aparezcan.",
+                            14, kMuted, 220, 140));
+                    } else {
+                        for (size_t i = 0; i < decisionQueue.size() && i < 6; ++i) {
+                            const auto& d = decisionQueue[i];
+                            float dy = 140.f + (float)i * 80.f;
+                            sf::RectangleShape card({780.f, 70.f});
+                            card.setPosition({220.f, dy});
+                            card.setFillColor(sf::Color(38, 42, 56));
+                            card.setOutlineColor(sf::Color(80, 90, 120));
+                            card.setOutlineThickness(1.f);
+                            window.draw(card);
+                            sf::Text title(font, d.id, 16);
+                            title.setStyle(sf::Text::Bold);
+                            title.setFillColor(kAccent);
+                            title.setPosition({232.f, dy + 8.f});
+                            window.draw(title);
+                            window.draw(makeText(font, d.prompt, 12, kText, 232.f, dy + 30.f));
+                            std::string opts;
+                            for (size_t j = 0; j < d.options.size(); ++j) {
+                                if (j > 0) opts += "  /  ";
+                                opts += d.options[j];
+                            }
+                            window.draw(makeText(font, "Opciones: " + opts, 11, kMuted, 232.f, dy + 50.f));
+                        }
+                        window.draw(makeText(font, "Presiona [D] para resolver la primera.",
+                                             13, kWarn, 220, 632));
+                    }
                     break;
                 }
                 case Tab::Achievements: {
