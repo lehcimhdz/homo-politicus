@@ -33,8 +33,9 @@
 #include "SuccessorMode.hpp"
 #include "Advisor.hpp"
 #include "llm/LLMProvider.hpp"
+#include "ModLoader.hpp"
 
-enum class AppState { Menu, ModeSelect, Playing };
+enum class AppState { Menu, ModeSelect, Settings, Playing };
 static const std::string LOCALES_DIR = "/Users/michelcano/Documents/Repositorios/homo-politicus-game/content/locales";
 static std::string tr(const std::string& key, const std::string& fallback) {
     if (Localization::currentLanguage().empty()) return fallback;
@@ -219,6 +220,19 @@ int main(int argc, char** argv) {
     int advisorHover = -1;
     std::string advisorLastResponse;
     std::string advisorLastWho;
+    // Settings state.
+    int settingsHover = -1;
+    std::vector<ModLoader::ModMetadata> detectedMods;
+    bool modsScanned = false;
+    // Scenario picker state (modo Historical).
+    bool showingScenarioPicker = false;
+    int scenarioPickerHover = -1;
+    std::vector<std::string> historicalScenarios = {
+        "argentina_2001", "brasil_1985", "cuba_1959", "chile_1973",
+        "mexico_1968", "espana_1936", "alemania_1933", "italia_1922",
+        "francia_1789", "rusia_1917", "venezuela_1999",
+    };
+    std::string selectedScenario;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     int gameSeed = 1;  // incrementa con cada Nueva Partida (rota retratos)
@@ -259,6 +273,9 @@ int main(int argc, char** argv) {
                 bridge.resetCountry();
                 dashboard.recordHistory(bridge.country());
                 appState = AppState::Playing;
+                break;
+            case MainMenu::Action::Settings:
+                appState = AppState::Settings;
                 break;
             case MainMenu::Action::Quit:
                 window.close();
@@ -398,14 +415,30 @@ int main(int argc, char** argv) {
                 sf::Vector2f pos((float)mm->position.x, (float)mm->position.y);
                 if (appState == AppState::Menu) menu.onMouseMove(pos);
                 else if (appState == AppState::ModeSelect) {
-                    modeSelectHover = -1;
-                    for (int i = 0; i < 3; ++i) {
-                        float cx = 220.f + (float)i * 290.f;
-                        if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= 220.f && pos.y <= 570.f) {
-                            modeSelectHover = i;
-                            break;
+                    if (showingScenarioPicker) {
+                        scenarioPickerHover = -1;
+                        for (int i = 0; i < (int)historicalScenarios.size(); ++i) {
+                            int col = i % 3, row = i / 3;
+                            float cx = 220.f + (float)col * 290.f;
+                            float cy = 180.f + (float)row * 110.f;
+                            if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= cy && pos.y <= cy + 90.f) {
+                                scenarioPickerHover = i;
+                                break;
+                            }
+                        }
+                    } else {
+                        modeSelectHover = -1;
+                        for (int i = 0; i < 3; ++i) {
+                            float cx = 220.f + (float)i * 290.f;
+                            if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= 220.f && pos.y <= 570.f) {
+                                modeSelectHover = i;
+                                break;
+                            }
                         }
                     }
+                }
+                else if (appState == AppState::Settings) {
+                    settingsHover = (pos.x >= 550.f && pos.x <= 730.f && pos.y >= 720.f && pos.y <= 770.f) ? 999 : -1;
                 }
                 else if (modal.visible()) modal.onMouseMove(pos);
                 else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
@@ -430,23 +463,72 @@ int main(int argc, char** argv) {
                     if (gameOver.visible()) gameOver.onClick(pos);
                     else if (appState == AppState::Menu) menu.onClick(pos);
                     else if (appState == AppState::ModeSelect) {
-                        // Click en alguna card de modo.
-                        const GameMode modes[] = {GameMode::Sandbox, GameMode::Missions, GameMode::Historical};
-                        for (int i = 0; i < 3; ++i) {
-                            float cx = 220.f + (float)i * 290.f;
-                            if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= 220.f && pos.y <= 570.f) {
-                                modeConfig.mode = modes[i];
-                                if (ironManToggled) IronManMode::enable();
-                                else IronManMode::disable();
-                                tutorialUI.start();
-                                appState = AppState::Playing;
+                        if (showingScenarioPicker) {
+                            // Click en alguno de los 11 escenarios.
+                            for (int i = 0; i < (int)historicalScenarios.size(); ++i) {
+                                int col = i % 3, row = i / 3;
+                                float cx = 220.f + (float)col * 290.f;
+                                float cy = 180.f + (float)row * 110.f;
+                                if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= cy && pos.y <= cy + 90.f) {
+                                    selectedScenario = historicalScenarios[i];
+                                    modeConfig.scenarioId = selectedScenario;
+                                    if (ironManToggled) IronManMode::enable();
+                                    else IronManMode::disable();
+                                    tutorialUI.start();
+                                    appState = AppState::Playing;
+                                    showingScenarioPicker = false;
+                                    audio.play("button_click");
+                                    pushEvent("Escenario: " + selectedScenario, sf::Color(80, 160, 240));
+                                    break;
+                                }
+                            }
+                        } else {
+                            const GameMode modes[] = {GameMode::Sandbox, GameMode::Missions, GameMode::Historical};
+                            for (int i = 0; i < 3; ++i) {
+                                float cx = 220.f + (float)i * 290.f;
+                                if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= 220.f && pos.y <= 570.f) {
+                                    modeConfig.mode = modes[i];
+                                    if (modes[i] == GameMode::Historical) {
+                                        showingScenarioPicker = true;
+                                        audio.play("button_click");
+                                    } else {
+                                        if (ironManToggled) IronManMode::enable();
+                                        else IronManMode::disable();
+                                        tutorialUI.start();
+                                        appState = AppState::Playing;
+                                        audio.play("button_click");
+                                    }
+                                    break;
+                                }
+                            }
+                            // Click en iron man toggle.
+                            if (pos.x >= 430.f && pos.x <= 850.f && pos.y >= 600.f && pos.y <= 660.f) {
+                                ironManToggled = !ironManToggled;
                                 audio.play("button_click");
-                                break;
                             }
                         }
-                        // Click en iron man toggle.
-                        if (pos.x >= 430.f && pos.x <= 850.f && pos.y >= 600.f && pos.y <= 660.f) {
-                            ironManToggled = !ironManToggled;
+                    }
+                    else if (appState == AppState::Settings) {
+                        // Click en volumen slider (track 280..1000, y 186..200).
+                        if (pos.x >= 280.f && pos.x <= 1000.f && pos.y >= 184.f && pos.y <= 204.f) {
+                            float pct = (pos.x - 280.f) / 720.f;
+                            audio.setVolume(pct * 100.f);
+                        }
+                        // Click en idioma.
+                        if (pos.y >= 280.f && pos.y <= 316.f) {
+                            const char* langs[] = {"es", "en", "pt", "fr", "de", "it"};
+                            for (int i = 0; i < 6; ++i) {
+                                float bx = 280.f + (float)i * 120.f;
+                                if (pos.x >= bx && pos.x <= bx + 110.f) {
+                                    Localization::load(LOCALES_DIR, langs[i]);
+                                    audio.play("button_click");
+                                    break;
+                                }
+                            }
+                        }
+                        // Click en Volver.
+                        if (pos.x >= 550.f && pos.x <= 730.f && pos.y >= 720.f && pos.y <= 770.f) {
+                            appState = AppState::Menu;
                             audio.play("button_click");
                         }
                     }
@@ -485,7 +567,12 @@ int main(int argc, char** argv) {
             }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
                 if (kp->code == sf::Keyboard::Key::Escape) {
-                    if (appState == AppState::Playing) appState = AppState::Menu;
+                    if (appState == AppState::Settings) appState = AppState::Menu;
+                    else if (appState == AppState::ModeSelect) {
+                        if (showingScenarioPicker) showingScenarioPicker = false;
+                        else appState = AppState::Menu;
+                    }
+                    else if (appState == AppState::Playing) appState = AppState::Menu;
                     else window.close();
                 }
                 if (kp->code == sf::Keyboard::Key::N) {
@@ -652,6 +739,122 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        // === Settings state ===
+        if (appState == AppState::Settings && fontOk) {
+            window.draw(makePanel(0, 0, 1280, 800, sf::Color(15, 17, 26)));
+            sf::Text title(fTitle, "CONFIGURACION", 48);
+            title.setStyle(sf::Text::Bold);
+            title.setFillColor(sf::Color(80, 160, 240));
+            auto lb = title.getLocalBounds();
+            title.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+            title.setPosition({640.f, 60.f});
+            window.draw(title);
+
+            // Audio volume slider.
+            window.draw(makeText(font, "VOLUMEN AUDIO", 14, kMuted, 280, 160));
+            float volTrackX = 280.f, volTrackY = 190.f, volTrackW = 720.f, volTrackH = 8.f;
+            sf::RectangleShape track({volTrackW, volTrackH});
+            track.setPosition({volTrackX, volTrackY});
+            track.setFillColor(sf::Color(40, 44, 60));
+            track.setOutlineColor(sf::Color(80, 90, 120));
+            track.setOutlineThickness(1.f);
+            window.draw(track);
+            float volPct = audio.volume() / 100.f;
+            sf::RectangleShape fill({volTrackW * volPct, volTrackH});
+            fill.setPosition({volTrackX, volTrackY});
+            fill.setFillColor(sf::Color(80, 160, 240));
+            window.draw(fill);
+            sf::CircleShape knob(10.f);
+            knob.setOrigin({10.f, 10.f});
+            knob.setPosition({volTrackX + volTrackW * volPct, volTrackY + volTrackH / 2.f});
+            knob.setFillColor(sf::Color(180, 210, 255));
+            knob.setOutlineColor(sf::Color(80, 160, 240));
+            knob.setOutlineThickness(2.f);
+            window.draw(knob);
+            std::ostringstream volLabel;
+            volLabel << (int)audio.volume() << " / 100";
+            window.draw(makeText(font, volLabel.str(), 12, kText, 1020, 184));
+
+            // Language picker.
+            window.draw(makeText(font, "IDIOMA", 14, kMuted, 280, 250));
+            const char* langs[] = {"es", "en", "pt", "fr", "de", "it"};
+            const char* langNames[] = {"Espanol", "English", "Portugues", "Francais", "Deutsch", "Italiano"};
+            for (int i = 0; i < 6; ++i) {
+                float bx = 280.f + (float)i * 120.f;
+                bool active = (Localization::currentLanguage() == langs[i]);
+                sf::RectangleShape btn({110.f, 36.f});
+                btn.setPosition({bx, 280.f});
+                btn.setFillColor(active ? sf::Color(60, 100, 160) : sf::Color(40, 44, 60));
+                btn.setOutlineColor(active ? sf::Color(180, 210, 255) : sf::Color(80, 90, 120));
+                btn.setOutlineThickness(active ? 2.f : 1.f);
+                window.draw(btn);
+                sf::Text lt(font, langNames[i], 13);
+                lt.setStyle(active ? sf::Text::Bold : sf::Text::Regular);
+                lt.setFillColor(active ? sf::Color(245, 250, 255) : sf::Color(200, 205, 220));
+                auto llb = lt.getLocalBounds();
+                lt.setOrigin({llb.position.x + llb.size.x / 2.f, llb.position.y + llb.size.y / 2.f});
+                lt.setPosition({bx + 55.f, 298.f});
+                window.draw(lt);
+            }
+
+            // Mods detectados.
+            if (!modsScanned) {
+                detectedMods = ModLoader::scan("mods/");
+                if (detectedMods.empty()) {
+                    detectedMods = ModLoader::scan("/Users/michelcano/Documents/Repositorios/homo-politicus-game/mods/");
+                }
+                modsScanned = true;
+            }
+            window.draw(makeText(font, "MODS DETECTADOS", 14, kMuted, 280, 360));
+            if (detectedMods.empty()) {
+                window.draw(makeText(font, "(Ninguno. Crear mod en mods/<id>/mod.yaml)",
+                                     12, kMuted, 280, 384));
+            } else {
+                for (size_t i = 0; i < detectedMods.size() && i < 5; ++i) {
+                    const auto& m = detectedMods[i];
+                    float my = 384.f + (float)i * 60.f;
+                    sf::RectangleShape mc({720.f, 50.f});
+                    mc.setPosition({280.f, my});
+                    mc.setFillColor(m.enabled ? sf::Color(38, 56, 42) : sf::Color(32, 32, 38));
+                    mc.setOutlineColor(m.enabled ? sf::Color(80, 200, 120) : sf::Color(80, 90, 110));
+                    mc.setOutlineThickness(1.5f);
+                    window.draw(mc);
+                    sf::Text mn(font, m.name + " (v" + m.version + ")", 14);
+                    mn.setStyle(sf::Text::Bold);
+                    mn.setFillColor(sf::Color(225, 230, 240));
+                    mn.setPosition({292.f, my + 6.f});
+                    window.draw(mn);
+                    window.draw(makeText(font, m.author + " - " + m.description.substr(0, 60),
+                                         11, kMuted, 292.f, my + 26.f));
+                    sf::Text st(font, m.enabled ? "ACTIVO" : "Inactivo", 11);
+                    st.setStyle(sf::Text::Bold);
+                    st.setFillColor(m.enabled ? sf::Color(80, 200, 120) : kMuted);
+                    st.setPosition({940.f, my + 16.f});
+                    window.draw(st);
+                }
+            }
+
+            // Boton Volver.
+            float backY = 720.f;
+            bool backHov = (settingsHover == 999);
+            sf::RectangleShape back({180.f, 50.f});
+            back.setPosition({550.f, backY});
+            back.setFillColor(backHov ? sf::Color(80, 110, 160) : sf::Color(40, 50, 70));
+            back.setOutlineColor(backHov ? sf::Color(180, 210, 255) : sf::Color(80, 95, 130));
+            back.setOutlineThickness(2.f);
+            window.draw(back);
+            sf::Text bt(font, "Volver al menu", 16);
+            bt.setStyle(sf::Text::Bold);
+            bt.setFillColor(sf::Color(245, 250, 255));
+            auto bb = bt.getLocalBounds();
+            bt.setOrigin({bb.position.x + bb.size.x / 2.f, bb.position.y + bb.size.y / 2.f});
+            bt.setPosition({640.f, backY + 25.f});
+            window.draw(bt);
+
+            window.display();
+            continue;
+        }
+
         // === ModeSelect state ===
         if (appState == AppState::ModeSelect && fontOk) {
             // Background revolution con dim.
@@ -666,6 +869,49 @@ int main(int argc, char** argv) {
                 window.draw(spr);
             }
             window.draw(makePanel(0, 0, 1280, 800, sf::Color(15, 17, 26, 180)));
+
+            if (showingScenarioPicker) {
+                sf::Text title(fTitle, "ELEGI ESCENARIO HISTORICO", 40);
+                title.setStyle(sf::Text::Bold);
+                title.setFillColor(sf::Color(220, 180, 80));
+                auto lb = title.getLocalBounds();
+                title.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+                title.setPosition({640.f, 60.f});
+                window.draw(title);
+                window.draw(makeText(font, "11 escenarios historicos disponibles. Click para arrancar.",
+                                     13, kMuted, 240, 130));
+                for (size_t i = 0; i < historicalScenarios.size(); ++i) {
+                    int col = (int)i % 3, row = (int)i / 3;
+                    float cx = 220.f + (float)col * 290.f;
+                    float cy = 180.f + (float)row * 110.f;
+                    bool hov = (scenarioPickerHover == (int)i);
+                    sf::Color top = hov ? sf::Color(100, 80, 50) : sf::Color(50, 42, 32);
+                    sf::Color bot = hov ? sf::Color(60, 45, 25)  : sf::Color(30, 24, 18);
+                    sf::VertexArray g(sf::PrimitiveType::TriangleStrip, 4);
+                    g[0] = sf::Vertex{{cx,         cy      }, top, {}};
+                    g[1] = sf::Vertex{{cx + 270.f, cy      }, top, {}};
+                    g[2] = sf::Vertex{{cx,         cy + 90.f}, bot, {}};
+                    g[3] = sf::Vertex{{cx + 270.f, cy + 90.f}, bot, {}};
+                    window.draw(g);
+                    sf::RectangleShape outline({270.f, 90.f});
+                    outline.setPosition({cx, cy});
+                    outline.setFillColor(sf::Color::Transparent);
+                    outline.setOutlineColor(hov ? sf::Color(240, 200, 90) : sf::Color(140, 110, 50));
+                    outline.setOutlineThickness(hov ? 2.f : 1.5f);
+                    window.draw(outline);
+                    sf::Text n(fTitle, historicalScenarios[i], 18);
+                    n.setStyle(sf::Text::Bold);
+                    n.setFillColor(hov ? sf::Color(255, 235, 180) : sf::Color(220, 200, 160));
+                    auto nlb = n.getLocalBounds();
+                    n.setOrigin({nlb.position.x + nlb.size.x / 2.f, 0.f});
+                    n.setPosition({cx + 135.f, cy + 32.f});
+                    window.draw(n);
+                }
+                window.draw(makeText(font, "Esc = volver a modos", 12, kMuted, 16, 770));
+                window.display();
+                continue;
+            }
+
             sf::Text title(fTitle, "ELEGI TU MODO", 56);
             title.setStyle(sf::Text::Bold);
             title.setFillColor(sf::Color(80, 160, 240));
