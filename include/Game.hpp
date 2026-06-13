@@ -21,11 +21,27 @@ public:
     Game();
     void run(); // The main loop function
 
+    // ===== Public API for UI integration (Sprint C19.1) =====
+    void update();                              // Ejecuta 1 tick de simulación.
+    void checkGameOver();                       // Evalua condiciones de fin.
+    void incrementTurn() { ++turnCount; }
+    void setQuietMode(bool q) { quietMode_ = q; }
+    bool quietMode() const { return quietMode_; }
+
+    Country&       playerCountryRef()       { return playerCountry; }
+    const Country& playerCountryRef() const { return playerCountry; }
+    int            turnCountValue()   const { return turnCount; }
+    EndCondition   endConditionValue() const { return endCondition; }
+    double         popularitySumValue() const { return popularitySum; }
+    double         initialGdpValue()   const { return initialGdp; }
+    AchievementTracker&       achievementsRef()       { return achievements; }
+    const AchievementTracker& achievementsRef() const { return achievements; }
+    EventManager&             eventManagerRef()       { return eventManager; }
+    std::vector<PendingDecision>& pendingDecisionsRef() { return pendingDecisions; }
+
 private:
     void processEvents(); // Check for input (placeholder for now)
-    void update();        // Update game state (mathematics, simulation)
     void render();        // Draw the game (text output for now)
-    void checkGameOver();
     void renderEndScreen();
     void resolveDecision(const std::string& choice);
     void saveGame(const std::string& path);
@@ -46,6 +62,7 @@ private:
     AchievementTracker achievements;
     std::vector<ScriptedEvent> scriptedEvents;
     Tutorial tutorial;
+    bool quietMode_ = false;        // Suprime stdout en modo UI.
 
     std::mt19937 rng; // Mersenne Twister Random Number Generator
 };

@@ -5,25 +5,26 @@
 #include <string>
 #include "Country.hpp"
 #include "EndCondition.hpp"
+#include "Game.hpp"
 
-// Bridge entre la UI grafica y el engine. Posee una instancia minima de estado.
-// Sprint 10: solo Country + turnCount; siguientes sprints agregan decisiones,
-// achievements, scenario loader, etc.
+// Bridge entre la UI grafica y el engine. Sprint C19.1: ahora posee un Game
+// real con todos los feedback loops del motor (welfare/economy/politics/
+// security/infra) en lugar del placeholder de tick anterior.
 class UIBridge {
 public:
     UIBridge();
-    void tick();                            // Avanza un turno (placeholder simple)
+    void tick();
     void resetCountry();
-    const Country& country() const { return c_; }
-    Country& mutableCountry() { return c_; }
-    int turn() const { return turn_; }
-    EndCondition endCondition() const { return end_; }
-    bool isGameOver() const { return end_ != EndCondition::NONE; }
+    const Country& country() const { return game_.playerCountryRef(); }
+    Country& mutableCountry() { return game_.playerCountryRef(); }
+    int turn() const { return game_.turnCountValue(); }
+    EndCondition endCondition() const { return game_.endConditionValue(); }
+    bool isGameOver() const { return endCondition() != EndCondition::NONE; }
+    Game& game() { return game_; }
+    const Game& game() const { return game_; }
 
 private:
-    Country c_;
-    int turn_ = 0;
-    EndCondition end_ = EndCondition::NONE;
+    Game game_;
 };
 
 #endif
