@@ -28,8 +28,13 @@
 #include "Localization.hpp"
 #include "EventManager.hpp"
 #include "Persistence.hpp"
+#include "GameMode.hpp"
+#include "IronManMode.hpp"
+#include "SuccessorMode.hpp"
+#include "Advisor.hpp"
+#include "llm/LLMProvider.hpp"
 
-enum class AppState { Menu, Playing };
+enum class AppState { Menu, ModeSelect, Playing };
 static const std::string LOCALES_DIR = "/Users/michelcano/Documents/Repositorios/homo-politicus-game/content/locales";
 static std::string tr(const std::string& key, const std::string& fallback) {
     if (Localization::currentLanguage().empty()) return fallback;
@@ -37,7 +42,7 @@ static std::string tr(const std::string& key, const std::string& fallback) {
     if (v.find("[missing:") != std::string::npos) return fallback;
     return v;
 }
-enum class Tab { Dashboard, Map, Action, Decisions, Achievements, Court };
+enum class Tab { Dashboard, Map, Action, Decisions, Achievements, Court, Advisors };
 
 // Layout (1280x800):
 //   TopBar:    1280 x 60
@@ -206,6 +211,14 @@ int main(int argc, char** argv) {
     achievements.configure(achievementTracker);
     EventManager eventMgr;
     double initialGdp = bridge.country().economy.gdp;
+    ModeConfig modeConfig;
+    int modeSelectHover = -1;
+    bool ironManToggled = false;
+    auto llmProvider = LLMFactory::create();  // Anthropic si env, sino Mock
+    auto advisorList = Advisors::all();
+    int advisorHover = -1;
+    std::string advisorLastResponse;
+    std::string advisorLastWho;
     TutorialOverlay tutorialUI;
     double popularitySumDemo = 0.0;
     int gameSeed = 1;  // incrementa con cada Nueva Partida (rota retratos)
@@ -239,9 +252,8 @@ int main(int argc, char** argv) {
             case MainMenu::Action::NewGame:
                 bridge.resetCountry();
                 dashboard.recordHistory(bridge.country());
-                tutorialUI.start();
                 ++gameSeed;
-                appState = AppState::Playing;
+                appState = AppState::ModeSelect;
                 break;
             case MainMenu::Action::Continue:
                 bridge.resetCountry();
@@ -385,33 +397,90 @@ int main(int argc, char** argv) {
             if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
                 sf::Vector2f pos((float)mm->position.x, (float)mm->position.y);
                 if (appState == AppState::Menu) menu.onMouseMove(pos);
+                else if (appState == AppState::ModeSelect) {
+                    modeSelectHover = -1;
+                    for (int i = 0; i < 3; ++i) {
+                        float cx = 220.f + (float)i * 290.f;
+                        if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= 220.f && pos.y <= 570.f) {
+                            modeSelectHover = i;
+                            break;
+                        }
+                    }
+                }
                 else if (modal.visible()) modal.onMouseMove(pos);
                 else if (currentTab == Tab::Action) actionPanel.onMouseMove(pos);
                 else if (currentTab == Tab::Dashboard) dashboard.onMouseMove(pos);
                 else if (currentTab == Tab::Court) court.onMouseMove(pos);
                 else if (currentTab == Tab::Map) mapView.onMouseMove(pos);
                 else if (currentTab == Tab::Achievements) achievements.onMouseMove(pos);
+                else if (currentTab == Tab::Advisors) {
+                    advisorHover = -1;
+                    for (int i = 0; i < (int)advisorList.size() && i < 5; ++i) {
+                        float ay = 130.f + (float)i * 96.f;
+                        if (pos.x >= 220.f && pos.x <= 1000.f && pos.y >= ay && pos.y <= ay + 84.f) {
+                            advisorHover = i;
+                            break;
+                        }
+                    }
+                }
             }
             if (const auto* mb = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (mb->button == sf::Mouse::Button::Left) {
                     sf::Vector2f pos((float)mb->position.x, (float)mb->position.y);
                     if (gameOver.visible()) gameOver.onClick(pos);
                     else if (appState == AppState::Menu) menu.onClick(pos);
+                    else if (appState == AppState::ModeSelect) {
+                        // Click en alguna card de modo.
+                        const GameMode modes[] = {GameMode::Sandbox, GameMode::Missions, GameMode::Historical};
+                        for (int i = 0; i < 3; ++i) {
+                            float cx = 220.f + (float)i * 290.f;
+                            if (pos.x >= cx && pos.x <= cx + 270.f && pos.y >= 220.f && pos.y <= 570.f) {
+                                modeConfig.mode = modes[i];
+                                if (ironManToggled) IronManMode::enable();
+                                else IronManMode::disable();
+                                tutorialUI.start();
+                                appState = AppState::Playing;
+                                audio.play("button_click");
+                                break;
+                            }
+                        }
+                        // Click en iron man toggle.
+                        if (pos.x >= 430.f && pos.x <= 850.f && pos.y >= 600.f && pos.y <= 660.f) {
+                            ironManToggled = !ironManToggled;
+                            audio.play("button_click");
+                        }
+                    }
                     else if (tutorialUI.visible()) tutorialUI.onClick(pos);
                     else if (modal.visible()) modal.onClick(pos);
                     else if (pos.x >= 1015 && pos.x <= 1125 && pos.y >= 12 && pos.y <= 48) {
                         // Click en el boton SIGUIENTE
                         doTick();
                     }
-                    else if (pos.x >= 8 && pos.x <= 192 && pos.y >= 314 && pos.y <= 462) {
-                        // Click en SidebarLeft ACCIONES.
+                    else if (pos.x >= 8 && pos.x <= 192 && pos.y >= 314 && pos.y <= 538) {
+                        // Click en SidebarLeft ACCIONES (7 items).
                         int idx = (int)((pos.y - 314.f) / 32.f);
-                        const Tab tabFor[] = {Tab::Dashboard, Tab::Map, Tab::Action, Tab::Decisions, Tab::Achievements};
-                        if (idx >= 0 && idx < 5) currentTab = tabFor[idx];
+                        const Tab tabFor[] = {Tab::Dashboard, Tab::Map, Tab::Action, Tab::Decisions,
+                                              Tab::Achievements, Tab::Court, Tab::Advisors};
+                        if (idx >= 0 && idx < 7) currentTab = tabFor[idx];
                         audio.play("button_click");
                     }
                     else if (currentTab == Tab::Action) actionPanel.onClick(pos);
                     else if (currentTab == Tab::Achievements) achievements.onClick(pos);
+                    else if (currentTab == Tab::Advisors) {
+                        for (int i = 0; i < (int)advisorList.size() && i < 5; ++i) {
+                            float ay = 130.f + (float)i * 96.f;
+                            // Click en boton Consultar.
+                            if (pos.x >= 858.f && pos.x <= 998.f && pos.y >= ay + 26.f && pos.y <= ay + 56.f) {
+                                advisorLastWho = advisorList[i]->id();
+                                advisorLastResponse = advisorList[i]->respondWithLLM(
+                                    llmProvider.get(), bridge.country(), "");
+                                pushEvent("Consulta a " + advisorList[i]->name_es(),
+                                          sf::Color(80, 160, 240));
+                                audio.play("button_click");
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
@@ -441,6 +510,7 @@ int main(int argc, char** argv) {
                 if (kp->code == sf::Keyboard::Key::Num4) currentTab = Tab::Decisions;
                 if (kp->code == sf::Keyboard::Key::Num5) currentTab = Tab::Achievements;
                 if (kp->code == sf::Keyboard::Key::Num6) currentTab = Tab::Court;
+                if (kp->code == sf::Keyboard::Key::Num7) currentTab = Tab::Advisors;
                 if (kp->code == sf::Keyboard::Key::D) {
                     PendingDecision next;
                     if (!decisionQueue.empty()) {
@@ -463,38 +533,55 @@ int main(int argc, char** argv) {
                     audio.play("game_over");
                     particles.emit(ParticleEmitter::Preset::GraySmoke, 640.f, 400.f, 30);
                 }
+                if (kp->code == sf::Keyboard::Key::U) {
+                    // Continuar como Sucesor (tecla U) si elegible.
+                    if (gameOver.visible() && SuccessorMode::isEligible(EndCondition::TERM_COMPLETED)) {
+                        SuccessorMode::applyTo(bridge.mutableCountry(), EndCondition::TERM_COMPLETED);
+                        popularitySumDemo = 0.0;
+                        gameOver.hide();
+                        appState = AppState::Playing;
+                        pushEvent("Continuando como sucesor", sf::Color(80, 200, 120));
+                        audio.play("achievement");
+                    }
+                }
                 if (kp->code == sf::Keyboard::Key::T) {
                     tutorialUI.start();
                     audio.play("button_click");
                 }
                 if (kp->code == sf::Keyboard::Key::S) {
-                    // Save al slot 1.
-                    bool ok = Persistence::save(bridge.country(), bridge.turn(),
-                                                popularitySumDemo, bridge.endCondition(),
-                                                "save_slot1.txt",
-                                                achievementTracker.serialize());
-                    pushEvent(ok ? "Partida guardada (slot 1)" : "Error al guardar",
-                              ok ? sf::Color(80, 200, 120) : sf::Color(220, 80, 80));
-                    audio.play("button_click");
+                    if (!IronManMode::isManualSaveAllowed()) {
+                        pushEvent("IRON MAN: save manual bloqueado", sf::Color(220, 90, 80));
+                        audio.play("warning");
+                    } else {
+                        bool ok = Persistence::save(bridge.country(), bridge.turn(),
+                                                    popularitySumDemo, bridge.endCondition(),
+                                                    "save_slot1.txt",
+                                                    achievementTracker.serialize());
+                        pushEvent(ok ? "Partida guardada (slot 1)" : "Error al guardar",
+                                  ok ? sf::Color(80, 200, 120) : sf::Color(220, 80, 80));
+                        audio.play("button_click");
+                    }
                 }
                 if (kp->code == sf::Keyboard::Key::P) {
-                    // Load del slot 1 (P de "Cargar Partida").
-                    Country tmp;
-                    int t = 0;
-                    double pSum = 0;
-                    EndCondition end = EndCondition::NONE;
-                    std::string achLine;
-                    bool ok = Persistence::load(tmp, t, pSum, end, "save_slot1.txt", &achLine);
-                    if (ok) {
-                        bridge.mutableCountry() = tmp;
-                        popularitySumDemo = pSum;
-                        achievementTracker.deserialize(achLine);
-                        achievements.update(achievementTracker);
-                        pushEvent("Partida cargada (slot 1)", sf::Color(80, 200, 120));
+                    if (!IronManMode::isManualLoadAllowed()) {
+                        pushEvent("IRON MAN: load manual bloqueado", sf::Color(220, 90, 80));
+                        audio.play("warning");
                     } else {
-                        pushEvent("Error al cargar (no existe slot)", sf::Color(220, 80, 80));
+                        Country tmp; int t = 0; double pSum = 0;
+                        EndCondition end = EndCondition::NONE;
+                        std::string achLine;
+                        bool ok = Persistence::load(tmp, t, pSum, end, "save_slot1.txt", &achLine);
+                        if (ok) {
+                            bridge.mutableCountry() = tmp;
+                            popularitySumDemo = pSum;
+                            achievementTracker.deserialize(achLine);
+                            achievements.update(achievementTracker);
+                            pushEvent("Partida cargada (slot 1)", sf::Color(80, 200, 120));
+                        } else {
+                            pushEvent("Error al cargar (no existe slot)", sf::Color(220, 80, 80));
+                        }
+                        audio.play("button_click");
                     }
-                    audio.play("button_click");
                 }
                 if (kp->code == sf::Keyboard::Key::Space && tutorialUI.visible()) {
                     tutorialUI.advance();
@@ -565,6 +652,100 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        // === ModeSelect state ===
+        if (appState == AppState::ModeSelect && fontOk) {
+            // Background revolution con dim.
+            const sf::Texture* bg = AssetManager::instance().getTexture("bg_revolution");
+            if (bg) {
+                sf::Sprite spr(*bg);
+                auto sz = bg->getSize();
+                float sc = std::max(1280.f / sz.x, 800.f / sz.y);
+                spr.setScale({sc, sc});
+                spr.setPosition({(1280.f - sz.x * sc) * 0.5f, (800.f - sz.y * sc) * 0.5f});
+                spr.setColor(sf::Color(255, 255, 255, 80));
+                window.draw(spr);
+            }
+            window.draw(makePanel(0, 0, 1280, 800, sf::Color(15, 17, 26, 180)));
+            sf::Text title(fTitle, "ELEGI TU MODO", 56);
+            title.setStyle(sf::Text::Bold);
+            title.setFillColor(sf::Color(80, 160, 240));
+            auto lb = title.getLocalBounds();
+            title.setOrigin({lb.position.x + lb.size.x / 2.f, 0.f});
+            title.setPosition({640.f, 80.f});
+            window.draw(title);
+
+            const struct { GameMode mode; const char* name; const char* desc; } modes[] = {
+                { GameMode::Sandbox,    "SANDBOX",    "Jugar libre. Sin objetivos.\nIdeal para experimentar." },
+                { GameMode::Missions,   "MISIONES",   "Objetivos especificos por dificultad.\nProgreso medible." },
+                { GameMode::Historical, "HISTORICO",  "Escenarios reales con eventos\nforzados. Re-juega la historia." },
+            };
+            for (int i = 0; i < 3; ++i) {
+                float cx = 220.f + (float)i * 290.f;
+                float cy = 220.f;
+                float cw = 270.f;
+                float ch = 350.f;
+                bool hov = (modeSelectHover == i);
+                sf::Color top = hov ? sf::Color(80, 110, 160) : sf::Color(40, 48, 70);
+                sf::Color bot = hov ? sf::Color(30, 60, 110)  : sf::Color(22, 26, 40);
+                sf::VertexArray grad(sf::PrimitiveType::TriangleStrip, 4);
+                grad[0] = sf::Vertex{{cx,      cy     }, top, {}};
+                grad[1] = sf::Vertex{{cx + cw, cy     }, top, {}};
+                grad[2] = sf::Vertex{{cx,      cy + ch}, bot, {}};
+                grad[3] = sf::Vertex{{cx + cw, cy + ch}, bot, {}};
+                window.draw(grad);
+                sf::RectangleShape outline({cw, ch});
+                outline.setPosition({cx, cy});
+                outline.setFillColor(sf::Color::Transparent);
+                outline.setOutlineColor(hov ? sf::Color(180, 210, 255) : sf::Color(80, 95, 130));
+                outline.setOutlineThickness(hov ? 3.f : 1.5f);
+                window.draw(outline);
+                sf::Text n(fTitle, modes[i].name, 30);
+                n.setStyle(sf::Text::Bold);
+                n.setFillColor(hov ? sf::Color(245, 250, 255) : sf::Color(220, 225, 240));
+                auto nlb = n.getLocalBounds();
+                n.setOrigin({nlb.position.x + nlb.size.x / 2.f, 0.f});
+                n.setPosition({cx + cw / 2.f, cy + 30.f});
+                window.draw(n);
+                std::string desc = modes[i].desc;
+                size_t pos = 0, lineY = 0;
+                while (pos < desc.size()) {
+                    size_t nl = desc.find('\n', pos);
+                    std::string line = desc.substr(pos, nl - pos);
+                    sf::Text lt(font, line, 14);
+                    lt.setFillColor(hov ? sf::Color(220, 230, 245) : sf::Color(180, 184, 200));
+                    auto llb = lt.getLocalBounds();
+                    lt.setOrigin({llb.position.x + llb.size.x / 2.f, 0.f});
+                    lt.setPosition({cx + cw / 2.f, cy + 90.f + (float)lineY * 22.f});
+                    window.draw(lt);
+                    ++lineY;
+                    if (nl == std::string::npos) break;
+                    pos = nl + 1;
+                }
+            }
+
+            // Iron Man toggle.
+            float ironY = 600.f;
+            sf::RectangleShape iron({420.f, 60.f});
+            iron.setPosition({430.f, ironY});
+            iron.setFillColor(ironManToggled ? sf::Color(120, 30, 30) : sf::Color(40, 44, 60));
+            iron.setOutlineColor(ironManToggled ? sf::Color(220, 90, 90) : sf::Color(80, 95, 130));
+            iron.setOutlineThickness(2.f);
+            window.draw(iron);
+            sf::Text iLabel(font, ironManToggled
+                ? "IRON MAN: ACTIVO (sin save/load manual)"
+                : "Activar IRON MAN (hardcore)", 16);
+            iLabel.setStyle(sf::Text::Bold);
+            iLabel.setFillColor(ironManToggled ? sf::Color(255, 230, 230) : sf::Color(200, 205, 220));
+            auto ilb = iLabel.getLocalBounds();
+            iLabel.setOrigin({ilb.position.x + ilb.size.x / 2.f, ilb.position.y + ilb.size.y / 2.f});
+            iLabel.setPosition({640.f, ironY + 30.f});
+            window.draw(iLabel);
+
+            window.draw(makeText(font, "Esc = volver al menu", 12, kMuted, 16, 770));
+            window.display();
+            continue;
+        }
+
         // === TopBar ===
         window.draw(makePanel(shakeX, 0, 1280, 60, currentPalette.topbar));
         if (fontOk) {
@@ -615,7 +796,17 @@ int main(int argc, char** argv) {
             window.draw(nextBtn);
             window.draw(makeText(font, "[N] SIGUIENTE", 14, sf::Color(255,255,255), 1025 + shakeX, 21));
 
-            window.draw(makeText(font, "1-5 tabs  D=decision  G=gameover  M=mute  L=lang", 11, kMuted, 1130 + shakeX, 22));
+            window.draw(makeText(font, "1-6 tabs  D=dec  G=over  S=save  P=load  M=mute  L=lang", 11, kMuted, 1130 + shakeX, 22));
+            // Indicador de modo en TopBar.
+            {
+                std::string modeName = GameModeRegistry::name(modeConfig.mode);
+                if (IronManMode::isActive()) modeName += " | IRON MAN";
+                sf::Text mt(font, modeName, 11);
+                mt.setStyle(sf::Text::Bold);
+                mt.setFillColor(IronManMode::isActive() ? sf::Color(220, 90, 90) : sf::Color(180, 200, 240));
+                mt.setPosition({1130 + shakeX, 38.f});
+                window.draw(mt);
+            }
         }
 
         // === SidebarLeft ===
@@ -627,9 +818,9 @@ int main(int argc, char** argv) {
                 window.draw(makeText(font, systems[i], 16, kText, 16, 104.f + i * 32));
             }
             window.draw(makeText(font, "ACCIONES", 14, kMuted, 16, 290));
-            const char* actions[] = {"Dashboard", "Mapa", "Accion", "Decisiones", "Logros"};
-            const Tab tabFor[] = {Tab::Dashboard, Tab::Map, Tab::Action, Tab::Decisions, Tab::Achievements};
-            for (int i = 0; i < 5; ++i) {
+            const char* actions[] = {"Dashboard", "Mapa", "Accion", "Decisiones", "Logros", "Corte", "Asesores"};
+            const Tab tabFor[] = {Tab::Dashboard, Tab::Map, Tab::Action, Tab::Decisions, Tab::Achievements, Tab::Court, Tab::Advisors};
+            for (int i = 0; i < 7; ++i) {
                 bool active = (currentTab == tabFor[i]);
                 float ty = 314.f + i * 32;
                 if (active) {
@@ -686,17 +877,50 @@ int main(int argc, char** argv) {
                     sf::Text hdr(fTitle, "DECISIONES  [4]", 18);
                     hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
                     hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+
+                    // Si modo Missions, mostrar objetivos arriba.
+                    if (modeConfig.mode == GameMode::Missions) {
+                        auto objs = GameModeRegistry::objectivesFor(GameMode::Missions, "");
+                        sf::Text ohdr(font, "OBJETIVOS DE MISION", 13);
+                        ohdr.setFillColor(sf::Color(220, 180, 80));
+                        ohdr.setStyle(sf::Text::Bold);
+                        ohdr.setPosition({220.f, 108.f});
+                        window.draw(ohdr);
+                        for (size_t i = 0; i < objs.size() && i < 4; ++i) {
+                            float oy = 130.f + (float)i * 22.f;
+                            // Checkbox.
+                            sf::RectangleShape box({14.f, 14.f});
+                            box.setPosition({226.f, oy + 1.f});
+                            box.setFillColor(objs[i].achieved ? sf::Color(80, 200, 120) : sf::Color(40, 50, 70));
+                            box.setOutlineColor(sf::Color(160, 170, 200));
+                            box.setOutlineThickness(1.f);
+                            window.draw(box);
+                            if (objs[i].achieved) {
+                                sf::Text ck(font, "v", 12);
+                                ck.setStyle(sf::Text::Bold);
+                                ck.setFillColor(sf::Color(20, 30, 20));
+                                ck.setPosition({229.f, oy});
+                                window.draw(ck);
+                            }
+                            window.draw(makeText(font, objs[i].description_es, 12,
+                                                 objs[i].achieved ? sf::Color(180, 230, 200) : kText,
+                                                 246.f, oy));
+                        }
+                    }
+
+                    float pendY = (modeConfig.mode == GameMode::Missions) ? 240.f : 102.f;
                     window.draw(makeText(font,
                         "Decisiones acumuladas: " + std::to_string(decisionQueue.size()),
-                        13, kMuted, 220, 102));
+                        13, kMuted, 220, pendY));
                     if (decisionQueue.empty()) {
                         window.draw(makeText(font,
                             "No hay decisiones pendientes. Avanza turnos para que aparezcan.",
                             14, kMuted, 220, 140));
                     } else {
-                        for (size_t i = 0; i < decisionQueue.size() && i < 6; ++i) {
+                        float baseListY = (modeConfig.mode == GameMode::Missions) ? 280.f : 140.f;
+                        for (size_t i = 0; i < decisionQueue.size() && i < 5; ++i) {
                             const auto& d = decisionQueue[i];
-                            float dy = 140.f + (float)i * 80.f;
+                            float dy = baseListY + (float)i * 75.f;
                             sf::RectangleShape card({780.f, 70.f});
                             card.setPosition({220.f, dy});
                             card.setFillColor(sf::Color(38, 42, 56));
@@ -727,6 +951,95 @@ int main(int argc, char** argv) {
                     hdr.setPosition({220.f, 76.f}); window.draw(hdr);
                     achievements.update(achievementTracker);
                     achievements.draw(window, font, 218.f, 102.f, 794.f, 580.f);
+                    break;
+                }
+                case Tab::Advisors: {
+                    sf::Text hdr(fTitle, "ASESORES  [7]", 18);
+                    hdr.setFillColor(kAccent); hdr.setStyle(sf::Text::Bold);
+                    hdr.setPosition({220.f, 76.f}); window.draw(hdr);
+
+                    std::string llmName = llmProvider ? llmProvider->name() : "(none)";
+                    bool llmReal = llmProvider && llmProvider->isAvailable() && llmName != "MockProvider";
+                    window.draw(makeText(font,
+                        "Provider: " + llmName + (llmReal ? " (LIVE)" : " (offline mock)"),
+                        12, llmReal ? sf::Color(80, 200, 120) : kMuted, 220, 102));
+
+                    // Lista de 5 asesores con botones "Consultar".
+                    for (size_t i = 0; i < advisorList.size() && i < 5; ++i) {
+                        const auto& adv = advisorList[i];
+                        float ay = 130.f + (float)i * 96.f;
+                        bool hov = (advisorHover == (int)i);
+                        sf::Color top = hov ? sf::Color(60, 80, 120) : sf::Color(38, 42, 56);
+                        sf::Color bot = hov ? sf::Color(30, 50,  90) : sf::Color(24, 28, 40);
+                        sf::VertexArray g(sf::PrimitiveType::TriangleStrip, 4);
+                        g[0] = sf::Vertex{{220.f,        ay      }, top, {}};
+                        g[1] = sf::Vertex{{220.f + 780.f, ay      }, top, {}};
+                        g[2] = sf::Vertex{{220.f,        ay + 84.f}, bot, {}};
+                        g[3] = sf::Vertex{{220.f + 780.f, ay + 84.f}, bot, {}};
+                        window.draw(g);
+                        sf::RectangleShape card({780.f, 84.f});
+                        card.setPosition({220.f, ay});
+                        card.setFillColor(sf::Color::Transparent);
+                        card.setOutlineColor(hov ? sf::Color(120, 160, 220) : sf::Color(70, 80, 110));
+                        card.setOutlineThickness(hov ? 2.f : 1.f);
+                        window.draw(card);
+                        // Avatar circular (retrato rotativo segun seed + i).
+                        const sf::Texture* tex = AssetManager::instance().pickPortrait(gameSeed, (int)i + 4);
+                        if (tex) {
+                            float ar = 30.f;
+                            sf::CircleShape disk(ar);
+                            disk.setOrigin({ar, ar});
+                            disk.setPosition({252.f, ay + 42.f});
+                            disk.setTexture(tex);
+                            auto sz = tex->getSize();
+                            int side = (int)std::min(sz.x, sz.y);
+                            disk.setTextureRect(sf::IntRect({(int)((sz.x - side) / 2), 0}, {side, side}));
+                            disk.setOutlineColor(sf::Color(190, 160, 80));
+                            disk.setOutlineThickness(1.5f);
+                            window.draw(disk);
+                        }
+                        sf::Text aname(font, adv->name_es(), 16);
+                        aname.setStyle(sf::Text::Bold);
+                        aname.setFillColor(sf::Color(225, 230, 245));
+                        aname.setPosition({296.f, ay + 12.f});
+                        window.draw(aname);
+                        sf::Text aid(font, adv->id(), 10);
+                        aid.setFillColor(kMuted);
+                        aid.setPosition({296.f, ay + 32.f});
+                        window.draw(aid);
+                        // Boton consultar.
+                        sf::RectangleShape btn({140.f, 30.f});
+                        btn.setPosition({858.f, ay + 26.f});
+                        btn.setFillColor(hov ? sf::Color(80, 130, 200) : sf::Color(50, 80, 130));
+                        btn.setOutlineColor(sf::Color(120, 160, 220));
+                        btn.setOutlineThickness(1.f);
+                        window.draw(btn);
+                        sf::Text bt(font, "Consultar", 14);
+                        bt.setStyle(sf::Text::Bold);
+                        bt.setFillColor(sf::Color(245, 250, 255));
+                        auto bb = bt.getLocalBounds();
+                        bt.setOrigin({bb.position.x + bb.size.x / 2.f, bb.position.y + bb.size.y / 2.f});
+                        bt.setPosition({928.f, ay + 41.f});
+                        window.draw(bt);
+                        // Si esta es el ultimo consultado, mostrar respuesta inline.
+                        if (advisorLastWho == adv->id() && !advisorLastResponse.empty()) {
+                            // Recortar a 90 chars y multi-line.
+                            std::string resp = advisorLastResponse;
+                            sf::Text r(font, resp.substr(0, std::min<size_t>(resp.size(), 160)), 12);
+                            r.setFillColor(sf::Color(200, 220, 240));
+                            r.setPosition({296.f, ay + 52.f});
+                            window.draw(r);
+                        }
+                    }
+                    if (!advisorLastResponse.empty()) {
+                        window.draw(makeText(font,
+                            "Ultimo consejo de: " + advisorLastWho,
+                            11, kMuted, 220, 660));
+                    } else {
+                        window.draw(makeText(font,
+                            "Click en \"Consultar\" para pedir consejo en base al estado actual.",
+                            12, kMuted, 220, 660));
+                    }
                     break;
                 }
                 case Tab::Court: {
