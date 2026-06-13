@@ -294,6 +294,19 @@ int main(int argc, char** argv) {
         turnShake = 0.15f;
         dashboard.triggerTurnGlow();
     };
+    // Auto-tick speeds (Paradox/RimWorld style).
+    enum class PlaySpeed { Paused, X1, X2, X4 };
+    PlaySpeed playSpeed = PlaySpeed::Paused;
+    PlaySpeed lastNonPausedSpeed = PlaySpeed::X1;
+    float autoTickAcc = 0.f;
+    auto intervalForSpeed = [](PlaySpeed s) -> float {
+        switch (s) {
+            case PlaySpeed::X1: return 3.0f;
+            case PlaySpeed::X2: return 1.5f;
+            case PlaySpeed::X4: return 0.75f;
+            default: return 1e9f;
+        }
+    };
     // Cinematic transitions:
     Tab previousTab = currentTab;
     float tabTransition = 0.f;   // 0..0.25s
@@ -534,9 +547,26 @@ int main(int argc, char** argv) {
                     }
                     else if (tutorialUI.visible()) tutorialUI.onClick(pos);
                     else if (modal.visible()) modal.onClick(pos);
-                    else if (pos.x >= 1015 && pos.x <= 1125 && pos.y >= 12 && pos.y <= 48) {
+                    else if (pos.x >= 1015 && pos.x <= 1105 && pos.y >= 12 && pos.y <= 48) {
                         // Click en el boton SIGUIENTE
                         doTick();
+                    }
+                    else if (pos.y >= 15 && pos.y <= 45) {
+                        // Botones de velocidad.
+                        struct { PlaySpeed s; float x; } sbtns[4] = {
+                            {PlaySpeed::Paused, 890.f},
+                            {PlaySpeed::X1,     920.f},
+                            {PlaySpeed::X2,     950.f},
+                            {PlaySpeed::X4,     980.f},
+                        };
+                        for (auto& sb : sbtns) {
+                            if (pos.x >= sb.x && pos.x <= sb.x + 26.f) {
+                                playSpeed = sb.s;
+                                if (playSpeed != PlaySpeed::Paused) lastNonPausedSpeed = playSpeed;
+                                audio.play("button_click");
+                                break;
+                            }
+                        }
                     }
                     else if (pos.x >= 8 && pos.x <= 192 && pos.y >= 314 && pos.y <= 538) {
                         // Click en SidebarLeft ACCIONES (7 items).
@@ -670,8 +700,35 @@ int main(int argc, char** argv) {
                         audio.play("button_click");
                     }
                 }
-                if (kp->code == sf::Keyboard::Key::Space && tutorialUI.visible()) {
-                    tutorialUI.advance();
+                if (kp->code == sf::Keyboard::Key::Space) {
+                    if (tutorialUI.visible()) {
+                        tutorialUI.advance();
+                        audio.play("button_click");
+                    } else if (appState == AppState::Playing) {
+                        // Toggle pausa <-> ultima velocidad usada.
+                        if (playSpeed == PlaySpeed::Paused) {
+                            playSpeed = lastNonPausedSpeed;
+                        } else {
+                            lastNonPausedSpeed = playSpeed;
+                            playSpeed = PlaySpeed::Paused;
+                        }
+                        audio.play("button_click");
+                    }
+                }
+                if (kp->code == sf::Keyboard::Key::Add ||
+                    kp->code == sf::Keyboard::Key::Equal) {
+                    if (playSpeed == PlaySpeed::Paused) playSpeed = PlaySpeed::X1;
+                    else if (playSpeed == PlaySpeed::X1) playSpeed = PlaySpeed::X2;
+                    else if (playSpeed == PlaySpeed::X2) playSpeed = PlaySpeed::X4;
+                    if (playSpeed != PlaySpeed::Paused) lastNonPausedSpeed = playSpeed;
+                    audio.play("button_click");
+                }
+                if (kp->code == sf::Keyboard::Key::Hyphen ||
+                    kp->code == sf::Keyboard::Key::Subtract) {
+                    if (playSpeed == PlaySpeed::X4) playSpeed = PlaySpeed::X2;
+                    else if (playSpeed == PlaySpeed::X2) playSpeed = PlaySpeed::X1;
+                    else if (playSpeed == PlaySpeed::X1) playSpeed = PlaySpeed::Paused;
+                    if (playSpeed != PlaySpeed::Paused) lastNonPausedSpeed = playSpeed;
                     audio.play("button_click");
                 }
             }
@@ -688,6 +745,19 @@ int main(int argc, char** argv) {
         if (turnSweep > 0.f) { turnSweep -= dt; if (turnSweep < 0.f) turnSweep = 0.f; }
         if (turnShake > 0.f) { turnShake -= dt; if (turnShake < 0.f) turnShake = 0.f; }
         particles.update(dt);
+        // Auto-tick (Sprint C19.2): si playSpeed != Paused y no hay modal,
+        // acumular dt y disparar doTick segun intervalo de velocidad.
+        if (appState == AppState::Playing && playSpeed != PlaySpeed::Paused
+            && !modal.visible() && !gameOver.visible() && !tutorialUI.visible()) {
+            autoTickAcc += dt;
+            float interval = intervalForSpeed(playSpeed);
+            while (autoTickAcc >= interval) {
+                autoTickAcc -= interval;
+                doTick();
+            }
+        } else {
+            autoTickAcc = 0.f;
+        }
         // Cinematic transitions: detectar cambios.
         if (currentTab != previousTab) {
             tabTransition = 0.25f;
@@ -1033,14 +1103,40 @@ int main(int argc, char** argv) {
             infStr << "Inflacion: " << std::fixed << std::setprecision(1) << (c.economy.inflation * 100) << "%";
             window.draw(makeText(font, infStr.str(), 18, kText, 760 + shakeX, 22));
 
+            // Botones de velocidad (Pausa / 1x / 2x / 4x).
+            {
+                struct SpeedBtn { PlaySpeed s; const char* label; float x; };
+                SpeedBtn btns[4] = {
+                    {PlaySpeed::Paused, "||",  890.f},
+                    {PlaySpeed::X1,     "1x",  920.f},
+                    {PlaySpeed::X2,     "2x",  950.f},
+                    {PlaySpeed::X4,     "4x",  980.f},
+                };
+                for (const auto& b : btns) {
+                    bool active = (playSpeed == b.s);
+                    sf::RectangleShape r({26.f, 30.f});
+                    r.setPosition({b.x + shakeX, 15.f});
+                    r.setFillColor(active ? sf::Color(80, 160, 240) : sf::Color(40, 50, 70));
+                    r.setOutlineColor(active ? sf::Color(180, 210, 255) : sf::Color(80, 95, 130));
+                    r.setOutlineThickness(active ? 2.f : 1.f);
+                    window.draw(r);
+                    sf::Text t(font, b.label, 13);
+                    t.setStyle(active ? sf::Text::Bold : sf::Text::Regular);
+                    t.setFillColor(active ? sf::Color(255, 255, 255) : sf::Color(200, 210, 230));
+                    auto lb = t.getLocalBounds();
+                    t.setOrigin({lb.position.x + lb.size.x / 2.f, lb.position.y + lb.size.y / 2.f});
+                    t.setPosition({b.x + 13.f + shakeX, 30.f});
+                    window.draw(t);
+                }
+            }
             // Boton visible de Next turn (solo visual, la tecla N es la real)
-            sf::RectangleShape nextBtn({110.f, 36.f});
+            sf::RectangleShape nextBtn({90.f, 36.f});
             nextBtn.setPosition({1015.f + shakeX, 12.f});
             nextBtn.setFillColor(sf::Color(50, 100, 160));
             nextBtn.setOutlineColor(kAccent);
             nextBtn.setOutlineThickness(2.f);
             window.draw(nextBtn);
-            window.draw(makeText(font, "[N] SIGUIENTE", 14, sf::Color(255,255,255), 1025 + shakeX, 21));
+            window.draw(makeText(font, "[N] SIG.", 14, sf::Color(255,255,255), 1033 + shakeX, 21));
 
             window.draw(makeText(font, "1-6 tabs  D=dec  G=over  S=save  P=load  M=mute  L=lang", 11, kMuted, 1130 + shakeX, 22));
             // Indicador de modo en TopBar.
