@@ -7,6 +7,15 @@
 #include <vector>
 #include <unordered_set>
 #include "DecisionSystem.hpp"
+
+// Suprime stdout durante el scope (los logs del motor son ruido en UI).
+namespace {
+struct CoutSuppressor {
+    std::streambuf* old;
+    CoutSuppressor() : old(std::cout.rdbuf(nullptr)) {}
+    ~CoutSuppressor() { std::cout.rdbuf(old); }
+};
+}
 #include "ui/UIBridge.hpp"
 #include "ui/Dashboard.hpp"
 #include "ui/MapView.hpp"
@@ -296,8 +305,9 @@ int main(int argc, char** argv) {
     };
     // Auto-tick speeds (Paradox/RimWorld style).
     enum class PlaySpeed { Paused, X1, X2, X4 };
-    PlaySpeed playSpeed = PlaySpeed::Paused;
+    PlaySpeed playSpeed = PlaySpeed::X1;        // C20.3: default 1x para que se sienta vivo
     PlaySpeed lastNonPausedSpeed = PlaySpeed::X1;
+    bool autoPausedBecauseOfDecisions = false;
     float autoTickAcc = 0.f;
     auto intervalForSpeed = [](PlaySpeed s) -> float {
         switch (s) {
@@ -321,6 +331,44 @@ int main(int argc, char** argv) {
         bridge.tick();
         // Disparar eventos del motor.
         eventMgr.triggerRandomEvent(bridge.mutableCountry());
+        // Sprint C20.1: drenar decisiones que el motor real puso en su cola
+        // hacia la cola visible del UI. Sin esto el jugador no ve lo que el
+        // motor le pide resolver.
+        {
+            auto& gameDecs = bridge.game().pendingDecisionsRef();
+            for (auto& d : gameDecs) {
+                DecisionSystem::enqueueOnce(decisionQueue, d);
+                pushEvent("Nueva decision: " + d.id, sf::Color(220, 180, 80));
+            }
+            gameDecs.clear();
+        }
+        // Sprint C20.4: emitir hasta 3 mensajes criticos del motor al sidebar.
+        {
+            auto msgs = bridge.drainCriticalMessages();
+            int shown = 0;
+            for (const auto& m : msgs) {
+                if (shown >= 3) break;
+                std::string clean = m;
+                // Limpiar prefijo de marcador para mostrar.
+                sf::Color msgColor(220, 200, 80);
+                if (clean.find("[!!!]") != std::string::npos) {
+                    msgColor = sf::Color(220, 90, 80);
+                    auto p = clean.find("[!!!]");
+                    clean = clean.substr(p + 6);
+                } else if (clean.find("[!!]") != std::string::npos) {
+                    msgColor = sf::Color(240, 160, 80);
+                    auto p = clean.find("[!!]");
+                    clean = clean.substr(p + 5);
+                } else if (clean.find("[INFO]") != std::string::npos) {
+                    msgColor = sf::Color(150, 200, 220);
+                    auto p = clean.find("[INFO]");
+                    clean = clean.substr(p + 7);
+                }
+                if (clean.size() > 56) clean = clean.substr(0, 54) + "..";
+                if (!clean.empty()) pushEvent(clean, msgColor);
+                ++shown;
+            }
+        }
         // Achievement tracking.
         std::unordered_set<std::string> prevUnlocked;
         for (const auto& s : achievementTracker.unlockedList()) prevUnlocked.insert(s);
@@ -403,11 +451,23 @@ int main(int argc, char** argv) {
     modal.setChoiceCallback([&](const std::string& choice) {
         lastActionFeedback = ">> Decision: " + choice;
         audio.play("button_click");
+        // Sprint C20.2: aplicar la decision al motor real.
+        {
+            CoutSuppressor suppress;
+            bridge.game().resolveDecisionPublic(choice);
+        }
+        pushEvent("Resuelto: " + choice, sf::Color(80, 200, 120));
         modal.hide();
     });
     modal.setSkipCallback([&]() {
         lastActionFeedback = ">> Decision saltada (-credibilidad)";
         audio.play("warning");
+        // Resolver como "skip" en el motor.
+        {
+            CoutSuppressor suppress;
+            bridge.game().resolveDecisionPublic("skip");
+        }
+        pushEvent("Decision saltada (-credibilidad)", sf::Color(220, 100, 80));
         modal.hide();
     });
     dashboard.recordHistory(bridge.country());
@@ -745,8 +805,18 @@ int main(int argc, char** argv) {
         if (turnSweep > 0.f) { turnSweep -= dt; if (turnSweep < 0.f) turnSweep = 0.f; }
         if (turnShake > 0.f) { turnShake -= dt; if (turnShake < 0.f) turnShake = 0.f; }
         particles.update(dt);
-        // Auto-tick (Sprint C19.2): si playSpeed != Paused y no hay modal,
-        // acumular dt y disparar doTick segun intervalo de velocidad.
+        // Auto-tick (Sprint C19.2 + C20.3): si playSpeed != Paused y no hay
+        // modal, acumular dt. Auto-pausa si hay 3+ decisiones pendientes.
+        if (decisionQueue.size() >= 3 && playSpeed != PlaySpeed::Paused
+            && !autoPausedBecauseOfDecisions) {
+            lastNonPausedSpeed = playSpeed;
+            playSpeed = PlaySpeed::Paused;
+            autoPausedBecauseOfDecisions = true;
+            pushEvent("PAUSA: 3+ decisiones pendientes. Resolve con [D] o tab [4].",
+                      sf::Color(240, 200, 80));
+        }
+        if (decisionQueue.empty()) autoPausedBecauseOfDecisions = false;
+
         if (appState == AppState::Playing && playSpeed != PlaySpeed::Paused
             && !modal.visible() && !gameOver.visible() && !tutorialUI.visible()) {
             autoTickAcc += dt;

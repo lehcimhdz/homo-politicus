@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "Country.hpp"
 #include "EndCondition.hpp"
 #include "Game.hpp"
@@ -22,9 +23,13 @@ public:
     bool isGameOver() const { return endCondition() != EndCondition::NONE; }
     Game& game() { return game_; }
     const Game& game() const { return game_; }
+    // C20.4: drena lineas del motor con marker [!!!] o [INFO] capturadas
+    // durante el ultimo tick. Vacia el buffer.
+    std::vector<std::string> drainCriticalMessages();
 
 private:
     Game game_;
+    std::vector<std::string> criticalBuf_;
 };
 
 #endif

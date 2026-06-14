@@ -24,6 +24,7 @@ public:
     // ===== Public API for UI integration (Sprint C19.1) =====
     void update();                              // Ejecuta 1 tick de simulación.
     void checkGameOver();                       // Evalua condiciones de fin.
+    void resolveDecisionPublic(const std::string& choice) { resolveDecision(choice); }
     void incrementTurn() { ++turnCount; }
     void setQuietMode(bool q) { quietMode_ = q; }
     bool quietMode() const { return quietMode_; }
